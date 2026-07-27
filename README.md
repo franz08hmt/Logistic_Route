@@ -79,7 +79,7 @@ Các cổng mặc định:
 
 | Dịch vụ | Địa chỉ |
 |---|---|
-| Next.js | `http://localhost:3000` hoặc cổng Next.js in ra |
+| Next.js | `http://localhost:3001` hoặc cổng Next.js in ra |
 | FastAPI | `http://localhost:8000` |
 | Swagger UI | `http://localhost:8000/docs` |
 | PostgreSQL/PostGIS | `localhost:5433` |
