@@ -3,6 +3,7 @@ from uuid import UUID
 from pydantic import BaseModel, ConfigDict, Field
 
 from app.db.models import OrderStatus, VehicleStatus
+from core_engine.solver import Route as OptimizedRoute
 
 
 class OrmSchema(BaseModel):
@@ -54,3 +55,12 @@ class SeedResponse(BaseModel):
     vehicles_created: int
     orders_created: int
     depot: DepotRead
+
+
+class RouteOptimizationResponse(BaseModel):
+    status: str
+    depot: DepotRead
+    total_distance_km: float
+    total_duration_mins: float
+    unassigned_orders: list[str]
+    routes: list[OptimizedRoute]

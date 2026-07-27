@@ -1,0 +1,105 @@
+from dataclasses import dataclass
+
+from sqlalchemy import select
+from sqlalchemy.orm import Session
+
+from app.db.models import (
+    Depot as DatabaseDepot,
+    Order as DatabaseOrder,
+    OrderStatus,
+    Vehicle as DatabaseVehicle,
+)
+from core_engine.solver import (
+    Depot as SolverDepot,
+    Order as SolverOrder,
+    Vehicle as SolverVehicle,
+    VRPInput,
+    VRPOutput,
+    VRPSolver,
+)
+
+
+@dataclass(frozen=True)
+class OptimizationRun:
+    depot: DatabaseDepot
+    result: VRPOutput
+
+
+class RouteOptimizationError(Exception):
+    def __init__(self, status_code: int, detail: str) -> None:
+        super().__init__(detail)
+        self.status_code = status_code
+        self.detail = detail
+
+
+def optimize_pending_routes(db: Session) -> OptimizationRun:
+    """Solve all pending orders and persist only assignments returned by the solver."""
+    depot = db.scalar(
+        select(DatabaseDepot).order_by(DatabaseDepot.name, DatabaseDepot.id).limit(1)
+    )
+    if depot is None:
+        raise RouteOptimizationError(404, "No depot is configured")
+
+    vehicles = list(
+        db.scalars(
+            select(DatabaseVehicle).order_by(DatabaseVehicle.license_plate)
+        ).all()
+    )
+    if not vehicles:
+        raise RouteOptimizationError(409, "At least one vehicle is required")
+
+    pending_orders = list(
+        db.scalars(
+            select(DatabaseOrder)
+            .where(DatabaseOrder.status == OrderStatus.PENDING)
+            .order_by(DatabaseOrder.order_code)
+            .with_for_update(skip_locked=True)
+        ).all()
+    )
+
+    solver_input = VRPInput(
+        depot=SolverDepot(
+            id=str(depot.id),
+            name=depot.name,
+            latitude=depot.latitude,
+            longitude=depot.longitude,
+        ),
+        vehicles=[
+            SolverVehicle(
+                id=str(vehicle.id),
+                license_plate=vehicle.license_plate,
+                capacity_kg=vehicle.capacity_kg,
+            )
+            for vehicle in vehicles
+        ],
+        orders=[
+            SolverOrder(
+                id=str(order.id),
+                address=order.address,
+                latitude=order.latitude,
+                longitude=order.longitude,
+                weight_kg=order.weight_kg,
+            )
+            for order in pending_orders
+        ],
+    )
+    result = VRPSolver(data=solver_input, time_limit_seconds=15).solve()
+
+    if result.status == "ERROR":
+        raise RouteOptimizationError(500, "The route solver failed")
+
+    assigned_order_ids = {
+        stop.order_id
+        for route in result.routes
+        for stop in route.stops
+    }
+    changed = False
+    for order in pending_orders:
+        if str(order.id) in assigned_order_ids:
+            order.status = OrderStatus.ASSIGNED
+            changed = True
+
+    if changed:
+        db.commit()
+
+    return OptimizationRun(depot=depot, result=result)

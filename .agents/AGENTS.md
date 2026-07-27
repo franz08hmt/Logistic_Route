@@ -1,15 +1,17 @@
-# VATA Project - Custom Agent Rules & Guidelines
+# LogiRoute VN - Custom Agent Rules & Guidelines
 
-Chào mừng bạn (AI Agent) đến với dự án **Vietnam Airport Tourist Assistant (VATA)**. Hãy tuân thủ nghiêm ngặt các quy tắc dưới đây khi làm việc trên codebase này:
+Dự án **LogiRoute VN** - Nền tảng tối ưu lộ trình và quản lý logistics cho Việt Nam.
 
 ## 1. Nguyên Tắc Cốt Lõi (Core Principles)
-*   **Không dùng dữ liệu giả vô nghĩa (No dummy/placeholder text):** Tất cả các nhãn (labels), tên địa điểm, hoặc thông tin đều phải có nghĩa và sử dụng nội dung thực tế liên quan đến Sân bay Việt Nam (vd: Sân bay Tân Sơn Nhất - SGN).
-*   **Bảo mật & Quyền riêng tư (Privacy-first):** Geolocation API phải được yêu cầu một cách an toàn. Phải xử lý triệt để trường hợp người dùng từ chối cấp quyền định vị (hướng dẫn họ chọn sân bay thủ công).
-*   **Tiếp cận Không rào cản (Zero Friction):** MVP không sử dụng cơ chế đăng nhập. Mọi cấu hình ngôn ngữ, lịch trình hoặc vị trí ưa thích của khách phải được lưu trữ trực tiếp trên thiết bị (LocalStorage).
+*   **Dữ liệu thực tế (Real-world data):** Tất cả tọa độ, địa chỉ, biển số xe phải sử dụng dữ liệu hợp lệ tại Việt Nam (vd: TP.HCM, Hà Nội). Không dùng dữ liệu giả vô nghĩa.
+*   **Tách biệt Engine & UI (Separation of Concerns):** Core optimization engine (`core_engine/`) phải hoàn toàn độc lập với HTTP layer (`apps/api/`) và UI (`apps/web/`). Engine chỉ nhận input và trả output qua Pydantic models.
+*   **Deterministic & Explainable:** Kết quả tối ưu phải tái lập được (deterministic) và giải thích được (tại sao đơn hàng X được gán cho xe Y).
 
-## 2. Tiêu chuẩn Đa ngôn ngữ (i18n Rules)
-*   Không Hardcode chuỗi tiếng Anh hoặc tiếng Việt vào component. Tất cả chuỗi hiển thị phải được đặt trong các file dịch `locales/*.json` và gọi thông qua thư viện `next-intl` (hoặc react-intl tương đương).
-*   Các ngôn ngữ bắt buộc hỗ trợ: **en** (Tiếng Anh - mặc định), **vi** (Tiếng Việt), **zh** (Tiếng Trung), **ko** (Tiếng Hàn).
+## 2. Tiêu chuẩn Code Python
+*   Tuân thủ **PEP 8**. Sử dụng **type hints** cho mọi hàm và biến.
+*   Sử dụng **Pydantic v2** cho validation và serialization của input/output contracts.
+*   Mọi module phải có khối `if __name__ == "__main__":` để test độc lập.
+*   Xử lý exception kỹ lưỡng: khi solver không tìm được lời giải khả thi, trả về `status: "INFEASIBLE"` kèm danh sách `unassigned_orders`.
 
 ## 3. Tiêu chuẩn UI & Frontend
 *   Sử dụng **Tailwind CSS** cho giao diện. Áp dụng phong cách thiết kế hiện đại (Glassmorphism, Card bóng đổ nhẹ, màu sắc tương phản cao hỗ trợ người dùng dưới ánh nắng ngoài trời).

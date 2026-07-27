@@ -1,0 +1,18 @@
+[build-system]
+requires = ["setuptools>=75"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "logiroute-core-engine"
+version = "0.1.0"
+description = "Vehicle route optimization engine for LogiRoute VN"
+readme = "core_engine/README.md"
+requires-python = ">=3.11"
+dependencies = [
+    "ortools==9.15.6755",
+    "pydantic>=2.10,<3.0",
+]
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["core_engine*"]

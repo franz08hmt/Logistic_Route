@@ -1,13 +1,22 @@
 # Core Engine
 
-Workspace for route optimization algorithms.
+Google OR-Tools implementation of the Capacitated Vehicle Routing Problem used
+by LogiRoute VN.
 
-## Planned responsibilities
+The engine accepts one depot, a fleet with weight capacities, and delivery
+orders. It minimizes straight-line Haversine distance, allows infeasible orders
+to remain unassigned, and returns typed Pydantic route output.
 
-- Build a graph from road-network or provider data.
-- Model vehicle capacity, delivery time windows, driver shifts, and service times.
-- Produce deterministic route plans with explainable constraints.
-- Keep the optimization engine independent from HTTP and UI concerns.
+Install it from the monorepo root in editable mode:
 
-The first implementation should define input/output contracts and a small deterministic baseline before introducing an external solver.
+```powershell
+cd D:\Individual_Project\apps\api
+.\.venv\Scripts\python.exe -m pip install -e ..\..
+```
 
+Run the standalone demo:
+
+```powershell
+cd D:\Individual_Project
+apps\api\.venv\Scripts\python.exe core_engine\solver.py
+```

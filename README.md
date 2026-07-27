@@ -72,3 +72,4 @@ npm.cmd run build
 - `GET|POST /api/v1/vehicles`
 - `DELETE /api/v1/vehicles/{vehicle_id}`
 - `POST /api/v1/seed`
+- `POST /api/v1/routes/optimize`

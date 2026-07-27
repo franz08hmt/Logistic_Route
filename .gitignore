@@ -10,6 +10,7 @@ __pycache__/
 .venv/
 venv/
 .pytest_cache/
+*.egg-info/
 
 # Environment and secrets
 .env
@@ -25,4 +26,3 @@ venv/
 
 # Local database data
 postgres_data/
-

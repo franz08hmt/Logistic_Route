@@ -26,6 +26,7 @@ Invoke-RestMethod -Method Post -Uri http://localhost:8000/api/v1/seed
 Invoke-RestMethod -Uri http://localhost:8000/api/v1/overview
 Invoke-RestMethod -Uri http://localhost:8000/api/v1/orders
 Invoke-RestMethod -Uri http://localhost:8000/api/v1/vehicles
+Invoke-RestMethod -Method Post -Uri http://localhost:8000/api/v1/routes/optimize
 ```
 
 OpenAPI docs: <http://localhost:8000/docs>
