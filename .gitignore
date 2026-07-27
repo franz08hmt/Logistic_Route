@@ -1,0 +1,28 @@
+# Node / Next.js
+node_modules/
+.next/
+out/
+*.tsbuildinfo
+
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+.pytest_cache/
+
+# Environment and secrets
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+
+# Local tooling
+.DS_Store
+.vscode/
+.idea/
+
+# Local database data
+postgres_data/
+
