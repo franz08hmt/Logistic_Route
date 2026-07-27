@@ -1,75 +1,218 @@
-# LogiRoute VN
+# LogiRoute VN — Smart Logistics & Route Optimization Platform
 
-Route optimization and logistics management platform for Vietnam.
+LogiRoute VN là nền tảng quản lý vận hành giao nhận tại Việt Nam, tập trung vào
+quản lý đơn hàng, đội xe và tối ưu tuyến giao hàng có ràng buộc tải trọng. Dự án
+được xây dựng theo kiến trúc monorepo với Next.js, FastAPI, PostgreSQL/PostGIS,
+Google OR-Tools, Leaflet/OpenStreetMap và OSRM.
 
-## Stack
+## Tính năng chính
 
-- `apps/web`: Next.js App Router dashboard.
-- `apps/api`: FastAPI + SQLAlchemy 2.0 + psycopg.
-- `core_engine`: Python route optimization workspace.
-- `docker-compose.yml`: PostgreSQL 17 + PostGIS 3.5.
+- Dashboard KPI lấy dữ liệu trực tiếp từ PostgreSQL.
+- CRUD đơn hàng và đội xe với kiểm tra dữ liệu ở cả frontend lẫn backend.
+- Tạo dữ liệu mẫu TP.HCM để trình diễn nhanh.
+- Phân công các đơn `PENDING` cho đội xe bằng CVRP/OR-Tools.
+- Hiển thị Depot, thứ tự điểm giao và tuyến riêng cho từng xe trên Leaflet.
+- Khớp đường vẽ theo mạng lưới giao thông thực tế bằng OSRM Route Service.
+- Đồng bộ lại trạng thái Orders và hiển thị toast sau mỗi lần tối ưu.
 
-## Run locally
+## Kiến trúc hệ thống
 
-### 1. Start PostGIS
+```mermaid
+flowchart LR
+    U["Điều phối viên"] --> W["Next.js App Router"]
+    W -->|"REST/JSON"| A["FastAPI"]
+    A -->|"SQLAlchemy"| DB[("PostgreSQL + PostGIS")]
+    A --> S["Core Engine · OR-Tools CVRP"]
+    S --> A
+    W --> L["Leaflet + OpenStreetMap"]
+    W -->|"Route geometry"| O["OSRM Route Service"]
+```
 
-Host port `5433` is intentional: another PostgreSQL instance already uses
-`5432` on this machine.
+Luồng tối ưu:
+
+1. FastAPI đọc Depot, Vehicles và Orders `PENDING` từ database.
+2. `core_engine` xác định thứ tự giao và xe được phân công.
+3. Backend cập nhật đơn đã phân công sang `ASSIGNED`.
+4. Frontend lấy lại danh sách Orders và yêu cầu OSRM trả về GeoJSON bám theo
+   đường giao thông để vẽ lên Leaflet.
+
+> OSRM hiện chỉ dùng để vẽ đường giao thông. Ma trận chi phí của solver vẫn dựa
+> trên khoảng cách Haversine; tích hợp OSRM Table Service vào core engine là một
+> bước nâng cấp độc lập.
+
+## Công nghệ
+
+| Lớp | Công nghệ |
+|---|---|
+| Frontend | Next.js 16, React 19, TypeScript |
+| Bản đồ | Leaflet, React-Leaflet, OpenStreetMap |
+| Road routing | OSRM Route Service (GeoJSON) |
+| Backend | FastAPI, Pydantic |
+| ORM / Database | SQLAlchemy 2, PostgreSQL 17, PostGIS 3.5 |
+| Optimization | Python, Google OR-Tools |
+| Test | Pytest, Vitest |
+| Local infrastructure | Docker Compose |
+
+## Cấu trúc monorepo
+
+```text
+logi-route-vn/
+├── apps/
+│   ├── api/                  # FastAPI, models, schemas, REST routers
+│   └── web/                  # Next.js dashboard, Orders, Fleet, Map
+├── core_engine/              # CVRP solver dùng OR-Tools
+├── tasks/                    # Kế hoạch và tiến độ
+├── docker-compose.yml        # PostgreSQL + PostGIS local
+└── README.md
+```
+
+## Chạy local
+
+### Yêu cầu
+
+- Docker Desktop đang chạy với Linux containers.
+- Node.js 20+ và npm.
+- Python 3.11+.
+- Git.
+
+Các cổng mặc định:
+
+| Dịch vụ | Địa chỉ |
+|---|---|
+| Next.js | `http://localhost:3000` hoặc cổng Next.js in ra |
+| FastAPI | `http://localhost:8000` |
+| Swagger UI | `http://localhost:8000/docs` |
+| PostgreSQL/PostGIS | `localhost:5433` |
+
+### 1. Tạo file môi trường
+
+Tại thư mục gốc:
+
+```cmd
+copy .env.example .env
+```
+
+PowerShell tương đương:
 
 ```powershell
+Copy-Item .env.example .env
+```
+
+Các biến có thể cấu hình:
+
+```dotenv
+NEXT_PUBLIC_API_BASE_URL=http://localhost:8000
+NEXT_PUBLIC_OSRM_BASE_URL=https://router.project-osrm.org
+DATABASE_URL=postgresql+psycopg://logiroute:logiroute_dev_password_change_me@localhost:5433/logiroute
+```
+
+### 2. Khởi động PostgreSQL/PostGIS
+
+```cmd
 cd D:\Individual_Project
 docker compose up -d postgis
 docker compose ps
 ```
 
-### 2. Initialize the database and run FastAPI
+Container sẵn sàng khi trạng thái `logiroute-postgis` là `healthy`.
 
-```powershell
+### 3. Khởi tạo và chạy FastAPI
+
+Lần đầu:
+
+```cmd
 cd D:\Individual_Project\apps\api
-.\.venv\Scripts\Activate.ps1
-python -m pip install -r requirements.txt
-python -m scripts.init_db
-uvicorn app.main:app --reload --port 8000
+python -m venv .venv
+.\.venv\Scripts\python.exe -m pip install -r requirements.txt
+.\.venv\Scripts\python.exe -m scripts.init_db
 ```
 
-In another terminal, seed the demo dataset:
+Mỗi lần mở máy/chạy lại:
 
-```powershell
-Invoke-RestMethod -Method Post -Uri http://localhost:8000/api/v1/seed
-Invoke-RestMethod -Uri http://localhost:8000/api/v1/overview
+```cmd
+cd D:\Individual_Project\apps\api
+.\.venv\Scripts\python.exe -m uvicorn app.main:app --reload --port 8000
 ```
 
-API docs: <http://localhost:8000/docs>
+### 4. Nạp dữ liệu mẫu
 
-### 3. Run Next.js
+Mở terminal thứ hai sau khi API đã chạy:
 
-```powershell
+```cmd
+curl.exe -X POST http://localhost:8000/api/v1/seed
+curl.exe http://localhost:8000/api/v1/overview
+```
+
+Seed là idempotent: gọi lại sẽ không tạo trùng Depot, Vehicles hoặc Orders.
+
+### 5. Chạy Next.js
+
+Mở terminal thứ ba:
+
+```cmd
 cd D:\Individual_Project\apps\web
-npm.cmd install
-npm.cmd run dev
+npm install
+npm run dev
 ```
 
-Open <http://localhost:3000> (or the port printed by Next.js if `3000` is in use).
-The Dashboard fetches live KPI values from `/api/v1/overview`.
+Mở URL do Next.js in ra, sau đó kiểm tra:
 
-## Verification
+- `/dashboard` — KPI tổng quan.
+- `/orders` — tạo, xem và xóa đơn hàng.
+- `/fleet` — tạo, xem và xóa xe.
+- `/map` — tối ưu và hiển thị tuyến giao hàng thực tế.
 
-```powershell
+## API endpoints
+
+Base URL local: `http://localhost:8000`
+
+| Method | Endpoint | Mô tả |
+|---|---|---|
+| `GET` | `/api/health` | Kiểm tra trạng thái API |
+| `GET` | `/api/v1/overview` | KPI thực tế từ database |
+| `GET` | `/api/v1/orders` | Danh sách đơn hàng |
+| `POST` | `/api/v1/orders` | Tạo đơn hàng mới |
+| `DELETE` | `/api/v1/orders/{order_id}` | Xóa đơn hàng |
+| `GET` | `/api/v1/vehicles` | Danh sách đội xe |
+| `POST` | `/api/v1/vehicles` | Tạo xe mới |
+| `DELETE` | `/api/v1/vehicles/{vehicle_id}` | Xóa xe |
+| `POST` | `/api/v1/seed` | Tạo dữ liệu demo TP.HCM |
+| `POST` | `/api/v1/routes/optimize` | Phân tuyến các đơn `PENDING` |
+
+OpenAPI tương tác có tại [http://localhost:8000/docs](http://localhost:8000/docs).
+
+## Kiểm thử và quality gates
+
+Backend:
+
+```cmd
 cd D:\Individual_Project\apps\api
 .\.venv\Scripts\python.exe -m pytest -q
-
-cd D:\Individual_Project\apps\web
-npm.cmd run typecheck
-npm.cmd run build
 ```
 
-## API routes
+Frontend:
 
-- `GET /api/health`
-- `GET /api/v1/overview`
-- `GET|POST /api/v1/orders`
-- `DELETE /api/v1/orders/{order_id}`
-- `GET|POST /api/v1/vehicles`
-- `DELETE /api/v1/vehicles/{vehicle_id}`
-- `POST /api/v1/seed`
-- `POST /api/v1/routes/optimize`
+```cmd
+cd D:\Individual_Project\apps\web
+npm test
+npm run typecheck
+npm run build
+```
+
+## Lưu ý OSRM
+
+Frontend mặc định dùng `https://router.project-osrm.org`, là demo server công
+cộng phù hợp cho phát triển và trình diễn. Nếu OSRM không phản hồi, giao diện tự
+động dùng đường nối thẳng làm fallback và thông báo rõ trạng thái. Với production
+hoặc lưu lượng lớn, nên tự host OSRM hoặc chọn nhà cung cấp routing có SLA, rate
+limit và điều khoản sử dụng phù hợp.
+
+## Trạng thái phát triển
+
+- [x] Database models, seed data và CRUD API.
+- [x] Dashboard, Orders và Fleet UI.
+- [x] CVRP route optimization integration.
+- [x] Leaflet/OpenStreetMap với OSRM road geometry.
+- [ ] Authentication và phân quyền.
+- [ ] OSRM Table Service cho ma trận chi phí theo đường thực tế.
+- [ ] Lưu lịch sử phiên tối ưu và theo dõi xe thời gian thực.

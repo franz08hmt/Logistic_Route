@@ -1,7 +1,7 @@
 'use client';
 
 import { divIcon, latLngBounds, type LatLngTuple } from 'leaflet';
-import { useEffect, useMemo } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import {
   MapContainer,
   Marker,
@@ -11,22 +11,26 @@ import {
   useMap,
 } from 'react-leaflet';
 
-import { buildAllMapPositions, buildRoutePositions } from './map-data';
+import {
+  buildRoutePositions,
+  fetchOsrmRouteGeometry,
+} from './map-data';
 import type { OptimizationResult } from './types';
 
 const HO_CHI_MINH_CITY: LatLngTuple = [10.7769, 106.7009];
 const ROUTE_COLORS = ['#52d6a3', '#f6c85f', '#6aa9ff', '#ef8ca3'];
 
-function FitRouteBounds({ result }: { result: OptimizationResult | null }) {
+type RoutingState = 'idle' | 'loading' | 'ready' | 'fallback';
+
+function FitRouteBounds({ positions }: { positions: LatLngTuple[] }) {
   const map = useMap();
 
   useEffect(() => {
-    if (!result) {
+    if (positions.length === 0) {
       map.setView(HO_CHI_MINH_CITY, 12);
       return;
     }
 
-    const positions = buildAllMapPositions(result);
     if (positions.length > 1) {
       map.fitBounds(latLngBounds(positions), {
         padding: [36, 36],
@@ -35,7 +39,7 @@ function FitRouteBounds({ result }: { result: OptimizationResult | null }) {
     } else {
       map.setView(positions[0], 14);
     }
-  }, [map, result]);
+  }, [map, positions]);
 
   return null;
 }
@@ -59,15 +63,80 @@ const depotIcon = divIcon({
 });
 
 export function RouteMap({ result }: { result: OptimizationResult | null }) {
+  const [roadPositions, setRoadPositions] = useState<
+    Record<string, LatLngTuple[]>
+  >({});
+  const [routingState, setRoutingState] = useState<RoutingState>('idle');
+
+  useEffect(() => {
+    const controller = new AbortController();
+
+    if (!result || result.routes.length === 0) {
+      setRoadPositions({});
+      setRoutingState('idle');
+      return () => controller.abort();
+    }
+
+    setRoadPositions({});
+    setRoutingState('loading');
+
+    void Promise.all(
+      result.routes.map(async (route) => {
+        try {
+          const positions = await fetchOsrmRouteGeometry(
+            result.depot,
+            route.stops,
+            controller.signal,
+          );
+          return [route.vehicle_id, positions] as const;
+        } catch {
+          return [route.vehicle_id, null] as const;
+        }
+      }),
+    ).then((routes) => {
+      if (controller.signal.aborted) {
+        return;
+      }
+
+      const nextRoadPositions: Record<string, LatLngTuple[]> = {};
+      let missingRouteCount = 0;
+
+      for (const [vehicleId, positions] of routes) {
+        if (positions) {
+          nextRoadPositions[vehicleId] = positions;
+        } else {
+          missingRouteCount += 1;
+        }
+      }
+
+      setRoadPositions(nextRoadPositions);
+      setRoutingState(missingRouteCount > 0 ? 'fallback' : 'ready');
+    });
+
+    return () => controller.abort();
+  }, [result]);
+
   const routeLayers = useMemo(
     () =>
       result?.routes.map((route, routeIndex) => ({
         route,
         color: ROUTE_COLORS[routeIndex % ROUTE_COLORS.length],
-        positions: buildRoutePositions(result.depot, route.stops),
+        positions:
+          roadPositions[route.vehicle_id] ??
+          buildRoutePositions(result.depot, route.stops),
       })) ?? [],
-    [result],
+    [result, roadPositions],
   );
+  const visiblePositions = useMemo<LatLngTuple[]>(() => {
+    if (!result) {
+      return [];
+    }
+
+    return [
+      [result.depot.latitude, result.depot.longitude],
+      ...routeLayers.flatMap((layer) => layer.positions),
+    ];
+  }, [result, routeLayers]);
 
   return (
     <section className="route-map" aria-label="Bản đồ tuyến đường tối ưu">
@@ -76,8 +145,20 @@ export function RouteMap({ result }: { result: OptimizationResult | null }) {
           <span className="eyebrow">Live map</span>
           <h2>Bản đồ điều phối TP.HCM</h2>
         </div>
-        <span className="map-provider">OpenStreetMap · Leaflet</span>
+        <span className="map-provider">OpenStreetMap · Leaflet · OSRM</span>
       </div>
+      {routingState === 'loading' && (
+        <p className="map-routing-status" role="status">
+          <span className="map-routing-spinner" aria-hidden="true" />
+          Đang khớp lộ trình với mạng lưới đường giao thông…
+        </p>
+      )}
+      {routingState === 'fallback' && (
+        <p className="map-routing-warning" role="status">
+          OSRM tạm thời không khả dụng cho một số tuyến. Bản đồ đang dùng đường
+          nối dự phòng.
+        </p>
+      )}
 
       <div className="leaflet-map-frame">
         <MapContainer
@@ -91,7 +172,7 @@ export function RouteMap({ result }: { result: OptimizationResult | null }) {
             url="https://tile.openstreetmap.org/{z}/{x}/{y}.png"
             maxZoom={19}
           />
-          <FitRouteBounds result={result} />
+          <FitRouteBounds positions={visiblePositions} />
 
           {result && (
             <Marker

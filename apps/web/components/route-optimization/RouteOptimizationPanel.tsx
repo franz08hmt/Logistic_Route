@@ -1,8 +1,14 @@
 'use client';
 
 import dynamic from 'next/dynamic';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 
+import {
+  isOrderList,
+  requestApi,
+} from '../admin/api-contracts';
+import { publishOrdersUpdated } from '../admin/orders-sync';
+import { getOptimizationSuccessMessage } from './optimization-feedback';
 import {
   isOptimizationResult,
   type OptimizationResult,
@@ -32,6 +38,19 @@ export function RouteOptimizationPanel() {
   const [result, setResult] = useState<OptimizationResult | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [toastMessage, setToastMessage] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!toastMessage) {
+      return;
+    }
+
+    const timeoutId = window.setTimeout(() => {
+      setToastMessage(null);
+    }, 5000);
+
+    return () => window.clearTimeout(timeoutId);
+  }, [toastMessage]);
 
   async function optimizeRoutes() {
     setIsLoading(true);
@@ -58,6 +77,23 @@ export function RouteOptimizationPanel() {
       }
 
       setResult(payload);
+      const assignedOrderCount = payload.routes.reduce(
+        (total, route) => total + route.stops.length,
+        0,
+      );
+      setToastMessage(getOptimizationSuccessMessage(assignedOrderCount));
+
+      try {
+        const ordersPayload = await requestApi('/api/v1/orders');
+        if (!isOrderList(ordersPayload)) {
+          throw new Error('API returned an invalid order list after optimization');
+        }
+        publishOrdersUpdated(ordersPayload);
+      } catch {
+        setError(
+          'Tuyến đã được tối ưu, nhưng danh sách đơn hàng chưa đồng bộ. Hãy tải lại trang Orders.',
+        );
+      }
     } catch (requestError) {
       setError(
         requestError instanceof Error
@@ -76,6 +112,19 @@ export function RouteOptimizationPanel() {
 
   return (
     <section className="optimization-workspace">
+      {toastMessage && (
+        <div className="success-toast" role="status" aria-live="polite">
+          <span className="success-toast-icon" aria-hidden="true">✓</span>
+          <p>{toastMessage}</p>
+          <button
+            type="button"
+            onClick={() => setToastMessage(null)}
+            aria-label="Đóng thông báo"
+          >
+            ×
+          </button>
+        </div>
+      )}
       <div className="optimization-toolbar">
         <div>
           <p className="toolbar-kicker">VRP Engine · OR-Tools</p>

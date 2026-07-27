@@ -1,6 +1,10 @@
 import { describe, expect, it } from 'vitest';
 
-import { buildRoutePositions } from './map-data';
+import {
+  buildOsrmRouteUrl,
+  buildRoutePositions,
+  parseOsrmRouteGeometry,
+} from './map-data';
 import type { OptimizationResult } from './types';
 
 const result: OptimizationResult = {
@@ -49,5 +53,60 @@ describe('buildRoutePositions', () => {
       [10.765, 106.603],
       [10.8632, 106.6535],
     ]);
+  });
+});
+
+describe('buildOsrmRouteUrl', () => {
+  it('uses longitude-latitude order and keeps the optimized stop sequence', () => {
+    const url = new URL(
+      buildOsrmRouteUrl(
+        result.depot,
+        result.routes[0].stops,
+        'https://router.example.test/',
+      ),
+    );
+
+    expect(url.origin).toBe('https://router.example.test');
+    expect(url.pathname).toBe(
+      '/route/v1/driving/106.6535,10.8632;106.665,10.838;106.603,10.765;106.6535,10.8632',
+    );
+    expect(url.searchParams.get('overview')).toBe('full');
+    expect(url.searchParams.get('geometries')).toBe('geojson');
+    expect(url.searchParams.get('steps')).toBe('false');
+  });
+});
+
+describe('parseOsrmRouteGeometry', () => {
+  it('converts GeoJSON longitude-latitude coordinates to Leaflet tuples', () => {
+    expect(
+      parseOsrmRouteGeometry({
+        code: 'Ok',
+        routes: [
+          {
+            geometry: {
+              type: 'LineString',
+              coordinates: [
+                [106.6535, 10.8632],
+                [106.665, 10.838],
+              ],
+            },
+          },
+        ],
+      }),
+    ).toEqual([
+      [10.8632, 106.6535],
+      [10.838, 106.665],
+    ]);
+  });
+
+  it.each([
+    { code: 'NoRoute', routes: [] },
+    { code: 'Ok', routes: [{ geometry: { coordinates: [] } }] },
+    {
+      code: 'Ok',
+      routes: [{ geometry: { coordinates: [['invalid', 10.8]] } }],
+    },
+  ])('returns null for an unusable OSRM response', (payload) => {
+    expect(parseOsrmRouteGeometry(payload)).toBeNull();
   });
 });

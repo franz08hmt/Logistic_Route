@@ -10,6 +10,7 @@ import {
   type OrderStatus,
 } from './api-contracts';
 import { CreateOrderDialog } from './CreateOrderDialog';
+import { subscribeToOrdersUpdated } from './orders-sync';
 
 const weightFormatter = new Intl.NumberFormat('vi-VN', {
   maximumFractionDigits: 1,
@@ -56,8 +57,17 @@ export function OrdersManager() {
     }
 
     void loadOrders();
+    const unsubscribe = subscribeToOrdersUpdated((updatedOrders) => {
+      if (active) {
+        setOrders(updatedOrders);
+        setError(null);
+        setIsLoading(false);
+      }
+    });
+
     return () => {
       active = false;
+      unsubscribe();
     };
   }, []);
 
