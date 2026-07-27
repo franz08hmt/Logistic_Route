@@ -104,6 +104,8 @@ Các biến có thể cấu hình:
 NEXT_PUBLIC_API_BASE_URL=http://localhost:8000
 NEXT_PUBLIC_OSRM_BASE_URL=https://router.project-osrm.org
 DATABASE_URL=postgresql+psycopg://logiroute:logiroute_dev_password_change_me@localhost:5433/logiroute
+JWT_SECRET_KEY=change-this-development-secret-before-production
+ACCESS_TOKEN_EXPIRE_MINUTES=60
 ```
 
 ### 2. Khởi động PostgreSQL/PostGIS
@@ -145,6 +147,25 @@ curl.exe http://localhost:8000/api/v1/overview
 
 Seed là idempotent: gọi lại sẽ không tạo trùng Depot, Vehicles hoặc Orders.
 
+### 4b. Khởi tạo tài khoản demo
+
+Sau khi API đã chạy, tạo ba tài khoản dùng cho local testing:
+
+```cmd
+curl.exe -X POST http://localhost:8000/api/v1/seed/users
+```
+
+Tài khoản demo:
+
+| Email | Mật khẩu | Role |
+|---|---|---|
+| `admin@logiroute.vn` | `123456` | `ADMIN` |
+| `dispatcher@logiroute.vn` | `123456` | `DISPATCHER` |
+| `driver1@logiroute.vn` | `123456` | `DRIVER` |
+
+Đây là credentials dành riêng cho môi trường local. Không sử dụng chúng trong
+production và phải thay `JWT_SECRET_KEY` bằng secret ngẫu nhiên, lưu ngoài Git.
+
 ### 5. Chạy Next.js
 
 Mở terminal thứ ba:
@@ -169,6 +190,8 @@ Base URL local: `http://localhost:8000`
 | Method | Endpoint | Mô tả |
 |---|---|---|
 | `GET` | `/api/health` | Kiểm tra trạng thái API |
+| `POST` | `/api/v1/auth/login` | Đăng nhập và nhận JWT access token |
+| `GET` | `/api/v1/auth/me` | Lấy thông tin user hiện tại |
 | `GET` | `/api/v1/overview` | KPI thực tế từ database |
 | `GET` | `/api/v1/orders` | Danh sách đơn hàng |
 | `POST` | `/api/v1/orders` | Tạo đơn hàng mới |
@@ -177,9 +200,41 @@ Base URL local: `http://localhost:8000`
 | `POST` | `/api/v1/vehicles` | Tạo xe mới |
 | `DELETE` | `/api/v1/vehicles/{vehicle_id}` | Xóa xe |
 | `POST` | `/api/v1/seed` | Tạo dữ liệu demo TP.HCM |
+| `POST` | `/api/v1/seed/users` | Tạo tài khoản demo local |
 | `POST` | `/api/v1/routes/optimize` | Phân tuyến các đơn `PENDING` |
 
 OpenAPI tương tác có tại [http://localhost:8000/docs](http://localhost:8000/docs).
+
+Các endpoint Orders, Vehicles và Route Optimization yêu cầu header:
+
+```text
+Authorization: Bearer <access_token>
+```
+
+Quyền hiện tại:
+
+| Role | Đọc Orders/Vehicles | Tạo/Xóa Orders/Vehicles | Optimize routes |
+|---|---:|---:|---:|
+| `ADMIN` | Có | Có | Có |
+| `DISPATCHER` | Có | Có | Có |
+| `DRIVER` | Có | Không | Không |
+
+### Test login và endpoint được bảo vệ
+
+```cmd
+curl.exe -X POST http://localhost:8000/api/v1/auth/login -H "Content-Type: application/json" -d "{\"email\":\"dispatcher@logiroute.vn\",\"password\":\"123456\"}"
+```
+
+Copy giá trị `access_token` trong response rồi dùng:
+
+```cmd
+curl.exe http://localhost:8000/api/v1/auth/me -H "Authorization: Bearer <access_token>"
+curl.exe http://localhost:8000/api/v1/orders -H "Authorization: Bearer <access_token>"
+curl.exe -X POST http://localhost:8000/api/v1/routes/optimize -H "Authorization: Bearer <access_token>"
+```
+
+Không có token hoặc token không hợp lệ sẽ nhận `401`; user hợp lệ nhưng không đủ
+role sẽ nhận `403`.
 
 ## Kiểm thử và quality gates
 
@@ -213,6 +268,6 @@ limit và điều khoản sử dụng phù hợp.
 - [x] Dashboard, Orders và Fleet UI.
 - [x] CVRP route optimization integration.
 - [x] Leaflet/OpenStreetMap với OSRM road geometry.
-- [ ] Authentication và phân quyền.
+- [x] Authentication và phân quyền RBAC cho API.
 - [ ] OSRM Table Service cho ma trận chi phí theo đường thực tế.
 - [ ] Lưu lịch sử phiên tối ưu và theo dõi xe thời gian thực.

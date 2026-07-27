@@ -1,7 +1,7 @@
 from sqlalchemy import text
 
 from app.db.base import Base
-from app.db.models import Depot, Order, Vehicle  # noqa: F401 - register ORM tables
+from app.db.models import Depot, Order, User, Vehicle  # noqa: F401 - register ORM tables
 from app.db.session import engine
 
 

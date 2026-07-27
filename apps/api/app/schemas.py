@@ -1,13 +1,45 @@
+from datetime import datetime
 from uuid import UUID
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, field_validator
 
-from app.db.models import OrderStatus, VehicleStatus
+from app.db.models import OrderStatus, UserRole, VehicleStatus
 from core_engine.solver import Route as OptimizedRoute
 
 
 class OrmSchema(BaseModel):
     model_config = ConfigDict(from_attributes=True)
+
+
+class LoginRequest(BaseModel):
+    email: str = Field(min_length=3, max_length=255)
+    password: str = Field(min_length=6, max_length=128)
+
+    @field_validator("email")
+    @classmethod
+    def normalize_email(cls, value: str) -> str:
+        normalized = value.strip().lower()
+        if "@" not in normalized or normalized.startswith("@") or normalized.endswith("@"):
+            raise ValueError("email must be valid")
+        return normalized
+
+
+class TokenResponse(BaseModel):
+    access_token: str
+    token_type: str = "bearer"
+
+
+class UserRead(OrmSchema):
+    id: UUID
+    email: str
+    full_name: str
+    role: UserRole
+    created_at: datetime
+
+
+class SeedUsersResponse(BaseModel):
+    created_count: int
+    users: list[UserRead]
 
 
 class DepotRead(OrmSchema):

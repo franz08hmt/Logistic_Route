@@ -3,9 +3,10 @@ from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
-from app.db.models import Depot, Order, OrderStatus, Vehicle, VehicleStatus
+from app.core.security import get_password_hash
+from app.db.models import Depot, Order, OrderStatus, User, UserRole, Vehicle, VehicleStatus
 from app.db.session import get_db
-from app.schemas import DepotRead, SeedResponse
+from app.schemas import DepotRead, SeedResponse, SeedUsersResponse, UserRead
 
 
 router = APIRouter(tags=["seed"])
@@ -80,6 +81,27 @@ SEED_ORDERS = [
     },
 ]
 
+SEED_USERS = [
+    {
+        "email": "admin@logiroute.vn",
+        "password": "123456",
+        "full_name": "LogiRoute Admin",
+        "role": UserRole.ADMIN,
+    },
+    {
+        "email": "dispatcher@logiroute.vn",
+        "password": "123456",
+        "full_name": "LogiRoute Dispatcher",
+        "role": UserRole.DISPATCHER,
+    },
+    {
+        "email": "driver1@logiroute.vn",
+        "password": "123456",
+        "full_name": "LogiRoute Driver 1",
+        "role": UserRole.DRIVER,
+    },
+]
+
 
 @router.post("/seed", response_model=SeedResponse, status_code=status.HTTP_201_CREATED)
 def seed_data(db: Session = Depends(get_db)) -> SeedResponse:
@@ -118,4 +140,38 @@ def seed_data(db: Session = Depends(get_db)) -> SeedResponse:
         vehicles_created=vehicles_created,
         orders_created=orders_created,
         depot=DepotRead.model_validate(depot),
+    )
+
+
+@router.post("/seed/users", response_model=SeedUsersResponse, status_code=status.HTTP_201_CREATED)
+def seed_users(db: Session = Depends(get_db)) -> SeedUsersResponse:
+    """Create local demo users once; repeated calls do not overwrite accounts."""
+    created_count = 0
+    for user_data in SEED_USERS:
+        exists = db.scalar(select(User).where(User.email == user_data["email"]))
+        if exists is None:
+            db.add(
+                User(
+                    email=user_data["email"],
+                    hashed_password=get_password_hash(user_data["password"]),
+                    full_name=user_data["full_name"],
+                    role=user_data["role"],
+                )
+            )
+            created_count += 1
+
+    try:
+        db.commit()
+    except IntegrityError as exc:
+        db.rollback()
+        raise HTTPException(status_code=409, detail="Seed users conflict with existing records") from exc
+
+    users = list(
+        db.scalars(
+            select(User).where(User.email.in_([user["email"] for user in SEED_USERS])).order_by(User.email)
+        ).all()
+    )
+    return SeedUsersResponse(
+        created_count=created_count,
+        users=[UserRead.model_validate(user) for user in users],
     )

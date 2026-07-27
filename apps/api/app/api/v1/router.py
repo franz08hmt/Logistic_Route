@@ -1,9 +1,10 @@
 from fastapi import APIRouter
 
-from app.api.v1 import orders, overview, routes, seed, vehicles
+from app.api.v1 import auth, orders, overview, routes, seed, vehicles
 
 
 router = APIRouter()
+router.include_router(auth.router)
 router.include_router(overview.router)
 router.include_router(orders.router)
 router.include_router(vehicles.router)

@@ -11,6 +11,9 @@ DATABASE_URL = getenv(
     "DATABASE_URL",
     "postgresql+psycopg://logiroute:logiroute_dev_password_change_me@localhost:5433/logiroute",
 )
+JWT_SECRET_KEY = getenv("JWT_SECRET_KEY", "logiroute-dev-secret-change-me")
+JWT_ALGORITHM = "HS256"
+ACCESS_TOKEN_EXPIRE_MINUTES = int(getenv("ACCESS_TOKEN_EXPIRE_MINUTES", "60"))
 
 _default_web_origins = ",".join(
     (

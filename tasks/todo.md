@@ -15,6 +15,6 @@
 - [x] Add `POST /api/v1/routes/optimize` with pending-order assignment.
 - [x] Add the interactive Map/Optimization page with loading, route cards, summary metrics, and route preview.
 - [x] Render optimized routes on real roads with OSRM and refresh Orders state after optimization.
+- [x] Add User authentication, JWT access tokens, and role-based protection for operational APIs.
 
-- [ ] Add authentication and role-based access control.
 - [ ] Use a road-network cost matrix and add advanced optimization constraints.

@@ -7,6 +7,8 @@ from sqlalchemy.orm import Session
 
 from app.db.models import Order
 from app.db.session import get_db
+from app.core.security import get_current_user, require_roles
+from app.db.models import User, UserRole
 from app.schemas import OrderCreate, OrderRead
 
 
@@ -14,12 +16,19 @@ router = APIRouter(prefix="/orders", tags=["orders"])
 
 
 @router.get("", response_model=list[OrderRead])
-def list_orders(db: Session = Depends(get_db)) -> list[Order]:
+def list_orders(
+    db: Session = Depends(get_db),
+    _current_user: User = Depends(get_current_user),
+) -> list[Order]:
     return list(db.scalars(select(Order).order_by(Order.order_code)).all())
 
 
 @router.post("", response_model=OrderRead, status_code=status.HTTP_201_CREATED)
-def create_order(payload: OrderCreate, db: Session = Depends(get_db)) -> Order:
+def create_order(
+    payload: OrderCreate,
+    db: Session = Depends(get_db),
+    _current_user: User = Depends(require_roles(UserRole.ADMIN, UserRole.DISPATCHER)),
+) -> Order:
     existing = db.scalar(select(Order).where(Order.order_code == payload.order_code))
     if existing:
         raise HTTPException(status_code=409, detail="order_code already exists")
@@ -36,7 +45,11 @@ def create_order(payload: OrderCreate, db: Session = Depends(get_db)) -> Order:
 
 
 @router.delete("/{order_id}", status_code=status.HTTP_204_NO_CONTENT)
-def delete_order(order_id: UUID, db: Session = Depends(get_db)) -> Response:
+def delete_order(
+    order_id: UUID,
+    db: Session = Depends(get_db),
+    _current_user: User = Depends(require_roles(UserRole.ADMIN, UserRole.DISPATCHER)),
+) -> Response:
     order = db.get(Order, order_id)
     if order is None:
         raise HTTPException(status_code=404, detail="Order not found")
