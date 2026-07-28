@@ -18,6 +18,15 @@ const result: OptimizationResult = {
   },
   total_distance_km: 20,
   total_duration_mins: 60,
+  cost_metrics: {
+    fuel_cost_vnd: 56_400,
+    driver_cost_vnd: 150_000,
+    total_cost_vnd: 206_400,
+    co2_emissions_kg: 5.544,
+    estimated_savings_vnd: 37_152,
+    estimated_co2_savings_kg: 0.998,
+    savings_rate: 0.18,
+  },
   unassigned_orders: [],
   routes: [
     {

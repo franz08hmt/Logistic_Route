@@ -29,6 +29,7 @@ class _FakeSession:
         self._depot = depot
         self._result_sets = [vehicles or [], orders or []]
         self.commit_count = 0
+        self.added: list[object] = []
 
     def scalar(self, _statement: object) -> Depot | None:
         return self._depot
@@ -38,6 +39,9 @@ class _FakeSession:
 
     def commit(self) -> None:
         self.commit_count += 1
+
+    def add(self, value: object) -> None:
+        self.added.append(value)
 
 
 def test_optimize_pending_and_failed_routes_assigns_only_orders_present_in_routes(
@@ -126,6 +130,8 @@ def test_optimize_pending_and_failed_routes_assigns_only_orders_present_in_route
     assert assigned_order.status == OrderStatus.ASSIGNED
     assert unassigned_order.status == OrderStatus.FAILED
     assert session.commit_count == 1
+    assert len(session.added) == 1
+    assert run.cost_metrics.total_cost_vnd == pytest.approx(189_888)
 
 
 def test_optimize_pending_routes_requires_a_default_depot() -> None:
@@ -140,6 +146,8 @@ def test_optimize_pending_routes_requires_a_default_depot() -> None:
 
 def test_optimize_endpoint_is_exposed_in_openapi() -> None:
     operation = app.openapi()["paths"]["/api/v1/routes/optimize"]["post"]
+    response_schema = app.openapi()["components"]["schemas"]["RouteOptimizationResponse"]
 
     assert operation["tags"] == ["route-optimization"]
     assert operation["responses"]["200"]["content"]["application/json"]["schema"]
+    assert "cost_metrics" in response_schema["properties"]

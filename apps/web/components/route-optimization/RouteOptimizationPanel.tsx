@@ -10,6 +10,7 @@ import {
 } from '../admin/api-contracts';
 import { publishOrdersUpdated } from '../admin/orders-sync';
 import { getOptimizationSuccessMessage } from './optimization-feedback';
+import { downloadManifestCsv } from './manifest-export';
 import {
   isOptimizationResult,
   type OptimizationResult,
@@ -33,6 +34,11 @@ const RouteMap = dynamic(
 );
 
 const numberFormatter = new Intl.NumberFormat('vi-VN', { maximumFractionDigits: 1 });
+const currencyFormatter = new Intl.NumberFormat('vi-VN', {
+  maximumFractionDigits: 0,
+  style: 'currency',
+  currency: 'VND',
+});
 
 export function RouteOptimizationPanel() {
   const [result, setResult] = useState<OptimizationResult | null>(null);
@@ -124,6 +130,15 @@ export function RouteOptimizationPanel() {
     0,
   ) ?? 0;
 
+  function exportManifest() {
+    if (!result || result.routes.length === 0) {
+      return;
+    }
+
+    downloadManifestCsv(result, orders);
+    setToastMessage('Đã xuất phiếu lộ trình CSV theo đúng thứ tự giao hàng.');
+  }
+
   return (
     <section className="optimization-workspace">
       {toastMessage && (
@@ -179,6 +194,68 @@ export function RouteOptimizationPanel() {
           <strong>{result ? assignedStops : '—'}</strong>
         </article>
       </div>
+
+      <section className="route-cost-summary" aria-labelledby="route-cost-title">
+        <div className="route-cost-heading">
+          <div>
+            <span className="eyebrow">Route cost summary</span>
+            <h2 id="route-cost-title">Kế toán chi phí lộ trình</h2>
+            <p>
+              Ước tính theo quãng đường, thời gian chạy và định mức nhiên liệu hiện tại.
+            </p>
+          </div>
+          <button
+            className="manifest-button"
+            type="button"
+            onClick={exportManifest}
+            disabled={!result || result.routes.length === 0}
+          >
+            <span aria-hidden="true">↓</span>
+            Xuất Phiếu Lộ Trình
+          </button>
+        </div>
+        <div className="route-cost-grid" aria-live="polite">
+          <article>
+            <span>Chi phí ước tính</span>
+            <strong>
+              {result
+                ? currencyFormatter.format(result.cost_metrics.total_cost_vnd)
+                : '—'}
+            </strong>
+            <small>
+              {result
+                ? `Nhiên liệu ${currencyFormatter.format(result.cost_metrics.fuel_cost_vnd)} · Tài xế ${currencyFormatter.format(result.cost_metrics.driver_cost_vnd)}`
+                : 'Chạy tối ưu để tính chi phí'}
+            </small>
+          </article>
+          <article className="cost-saving-card">
+            <span>Tiết kiệm nhờ AI</span>
+            <strong>
+              {result
+                ? currencyFormatter.format(result.cost_metrics.estimated_savings_vnd)
+                : '—'}
+            </strong>
+            <small>
+              {result
+                ? `Ước tính ~${numberFormatter.format(result.cost_metrics.savings_rate * 100)}% so với tuyến thủ công`
+                : 'Mô hình so sánh sẽ xuất hiện tại đây'}
+            </small>
+          </article>
+          <article>
+            <span>Phát thải CO₂</span>
+            <strong>
+              {result
+                ? `${numberFormatter.format(result.cost_metrics.co2_emissions_kg)} kg`
+                : '—'}
+            </strong>
+            <small>
+              {result
+                ? `Ước tính giảm ${numberFormatter.format(result.cost_metrics.estimated_co2_savings_kg)} kg CO₂`
+                : 'Theo hệ số 2,31 kg CO₂/lít'}
+            </small>
+          </article>
+        </div>
+      </section>
 
       <div className="optimization-layout">
         <aside className="route-sidebar" aria-label="Optimized route list">

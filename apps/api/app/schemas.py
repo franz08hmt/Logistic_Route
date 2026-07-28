@@ -95,6 +95,10 @@ class OverviewRead(BaseModel):
     vehicles_count: int
     drivers_online_count: int
     routes_optimized_count: int
+    estimated_operating_cost_vnd: float = Field(ge=0)
+    estimated_savings_vnd: float = Field(ge=0)
+    co2_emissions_kg: float = Field(ge=0)
+    estimated_co2_savings_kg: float = Field(ge=0)
 
 
 class SeedResponse(BaseModel):
@@ -104,11 +108,22 @@ class SeedResponse(BaseModel):
     depot: DepotRead
 
 
+class RouteCostMetrics(BaseModel):
+    fuel_cost_vnd: float = Field(ge=0)
+    driver_cost_vnd: float = Field(ge=0)
+    total_cost_vnd: float = Field(ge=0)
+    co2_emissions_kg: float = Field(ge=0)
+    estimated_savings_vnd: float = Field(ge=0)
+    estimated_co2_savings_kg: float = Field(ge=0)
+    savings_rate: float = Field(ge=0, le=1)
+
+
 class RouteOptimizationResponse(BaseModel):
     status: str
     depot: DepotRead
     total_distance_km: float
     total_duration_mins: float
+    cost_metrics: RouteCostMetrics
     unassigned_orders: list[str]
     routes: list[OptimizedRoute]
 

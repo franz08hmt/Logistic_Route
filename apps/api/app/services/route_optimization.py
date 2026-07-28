@@ -8,9 +8,11 @@ from app.db.models import (
     Depot as DatabaseDepot,
     Order as DatabaseOrder,
     OrderStatus,
+    RouteAnalyticsSnapshot,
     Vehicle as DatabaseVehicle,
     VehicleStatus,
 )
+from app.services.cost_calculator import CostCalculation, calculate_route_costs
 from core_engine.solver import (
     Depot as SolverDepot,
     Order as SolverOrder,
@@ -25,6 +27,7 @@ from core_engine.solver import (
 class OptimizationRun:
     depot: DatabaseDepot
     result: VRPOutput
+    cost_metrics: CostCalculation
 
 
 class RouteOptimizationError(Exception):
@@ -90,13 +93,16 @@ def optimize_pending_routes(db: Session) -> OptimizationRun:
     if result.status == "ERROR":
         raise RouteOptimizationError(500, "The route solver failed")
 
+    cost_metrics = calculate_route_costs(
+        total_distance_km=result.total_distance_km,
+        total_time_minutes=result.total_duration_mins,
+    )
     assignments = {
         stop.order_id: (route.vehicle_id, stop.stop_sequence)
         for route in result.routes
         for stop in route.stops
     }
     vehicles_by_id = {str(vehicle.id): vehicle for vehicle in vehicles}
-    changed = False
     for order in pending_orders:
         assignment = assignments.get(str(order.id))
         if assignment:
@@ -104,13 +110,28 @@ def optimize_pending_routes(db: Session) -> OptimizationRun:
             order.assigned_vehicle_id = UUID(assignment[0])
             order.stop_sequence = assignment[1]
             order.failure_reason = None
-            changed = True
 
             vehicle = vehicles_by_id.get(assignment[0])
             if vehicle is not None:
                 vehicle.status = VehicleStatus.ON_ROUTE
 
-    if changed:
-        db.commit()
+    db.add(
+        RouteAnalyticsSnapshot(
+            total_distance_km=result.total_distance_km,
+            total_duration_mins=result.total_duration_mins,
+            fuel_cost_vnd=cost_metrics.fuel_cost_vnd,
+            driver_cost_vnd=cost_metrics.driver_cost_vnd,
+            total_cost_vnd=cost_metrics.total_cost_vnd,
+            co2_emissions_kg=cost_metrics.co2_emissions_kg,
+            estimated_savings_vnd=cost_metrics.estimated_savings_vnd,
+            estimated_co2_savings_kg=cost_metrics.estimated_co2_savings_kg,
+            savings_rate=cost_metrics.savings_rate,
+        )
+    )
+    db.commit()
 
-    return OptimizationRun(depot=depot, result=result)
+    return OptimizationRun(
+        depot=depot,
+        result=result,
+        cost_metrics=cost_metrics,
+    )

@@ -11,6 +11,10 @@ type Overview = {
   vehicles_count: number;
   drivers_online_count: number;
   routes_optimized_count: number;
+  estimated_operating_cost_vnd: number;
+  estimated_savings_vnd: number;
+  co2_emissions_kg: number;
+  estimated_co2_savings_kg: number;
 };
 
 const cardDefinitions = [
@@ -22,6 +26,15 @@ const cardDefinitions = [
   ['Drivers online', 'drivers_online_count'],
   ['Routes optimized', 'routes_optimized_count'],
 ] as const;
+
+const currencyFormatter = new Intl.NumberFormat('vi-VN', {
+  maximumFractionDigits: 0,
+  style: 'currency',
+  currency: 'VND',
+});
+const decimalFormatter = new Intl.NumberFormat('vi-VN', {
+  maximumFractionDigits: 2,
+});
 
 export function DashboardOverview() {
   const [overview, setOverview] = useState<Overview | null>(null);
@@ -62,6 +75,40 @@ export function DashboardOverview() {
           </section>
         ))}
       </div>
+      <section className="dashboard-analytics" aria-labelledby="analytics-title">
+        <div className="dashboard-analytics-heading">
+          <span className="eyebrow">Cost & sustainability</span>
+          <h2 id="analytics-title">Hiệu quả vận hành gần nhất</h2>
+        </div>
+        <div className="dashboard-analytics-grid">
+          <article>
+            <span>Tổng chi phí vận hành ước tính</span>
+            <strong>
+              {overview
+                ? currencyFormatter.format(overview.estimated_operating_cost_vnd)
+                : '—'}
+            </strong>
+            <small>
+              {overview
+                ? `AI ước tính tiết kiệm ${currencyFormatter.format(overview.estimated_savings_vnd)}`
+                : 'Đang chờ dữ liệu tối ưu tuyến'}
+            </small>
+          </article>
+          <article>
+            <span>Tổng CO₂ cắt giảm</span>
+            <strong>
+              {overview
+                ? `${decimalFormatter.format(overview.estimated_co2_savings_kg)} kg`
+                : '—'}
+            </strong>
+            <small>
+              {overview
+                ? `Phát thải lộ trình ước tính ${decimalFormatter.format(overview.co2_emissions_kg)} kg`
+                : 'Đang chờ dữ liệu tối ưu tuyến'}
+            </small>
+          </article>
+        </div>
+      </section>
       <p className={error ? 'metric-state error' : 'metric-state'} aria-live="polite">
         {error ?? (overview ? 'Live data from LogiRoute API' : 'Loading live metrics…')}
       </p>

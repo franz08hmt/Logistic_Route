@@ -4,7 +4,7 @@ from sqlalchemy.orm import Session
 from app.db.session import get_db
 from app.core.security import require_roles
 from app.db.models import User, UserRole
-from app.schemas import DepotRead, RouteOptimizationResponse
+from app.schemas import DepotRead, RouteCostMetrics, RouteOptimizationResponse
 from app.services.route_optimization import (
     RouteOptimizationError,
     optimize_pending_routes,
@@ -27,5 +27,9 @@ def optimize_routes(
 
     return RouteOptimizationResponse(
         depot=DepotRead.model_validate(run.depot),
+        cost_metrics=RouteCostMetrics.model_validate(
+            run.cost_metrics,
+            from_attributes=True,
+        ),
         **run.result.model_dump(),
     )

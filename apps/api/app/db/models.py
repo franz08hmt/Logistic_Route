@@ -103,3 +103,28 @@ class Order(Base):
     delivery_note: Mapped[str | None] = mapped_column(Text, nullable=True)
     failure_reason: Mapped[str | None] = mapped_column(Text, nullable=True)
     pod_url: Mapped[str | None] = mapped_column(Text, nullable=True)
+
+
+class RouteAnalyticsSnapshot(Base):
+    __tablename__ = "route_analytics_snapshots"
+
+    id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True),
+        primary_key=True,
+        default=uuid.uuid4,
+    )
+    total_distance_km: Mapped[float] = mapped_column(Double, nullable=False)
+    total_duration_mins: Mapped[float] = mapped_column(Double, nullable=False)
+    fuel_cost_vnd: Mapped[float] = mapped_column(Double, nullable=False)
+    driver_cost_vnd: Mapped[float] = mapped_column(Double, nullable=False)
+    total_cost_vnd: Mapped[float] = mapped_column(Double, nullable=False)
+    co2_emissions_kg: Mapped[float] = mapped_column(Double, nullable=False)
+    estimated_savings_vnd: Mapped[float] = mapped_column(Double, nullable=False)
+    estimated_co2_savings_kg: Mapped[float] = mapped_column(Double, nullable=False)
+    savings_rate: Mapped[float] = mapped_column(Double, nullable=False)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        nullable=False,
+        server_default=func.now(),
+        index=True,
+    )

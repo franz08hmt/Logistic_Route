@@ -2,7 +2,13 @@ from fastapi import APIRouter, Depends
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
-from app.db.models import Order, OrderStatus, Vehicle, VehicleStatus
+from app.db.models import (
+    Order,
+    OrderStatus,
+    RouteAnalyticsSnapshot,
+    Vehicle,
+    VehicleStatus,
+)
 from app.db.session import get_db
 from app.schemas import OverviewRead
 
@@ -44,6 +50,14 @@ def get_overview(db: Session = Depends(get_db)) -> OverviewRead:
     routes_optimized_count = db.scalar(
         select(func.count(Order.id)).where(Order.status == OrderStatus.ASSIGNED)
     ) or 0
+    latest_analytics = db.scalar(
+        select(RouteAnalyticsSnapshot)
+        .order_by(
+            RouteAnalyticsSnapshot.created_at.desc(),
+            RouteAnalyticsSnapshot.id.desc(),
+        )
+        .limit(1)
+    )
 
     return OverviewRead(
         active_orders_count=active_orders_count,
@@ -53,4 +67,16 @@ def get_overview(db: Session = Depends(get_db)) -> OverviewRead:
         vehicles_count=vehicles_count,
         drivers_online_count=drivers_online_count,
         routes_optimized_count=routes_optimized_count,
+        estimated_operating_cost_vnd=(
+            latest_analytics.total_cost_vnd if latest_analytics else 0
+        ),
+        estimated_savings_vnd=(
+            latest_analytics.estimated_savings_vnd if latest_analytics else 0
+        ),
+        co2_emissions_kg=(
+            latest_analytics.co2_emissions_kg if latest_analytics else 0
+        ),
+        estimated_co2_savings_kg=(
+            latest_analytics.estimated_co2_savings_kg if latest_analytics else 0
+        ),
     )
