@@ -1,4 +1,5 @@
 from dataclasses import dataclass
+from uuid import UUID
 
 from sqlalchemy import select
 from sqlalchemy.orm import Session
@@ -8,6 +9,7 @@ from app.db.models import (
     Order as DatabaseOrder,
     OrderStatus,
     Vehicle as DatabaseVehicle,
+    VehicleStatus,
 )
 from core_engine.solver import (
     Depot as SolverDepot,
@@ -88,16 +90,24 @@ def optimize_pending_routes(db: Session) -> OptimizationRun:
     if result.status == "ERROR":
         raise RouteOptimizationError(500, "The route solver failed")
 
-    assigned_order_ids = {
-        stop.order_id
+    assignments = {
+        stop.order_id: (route.vehicle_id, stop.stop_sequence)
         for route in result.routes
         for stop in route.stops
     }
+    vehicles_by_id = {str(vehicle.id): vehicle for vehicle in vehicles}
     changed = False
     for order in pending_orders:
-        if str(order.id) in assigned_order_ids:
+        assignment = assignments.get(str(order.id))
+        if assignment:
             order.status = OrderStatus.ASSIGNED
+            order.assigned_vehicle_id = UUID(assignment[0])
+            order.stop_sequence = assignment[1]
             changed = True
+
+            vehicle = vehicles_by_id.get(assignment[0])
+            if vehicle is not None:
+                vehicle.status = VehicleStatus.ON_ROUTE
 
     if changed:
         db.commit()

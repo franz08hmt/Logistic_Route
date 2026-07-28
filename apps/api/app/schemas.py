@@ -1,7 +1,8 @@
 from datetime import datetime
+from enum import Enum
 from uuid import UUID
 
-from pydantic import BaseModel, ConfigDict, Field, field_validator
+from pydantic import AnyHttpUrl, BaseModel, ConfigDict, Field, field_validator
 
 from app.db.models import OrderStatus, UserRole, VehicleStatus
 from core_engine.solver import Route as OptimizedRoute
@@ -64,6 +65,7 @@ class VehicleRead(VehicleCreate, OrmSchema):
 class OrderCreate(BaseModel):
     order_code: str = Field(min_length=2, max_length=50)
     customer_name: str = Field(min_length=1, max_length=150)
+    customer_phone: str | None = Field(default=None, max_length=30)
     address: str = Field(min_length=1)
     latitude: float = Field(ge=-90, le=90)
     longitude: float = Field(ge=-180, le=180)
@@ -73,6 +75,10 @@ class OrderCreate(BaseModel):
 
 class OrderRead(OrderCreate, OrmSchema):
     id: UUID
+    assigned_vehicle_id: UUID | None = None
+    stop_sequence: int | None = Field(default=None, ge=1)
+    delivery_note: str | None = None
+    pod_url: str | None = None
 
 
 class OverviewRead(BaseModel):
@@ -96,3 +102,45 @@ class RouteOptimizationResponse(BaseModel):
     total_duration_mins: float
     unassigned_orders: list[str]
     routes: list[OptimizedRoute]
+
+
+class DriverOrderStatus(str, Enum):
+    DELIVERING = "DELIVERING"
+    DELIVERED = "DELIVERED"
+    FAILED = "FAILED"
+
+
+class DriverOrderStatusUpdate(BaseModel):
+    status: DriverOrderStatus
+    delivery_note: str | None = Field(default=None, max_length=2000)
+    pod_url: AnyHttpUrl | None = None
+
+
+class DriverVehicleRead(OrmSchema):
+    id: UUID
+    license_plate: str
+    driver_name: str | None
+    status: VehicleStatus
+
+
+class DriverStopRead(OrmSchema):
+    id: UUID
+    order_code: str
+    stop_sequence: int = Field(ge=1)
+    customer_name: str
+    customer_phone: str | None
+    address: str
+    latitude: float = Field(ge=-90, le=90)
+    longitude: float = Field(ge=-180, le=180)
+    weight_kg: float = Field(gt=0)
+    status: OrderStatus
+    delivery_note: str | None
+    pod_url: str | None
+
+
+class DriverRouteRead(BaseModel):
+    vehicle: DriverVehicleRead
+    depot: DepotRead
+    total_orders: int
+    completed_orders: int
+    stops: list[DriverStopRead]

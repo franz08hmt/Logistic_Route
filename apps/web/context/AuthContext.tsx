@@ -85,7 +85,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
 
     setUser(payload.user);
-    router.replace('/dashboard');
+    router.replace(payload.user.role === 'DRIVER' ? '/driver' : '/dashboard');
     router.refresh();
   }, [router]);
 

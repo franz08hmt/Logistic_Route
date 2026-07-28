@@ -27,6 +27,7 @@ export const config = {
     '/orders/:path*',
     '/fleet/:path*',
     '/map/:path*',
+    '/driver/:path*',
     '/login',
   ],
 };

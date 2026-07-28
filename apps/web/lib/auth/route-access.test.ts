@@ -3,7 +3,7 @@ import { describe, expect, it } from 'vitest';
 import { getRouteAccessDecision } from './route-access';
 
 describe('route access decisions', () => {
-  it.each(['/dashboard', '/orders', '/fleet', '/map'])(
+  it.each(['/dashboard', '/orders', '/fleet', '/map', '/driver'])(
     'redirects unauthenticated access to %s',
     (pathname) => {
       expect(getRouteAccessDecision(pathname, false)).toBe('login');

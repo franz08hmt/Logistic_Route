@@ -37,6 +37,7 @@ SEED_ORDERS = [
     {
         "order_code": "LR-HCM-001",
         "customer_name": "Pham Gia Dung",
+        "customer_phone": "0901000001",
         "address": "Ben Nghe, Quan 1, Ho Chi Minh City",
         "latitude": 10.7769,
         "longitude": 106.7009,
@@ -46,6 +47,7 @@ SEED_ORDERS = [
     {
         "order_code": "LR-HCM-002",
         "customer_name": "Le Minh Anh",
+        "customer_phone": "0901000002",
         "address": "Ward 5, Go Vap, Ho Chi Minh City",
         "latitude": 10.8387,
         "longitude": 106.6653,
@@ -55,6 +57,7 @@ SEED_ORDERS = [
     {
         "order_code": "LR-HCM-003",
         "customer_name": "Vo Thanh Nam",
+        "customer_phone": "0901000003",
         "address": "Tan Tao, Binh Tan, Ho Chi Minh City",
         "latitude": 10.7658,
         "longitude": 106.5961,
@@ -64,6 +67,7 @@ SEED_ORDERS = [
     {
         "order_code": "LR-HCM-004",
         "customer_name": "Nguyen Ngoc Ha",
+        "customer_phone": "0901000004",
         "address": "Thao Dien, Thu Duc, Ho Chi Minh City",
         "latitude": 10.8038,
         "longitude": 106.7337,
@@ -73,6 +77,7 @@ SEED_ORDERS = [
     {
         "order_code": "LR-HCM-005",
         "customer_name": "Bui Quoc Bao",
+        "customer_phone": "0901000005",
         "address": "Ward 10, Phu Nhuan, Ho Chi Minh City",
         "latitude": 10.7992,
         "longitude": 106.6805,
@@ -127,12 +132,34 @@ def seed_data(db: Session = Depends(get_db)) -> SeedResponse:
         if exists is None:
             db.add(Order(**order_data))
             orders_created += 1
+        elif exists.customer_phone is None:
+            exists.customer_phone = order_data["customer_phone"]
 
     try:
         db.commit()
     except IntegrityError as exc:
         db.rollback()
         raise HTTPException(status_code=409, detail="Seed data conflicts with existing records") from exc
+
+    primary_vehicle = db.scalar(
+        select(Vehicle).where(Vehicle.license_plate == SEED_VEHICLES[0]["license_plate"])
+    )
+    if primary_vehicle is not None:
+        assigned_orders = list(
+            db.scalars(
+                select(Order)
+                .where(
+                    Order.status == OrderStatus.ASSIGNED,
+                    Order.assigned_vehicle_id.is_(None),
+                )
+                .order_by(Order.order_code)
+            ).all()
+        )
+        for sequence, order in enumerate(assigned_orders, start=1):
+            order.assigned_vehicle_id = primary_vehicle.id
+            order.stop_sequence = sequence
+        if assigned_orders:
+            db.commit()
 
     db.refresh(depot)
     return SeedResponse(
@@ -165,6 +192,16 @@ def seed_users(db: Session = Depends(get_db)) -> SeedUsersResponse:
     except IntegrityError as exc:
         db.rollback()
         raise HTTPException(status_code=409, detail="Seed users conflict with existing records") from exc
+
+    driver_user = db.scalar(
+        select(User).where(User.email == "driver1@logiroute.vn")
+    )
+    primary_vehicle = db.scalar(
+        select(Vehicle).where(Vehicle.license_plate == SEED_VEHICLES[0]["license_plate"])
+    )
+    if driver_user is not None and primary_vehicle is not None:
+        primary_vehicle.driver_id = driver_user.id
+        db.commit()
 
     users = list(
         db.scalars(

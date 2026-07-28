@@ -2,7 +2,7 @@ import uuid
 from datetime import datetime
 from enum import Enum
 
-from sqlalchemy import DateTime, Double, Enum as SqlEnum, String, Text, func
+from sqlalchemy import DateTime, Double, Enum as SqlEnum, ForeignKey, String, Text, func
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import Mapped, mapped_column
 
@@ -17,7 +17,9 @@ class VehicleStatus(str, Enum):
 class OrderStatus(str, Enum):
     PENDING = "PENDING"
     ASSIGNED = "ASSIGNED"
+    DELIVERING = "DELIVERING"
     DELIVERED = "DELIVERED"
+    FAILED = "FAILED"
 
 
 class UserRole(str, Enum):
@@ -62,6 +64,12 @@ class Vehicle(Base):
     license_plate: Mapped[str] = mapped_column(String(30), unique=True, index=True, nullable=False)
     capacity_kg: Mapped[float] = mapped_column(Double, nullable=False)
     driver_name: Mapped[str | None] = mapped_column(String(150), nullable=True)
+    driver_id: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True),
+        ForeignKey("users.id", ondelete="SET NULL"),
+        nullable=True,
+        index=True,
+    )
     status: Mapped[VehicleStatus] = mapped_column(
         SqlEnum(VehicleStatus, native_enum=False, length=16),
         nullable=False,
@@ -75,6 +83,7 @@ class Order(Base):
     id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     order_code: Mapped[str] = mapped_column(String(50), unique=True, index=True, nullable=False)
     customer_name: Mapped[str] = mapped_column(String(150), nullable=False)
+    customer_phone: Mapped[str | None] = mapped_column(String(30), nullable=True)
     address: Mapped[str] = mapped_column(Text, nullable=False)
     latitude: Mapped[float] = mapped_column(Double, nullable=False)
     longitude: Mapped[float] = mapped_column(Double, nullable=False)
@@ -84,3 +93,12 @@ class Order(Base):
         nullable=False,
         default=OrderStatus.PENDING,
     )
+    assigned_vehicle_id: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True),
+        ForeignKey("vehicles.id", ondelete="SET NULL"),
+        nullable=True,
+        index=True,
+    )
+    stop_sequence: Mapped[int | None] = mapped_column(nullable=True)
+    delivery_note: Mapped[str | None] = mapped_column(Text, nullable=True)
+    pod_url: Mapped[str | None] = mapped_column(Text, nullable=True)

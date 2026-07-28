@@ -5,16 +5,19 @@ import { usePathname } from 'next/navigation';
 
 import { useAuth } from '@/context/AuthContext';
 
-const links = [
+const adminLinks = [
   ['Dashboard', '/dashboard'],
   ['Orders', '/orders'],
   ['Fleet', '/fleet'],
   ['Map', '/map'],
 ] as const;
 
+const driverLinks = [['Driver Workspace', '/driver']] as const;
+
 export function Navigation() {
   const pathname = usePathname();
   const { user, isLoading, logout } = useAuth();
+  const links = user?.role === 'DRIVER' ? driverLinks : adminLinks;
 
   return (
     <aside className="sidebar">

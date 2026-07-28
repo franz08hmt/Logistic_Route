@@ -1,4 +1,4 @@
-const protectedRoutePrefixes = ['/dashboard', '/orders', '/fleet', '/map'];
+const protectedRoutePrefixes = ['/dashboard', '/orders', '/fleet', '/map', '/driver'];
 
 export type RouteAccessDecision = 'allow' | 'login' | 'dashboard';
 

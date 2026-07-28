@@ -19,7 +19,9 @@ const weightFormatter = new Intl.NumberFormat('vi-VN', {
 const statusLabels: Record<OrderStatus, string> = {
   PENDING: 'Chờ phân tuyến',
   ASSIGNED: 'Đã phân tuyến',
+  DELIVERING: 'Đang giao',
   DELIVERED: 'Đã giao',
+  FAILED: 'Giao thất bại',
 };
 
 export function OrdersManager() {

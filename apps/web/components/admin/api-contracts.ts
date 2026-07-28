@@ -1,6 +1,12 @@
 import { apiFetch } from '../../lib/api-client';
 
-export const ORDER_STATUSES = ['PENDING', 'ASSIGNED', 'DELIVERED'] as const;
+export const ORDER_STATUSES = [
+  'PENDING',
+  'ASSIGNED',
+  'DELIVERING',
+  'DELIVERED',
+  'FAILED',
+] as const;
 export const VEHICLE_STATUSES = ['IDLE', 'ON_ROUTE'] as const;
 
 export type OrderStatus = (typeof ORDER_STATUSES)[number];
