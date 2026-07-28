@@ -31,7 +31,6 @@ const RouteMap = dynamic(
   },
 );
 
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL ?? 'http://localhost:8000';
 const numberFormatter = new Intl.NumberFormat('vi-VN', { maximumFractionDigits: 1 });
 
 export function RouteOptimizationPanel() {
@@ -57,21 +56,9 @@ export function RouteOptimizationPanel() {
     setError(null);
 
     try {
-      const response = await fetch(`${API_BASE_URL}/api/v1/routes/optimize`, {
+      const payload = await requestApi('/api/v1/routes/optimize', {
         method: 'POST',
       });
-      const payload: unknown = await response.json();
-
-      if (!response.ok) {
-        const detail =
-          typeof payload === 'object' &&
-          payload !== null &&
-          'detail' in payload &&
-          typeof payload.detail === 'string'
-            ? payload.detail
-            : `API returned ${response.status}`;
-        throw new Error(detail);
-      }
       if (!isOptimizationResult(payload)) {
         throw new Error('API returned an invalid optimization result');
       }

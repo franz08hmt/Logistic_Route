@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import { apiFetch } from '@/lib/api-client';
 
 type Overview = {
   active_orders_count: number;
@@ -8,8 +9,6 @@ type Overview = {
   drivers_online_count: number;
   routes_optimized_count: number;
 };
-
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL ?? 'http://localhost:8000';
 
 const cardDefinitions = [
   ['Active orders', 'active_orders_count'],
@@ -27,7 +26,7 @@ export function DashboardOverview() {
 
     async function loadOverview() {
       try {
-        const response = await fetch(`${API_BASE_URL}/api/v1/overview`, {
+        const response = await apiFetch('/api/v1/overview', {
           cache: 'no-store',
           signal: controller.signal,
         });

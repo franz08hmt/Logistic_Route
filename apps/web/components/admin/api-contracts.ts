@@ -1,5 +1,4 @@
-export const API_BASE_URL =
-  process.env.NEXT_PUBLIC_API_BASE_URL ?? 'http://localhost:8000';
+import { apiFetch } from '../../lib/api-client';
 
 export const ORDER_STATUSES = ['PENDING', 'ASSIGNED', 'DELIVERED'] as const;
 export const VEHICLE_STATUSES = ['IDLE', 'ON_ROUTE'] as const;
@@ -93,7 +92,7 @@ export async function requestApi(
   path: string,
   init?: RequestInit,
 ): Promise<unknown> {
-  const response = await fetch(`${API_BASE_URL}${path}`, init);
+  const response = await apiFetch(path, init);
   const payload: unknown = response.status === 204
     ? null
     : await response.json().catch(() => null);
