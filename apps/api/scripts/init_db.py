@@ -27,6 +27,9 @@ def main() -> None:
             "ALTER TABLE orders ADD COLUMN IF NOT EXISTS delivery_note TEXT"
         ))
         connection.execute(text(
+            "ALTER TABLE orders ADD COLUMN IF NOT EXISTS failure_reason TEXT"
+        ))
+        connection.execute(text(
             "ALTER TABLE orders ADD COLUMN IF NOT EXISTS pod_url TEXT"
         ))
     print("Database schema is ready.")

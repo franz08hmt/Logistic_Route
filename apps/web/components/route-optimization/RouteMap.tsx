@@ -16,6 +16,7 @@ import {
   fetchOsrmRouteGeometry,
 } from './map-data';
 import type { OptimizationResult } from './types';
+import type { Order } from '../admin/api-contracts';
 
 const HO_CHI_MINH_CITY: LatLngTuple = [10.7769, 106.7009];
 const ROUTE_COLORS = ['#52d6a3', '#f6c85f', '#6aa9ff', '#ef8ca3'];
@@ -44,10 +45,16 @@ function FitRouteBounds({ positions }: { positions: LatLngTuple[] }) {
   return null;
 }
 
-function createStopIcon(sequence: number, color: string) {
+function createStopIcon(
+  sequence: number,
+  color: string,
+  status: Order['status'] | undefined,
+) {
+  const markerClass = status ? ` route-stop-${status.toLowerCase()}` : '';
+  const label = status === 'DELIVERED' ? '✓' : status === 'FAILED' ? '!' : sequence;
   return divIcon({
     className: 'route-stop-icon-shell',
-    html: `<span class="route-stop-icon" style="--marker-color:${color}">${sequence}</span>`,
+    html: `<span class="route-stop-icon${markerClass}" style="--marker-color:${color}">${label}</span>`,
     iconAnchor: [16, 16],
     iconSize: [32, 32],
     popupAnchor: [0, -18],
@@ -62,7 +69,13 @@ const depotIcon = divIcon({
   popupAnchor: [0, -20],
 });
 
-export function RouteMap({ result }: { result: OptimizationResult | null }) {
+export function RouteMap({
+  result,
+  orders,
+}: {
+  result: OptimizationResult | null;
+  orders: Order[];
+}) {
   const [roadPositions, setRoadPositions] = useState<
     Record<string, LatLngTuple[]>
   >({});
@@ -126,6 +139,10 @@ export function RouteMap({ result }: { result: OptimizationResult | null }) {
           buildRoutePositions(result.depot, route.stops),
       })) ?? [],
     [result, roadPositions],
+  );
+  const orderById = useMemo(
+    () => new Map(orders.map((order) => [order.id, order])),
+    [orders],
   );
   const visiblePositions = useMemo<LatLngTuple[]>(() => {
     if (!result) {
@@ -204,20 +221,45 @@ export function RouteMap({ result }: { result: OptimizationResult | null }) {
 
           {routeLayers.flatMap(({ route, color }) =>
             route.stops.map((stop) => (
-              <Marker
-                key={`${route.vehicle_id}-${stop.order_id}`}
-                position={[stop.latitude, stop.longitude]}
-                icon={createStopIcon(stop.stop_sequence, color)}
-                title={`Điểm ${stop.stop_sequence}: ${stop.address}`}
-              >
-                <Popup>
-                  <strong>
-                    Điểm {stop.stop_sequence} · {route.license_plate}
-                  </strong>
-                  <br />
-                  {stop.address}
-                </Popup>
-              </Marker>
+              (() => {
+                const order = orderById.get(stop.order_id);
+                const status = order?.status;
+                const markerColor =
+                  status === 'DELIVERED'
+                    ? '#4b5563'
+                    : status === 'FAILED'
+                      ? '#ef4444'
+                      : color;
+
+                return (
+                  <Marker
+                    key={`${route.vehicle_id}-${stop.order_id}`}
+                    position={[stop.latitude, stop.longitude]}
+                    icon={createStopIcon(stop.stop_sequence, markerColor, status)}
+                    title={`Điểm ${stop.stop_sequence}: ${stop.address}`}
+                  >
+                    <Popup>
+                      <strong>
+                        Điểm {stop.stop_sequence} · {route.license_plate}
+                      </strong>
+                      <br />
+                      {stop.address}
+                      {status && (
+                        <>
+                          <br />
+                          Trạng thái: {status}
+                        </>
+                      )}
+                      {order?.failure_reason && (
+                        <>
+                          <br />
+                          Lý do: {order.failure_reason}
+                        </>
+                      )}
+                    </Popup>
+                  </Marker>
+                );
+              })()
             )),
           )}
         </MapContainer>

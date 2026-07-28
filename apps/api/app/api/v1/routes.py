@@ -19,7 +19,7 @@ def optimize_routes(
     db: Session = Depends(get_db),
     _current_user: User = Depends(require_roles(UserRole.ADMIN, UserRole.DISPATCHER)),
 ) -> RouteOptimizationResponse:
-    """Optimize all currently pending orders using the configured depot and fleet."""
+    """Optimize all pending and failed orders using the configured depot and fleet."""
     try:
         run = optimize_pending_routes(db)
     except RouteOptimizationError as exc:

@@ -247,6 +247,7 @@ export function DriverWorkspace() {
                         <p><span aria-hidden="true">◈</span>{stop.weight_kg} kg</p>
                       </div>
                       {stop.delivery_note && <p className="driver-note">Ghi chú: {stop.delivery_note}</p>}
+                      {stop.failure_reason && <p className="driver-note driver-failure-note">Lý do thất bại: {stop.failure_reason}</p>}
                       <footer className="driver-stop-actions">
                         <a
                           className="secondary-button driver-nav-button"

@@ -19,6 +19,7 @@ export type DriverStop = {
   weight_kg: number;
   status: DriverOrderStatus;
   delivery_note: string | null;
+  failure_reason: string | null;
   pod_url: string | null;
 };
 
@@ -68,6 +69,7 @@ export function isDriverStop(value: unknown): value is DriverStop {
     isFiniteNumber(value.weight_kg) &&
     DRIVER_ORDER_STATUSES.includes(value.status as DriverOrderStatus) &&
     (typeof value.delivery_note === 'string' || value.delivery_note === null) &&
+    (typeof value.failure_reason === 'string' || value.failure_reason === null) &&
     (typeof value.pod_url === 'string' || value.pod_url === null)
   );
 }

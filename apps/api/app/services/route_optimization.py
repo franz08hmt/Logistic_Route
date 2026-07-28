@@ -35,7 +35,7 @@ class RouteOptimizationError(Exception):
 
 
 def optimize_pending_routes(db: Session) -> OptimizationRun:
-    """Solve all pending orders and persist only assignments returned by the solver."""
+    """Solve pending and failed orders and persist only returned assignments."""
     depot = db.scalar(
         select(DatabaseDepot).order_by(DatabaseDepot.name, DatabaseDepot.id).limit(1)
     )
@@ -53,7 +53,7 @@ def optimize_pending_routes(db: Session) -> OptimizationRun:
     pending_orders = list(
         db.scalars(
             select(DatabaseOrder)
-            .where(DatabaseOrder.status == OrderStatus.PENDING)
+            .where(DatabaseOrder.status.in_([OrderStatus.PENDING, OrderStatus.FAILED]))
             .order_by(DatabaseOrder.order_code)
             .with_for_update(skip_locked=True)
         ).all()
@@ -103,6 +103,7 @@ def optimize_pending_routes(db: Session) -> OptimizationRun:
             order.status = OrderStatus.ASSIGNED
             order.assigned_vehicle_id = UUID(assignment[0])
             order.stop_sequence = assignment[1]
+            order.failure_reason = None
             changed = True
 
             vehicle = vehicles_by_id.get(assignment[0])

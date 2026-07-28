@@ -6,6 +6,7 @@ import { useEffect, useState } from 'react';
 import {
   isOrderList,
   requestApi,
+  type Order,
 } from '../admin/api-contracts';
 import { publishOrdersUpdated } from '../admin/orders-sync';
 import { getOptimizationSuccessMessage } from './optimization-feedback';
@@ -38,6 +39,31 @@ export function RouteOptimizationPanel() {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
+  const [orders, setOrders] = useState<Order[]>([]);
+
+  useEffect(() => {
+    let active = true;
+
+    async function loadOrders() {
+      try {
+        const payload = await requestApi('/api/v1/orders');
+        if (active && isOrderList(payload)) {
+          setOrders(payload);
+        }
+      } catch {
+        // The optimization result remains usable if this background refresh fails.
+      }
+    }
+
+    void loadOrders();
+    const refreshInterval = window.setInterval(() => {
+      void loadOrders();
+    }, 10000);
+    return () => {
+      active = false;
+      window.clearInterval(refreshInterval);
+    };
+  }, []);
 
   useEffect(() => {
     if (!toastMessage) {
@@ -75,6 +101,7 @@ export function RouteOptimizationPanel() {
         if (!isOrderList(ordersPayload)) {
           throw new Error('API returned an invalid order list after optimization');
         }
+        setOrders(ordersPayload);
         publishOrdersUpdated(ordersPayload);
       } catch {
         setError(
@@ -116,7 +143,7 @@ export function RouteOptimizationPanel() {
         <div>
           <p className="toolbar-kicker">VRP Engine · OR-Tools</p>
           <p className="muted">
-            Phân đơn PENDING theo tải trọng xe và tối thiểu hóa tổng quãng đường.
+            Gom đơn PENDING và FAILED theo tải trọng xe, sau đó tối thiểu hóa tổng quãng đường.
           </p>
         </div>
         <button
@@ -129,7 +156,7 @@ export function RouteOptimizationPanel() {
           {isLoading && <span className="button-spinner" aria-hidden="true" />}
           {isLoading
             ? 'Đang tính toán tuyến…'
-            : '⚡ Chạy Tối Ưu Tuyến Đường (Optimize Routes)'}
+            : '⚡ Re-Optimize Pending & Failed Routes'}
         </button>
       </div>
 
@@ -207,7 +234,7 @@ export function RouteOptimizationPanel() {
             </div>
           )}
         </aside>
-        <RouteMap result={result} />
+        <RouteMap result={result} orders={orders} />
       </div>
     </section>
   );

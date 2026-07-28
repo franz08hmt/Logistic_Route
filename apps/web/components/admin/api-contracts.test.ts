@@ -12,11 +12,17 @@ describe('admin API contracts', () => {
       id: 'order-1',
       order_code: 'LR-001',
       customer_name: 'Nguyen Van A',
+      customer_phone: null,
       address: 'Quan 1, TP.HCM',
       latitude: 10.7769,
       longitude: 106.7009,
       weight_kg: 25,
       status: 'PENDING',
+      assigned_vehicle_id: null,
+      stop_sequence: null,
+      delivery_note: null,
+      failure_reason: null,
+      pod_url: null,
     };
 
     expect(isOrderList([order])).toBe(true);

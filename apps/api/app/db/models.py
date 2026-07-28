@@ -101,4 +101,5 @@ class Order(Base):
     )
     stop_sequence: Mapped[int | None] = mapped_column(nullable=True)
     delivery_note: Mapped[str | None] = mapped_column(Text, nullable=True)
+    failure_reason: Mapped[str | None] = mapped_column(Text, nullable=True)
     pod_url: Mapped[str | None] = mapped_column(Text, nullable=True)

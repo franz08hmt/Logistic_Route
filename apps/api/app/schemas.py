@@ -78,11 +78,20 @@ class OrderRead(OrderCreate, OrmSchema):
     assigned_vehicle_id: UUID | None = None
     stop_sequence: int | None = Field(default=None, ge=1)
     delivery_note: str | None = None
+    failure_reason: str | None = None
     pod_url: str | None = None
+
+
+class OrderStatusUpdate(BaseModel):
+    status: OrderStatus
+    failure_reason: str | None = Field(default=None, max_length=2000)
 
 
 class OverviewRead(BaseModel):
     active_orders_count: int
+    assigned_orders_count: int
+    delivered_orders_count: int
+    failed_orders_count: int
     vehicles_count: int
     drivers_online_count: int
     routes_optimized_count: int
@@ -135,6 +144,7 @@ class DriverStopRead(OrmSchema):
     weight_kg: float = Field(gt=0)
     status: OrderStatus
     delivery_note: str | None
+    failure_reason: str | None
     pod_url: str | None
 
 

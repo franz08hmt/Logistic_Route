@@ -5,11 +5,10 @@ from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
-from app.db.models import Order
+from app.db.models import Order, OrderStatus, User, UserRole
 from app.db.session import get_db
 from app.core.security import get_current_user, require_roles
-from app.db.models import User, UserRole
-from app.schemas import OrderCreate, OrderRead
+from app.schemas import OrderCreate, OrderRead, OrderStatusUpdate
 
 
 router = APIRouter(prefix="/orders", tags=["orders"])
@@ -56,3 +55,28 @@ def delete_order(
     db.delete(order)
     db.commit()
     return Response(status_code=status.HTTP_204_NO_CONTENT)
+
+
+@router.patch("/{order_id}/status", response_model=OrderRead)
+def update_order_status(
+    order_id: UUID,
+    payload: OrderStatusUpdate,
+    db: Session = Depends(get_db),
+    _current_user: User = Depends(require_roles(UserRole.ADMIN, UserRole.DISPATCHER)),
+) -> Order:
+    order = db.get(Order, order_id)
+    if order is None:
+        raise HTTPException(status_code=404, detail="Order not found")
+
+    order.status = payload.status
+    failure_reason = payload.failure_reason.strip() if payload.failure_reason else None
+    order.failure_reason = (
+        failure_reason if payload.status is OrderStatus.FAILED else None
+    )
+    if payload.status is OrderStatus.PENDING:
+        order.assigned_vehicle_id = None
+        order.stop_sequence = None
+
+    db.commit()
+    db.refresh(order)
+    return order

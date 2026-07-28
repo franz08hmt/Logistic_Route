@@ -94,9 +94,12 @@ def update_driver_order_status(
             detail="A completed delivery cannot be moved back to another status",
         )
 
-    order.status = requested_status
-    order.delivery_note = payload.delivery_note
-    order.pod_url = str(payload.pod_url) if payload.pod_url else None
+        order.status = requested_status
+        order.delivery_note = payload.delivery_note
+        order.failure_reason = (
+            payload.delivery_note if requested_status is OrderStatus.FAILED else None
+        )
+        order.pod_url = str(payload.pod_url) if payload.pod_url else None
     db.commit()
     db.refresh(order)
     return order

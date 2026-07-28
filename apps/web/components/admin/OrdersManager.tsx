@@ -59,6 +59,9 @@ export function OrdersManager() {
     }
 
     void loadOrders();
+    const refreshInterval = window.setInterval(() => {
+      void loadOrders();
+    }, 10000);
     const unsubscribe = subscribeToOrdersUpdated((updatedOrders) => {
       if (active) {
         setOrders(updatedOrders);
@@ -69,6 +72,7 @@ export function OrdersManager() {
 
     return () => {
       active = false;
+      window.clearInterval(refreshInterval);
       unsubscribe();
     };
   }, []);
@@ -113,6 +117,8 @@ export function OrdersManager() {
 
   const pendingCount = orders.filter((order) => order.status === 'PENDING').length;
   const assignedCount = orders.filter((order) => order.status === 'ASSIGNED').length;
+  const failedCount = orders.filter((order) => order.status === 'FAILED').length;
+  const deliveredCount = orders.filter((order) => order.status === 'DELIVERED').length;
 
   return (
     <section className="management-workspace" aria-labelledby="orders-heading">
@@ -120,7 +126,7 @@ export function OrdersManager() {
         <div>
           <h2 id="orders-heading">Danh sách đơn hàng</h2>
           <p>
-            {orders.length} đơn · {pendingCount} đang chờ · {assignedCount} đã phân tuyến
+            {orders.length} đơn · {pendingCount} đang chờ · {assignedCount} đã phân tuyến · {failedCount} thất bại · {deliveredCount} đã giao
           </p>
         </div>
         <button
@@ -177,6 +183,23 @@ export function OrdersManager() {
                     <span className={`status-badge status-${order.status.toLowerCase()}`}>
                       {statusLabels[order.status]}
                     </span>
+                    {order.status === 'FAILED' && (
+                      <details className="order-exception-details">
+                        <summary>Xem exception</summary>
+                        <div>
+                          <strong>Lý do: </strong>
+                          {order.failure_reason || 'Chưa có lý do'}
+                          <br />
+                          <strong>Ghi chú POD: </strong>
+                          {order.delivery_note || 'Chưa có ghi chú'}
+                          {order.pod_url && (
+                            <a href={order.pod_url} target="_blank" rel="noreferrer">
+                              Mở ảnh POD
+                            </a>
+                          )}
+                        </div>
+                      </details>
+                    )}
                   </td>
                   <td className="table-actions">
                     <button

@@ -40,7 +40,7 @@ class _FakeSession:
         self.commit_count += 1
 
 
-def test_optimize_pending_routes_assigns_only_orders_present_in_routes(
+def test_optimize_pending_and_failed_routes_assigns_only_orders_present_in_routes(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     depot = Depot(
@@ -75,7 +75,8 @@ def test_optimize_pending_routes_assigns_only_orders_present_in_routes(
         latitude=10.8038,
         longitude=106.7337,
         weight_kg=20,
-        status=OrderStatus.PENDING,
+        status=OrderStatus.FAILED,
+        failure_reason="Sai dia chi",
     )
     captured_input: dict[str, object] = {}
 
@@ -123,7 +124,7 @@ def test_optimize_pending_routes_assigns_only_orders_present_in_routes(
     assert len(solver_input.orders) == 2  # type: ignore[union-attr]
     assert run.result.status == "FEASIBLE"
     assert assigned_order.status == OrderStatus.ASSIGNED
-    assert unassigned_order.status == OrderStatus.PENDING
+    assert unassigned_order.status == OrderStatus.FAILED
     assert session.commit_count == 1
 
 

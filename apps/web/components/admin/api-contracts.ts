@@ -16,14 +16,28 @@ export type Order = {
   id: string;
   order_code: string;
   customer_name: string;
+  customer_phone: string | null;
   address: string;
   latitude: number;
   longitude: number;
   weight_kg: number;
   status: OrderStatus;
+  assigned_vehicle_id: string | null;
+  stop_sequence: number | null;
+  delivery_note: string | null;
+  failure_reason: string | null;
+  pod_url: string | null;
 };
 
-export type CreateOrderInput = Omit<Order, 'id' | 'status'>;
+export type CreateOrderInput = {
+  order_code: string;
+  customer_name: string;
+  customer_phone?: string | null;
+  address: string;
+  latitude: number;
+  longitude: number;
+  weight_kg: number;
+};
 
 export type Vehicle = {
   id: string;
@@ -52,11 +66,17 @@ function isOrder(value: unknown): value is Order {
     typeof value.id === 'string' &&
     typeof value.order_code === 'string' &&
     typeof value.customer_name === 'string' &&
+    (typeof value.customer_phone === 'string' || value.customer_phone === null) &&
     typeof value.address === 'string' &&
     isFiniteNumber(value.latitude) &&
     isFiniteNumber(value.longitude) &&
     isFiniteNumber(value.weight_kg) &&
-    ORDER_STATUSES.includes(value.status as OrderStatus)
+    ORDER_STATUSES.includes(value.status as OrderStatus) &&
+    (typeof value.assigned_vehicle_id === 'string' || value.assigned_vehicle_id === null) &&
+    (typeof value.stop_sequence === 'number' || value.stop_sequence === null) &&
+    (typeof value.delivery_note === 'string' || value.delivery_note === null) &&
+    (typeof value.failure_reason === 'string' || value.failure_reason === null) &&
+    (typeof value.pod_url === 'string' || value.pod_url === null)
   );
 }
 

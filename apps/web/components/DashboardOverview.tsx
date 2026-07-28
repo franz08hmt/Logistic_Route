@@ -5,6 +5,9 @@ import { apiFetch } from '@/lib/api-client';
 
 type Overview = {
   active_orders_count: number;
+  assigned_orders_count: number;
+  delivered_orders_count: number;
+  failed_orders_count: number;
   vehicles_count: number;
   drivers_online_count: number;
   routes_optimized_count: number;
@@ -12,6 +15,9 @@ type Overview = {
 
 const cardDefinitions = [
   ['Active orders', 'active_orders_count'],
+  ['Assigned orders', 'assigned_orders_count'],
+  ['Delivered orders', 'delivered_orders_count'],
+  ['Failed orders', 'failed_orders_count'],
   ['Vehicles', 'vehicles_count'],
   ['Drivers online', 'drivers_online_count'],
   ['Routes optimized', 'routes_optimized_count'],

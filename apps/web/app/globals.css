@@ -435,6 +435,8 @@ h1 { margin: 8px 0 12px; font-size: clamp(2rem, 5vw, 3.4rem); }
   font-size: .76rem;
   font-weight: 900;
 }
+.route-stop-delivered { color: #fff; }
+.route-stop-failed { color: #fff; }
 .depot-map-icon {
   display: grid;
   width: 36px;
@@ -554,6 +556,10 @@ h1 { margin: 8px 0 12px; font-size: clamp(2rem, 5vw, 3.4rem); }
 .status-delivering { color: #80b6ff; background: #182d49; }
 .status-failed { color: #ffb7bd; background: #3a2028; }
 .status-delivered, .status-idle { color: #52d6a3; background: #17362f; }
+.order-exception-details { margin-top: 8px; max-width: 260px; color: #ffb7bd; font-size: .72rem; }
+.order-exception-details summary { color: #ffb7bd; cursor: pointer; font-weight: 800; }
+.order-exception-details div { margin-top: 6px; padding: 8px; color: #d9e2ef; background: #241a24; border: 1px solid #57313f; border-radius: 6px; line-height: 1.45; }
+.order-exception-details a { display: block; margin-top: 6px; color: #80b6ff; }
 .driver-cell { display: inline-flex; align-items: center; gap: 9px; }
 .driver-cell i {
   display: grid;

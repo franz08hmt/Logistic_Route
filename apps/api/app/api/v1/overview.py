@@ -14,7 +14,22 @@ router = APIRouter(tags=["overview"])
 def get_overview(db: Session = Depends(get_db)) -> OverviewRead:
     """Return live dashboard metrics derived from the current database state."""
     active_orders_count = db.scalar(
-        select(func.count(Order.id)).where(Order.status != OrderStatus.DELIVERED)
+        select(func.count(Order.id)).where(
+            Order.status.in_([
+                OrderStatus.PENDING,
+                OrderStatus.ASSIGNED,
+                OrderStatus.DELIVERING,
+            ])
+        )
+    ) or 0
+    assigned_orders_count = db.scalar(
+        select(func.count(Order.id)).where(Order.status == OrderStatus.ASSIGNED)
+    ) or 0
+    delivered_orders_count = db.scalar(
+        select(func.count(Order.id)).where(Order.status == OrderStatus.DELIVERED)
+    ) or 0
+    failed_orders_count = db.scalar(
+        select(func.count(Order.id)).where(Order.status == OrderStatus.FAILED)
     ) or 0
     vehicles_count = db.scalar(select(func.count(Vehicle.id))) or 0
     drivers_online_count = db.scalar(
@@ -32,6 +47,9 @@ def get_overview(db: Session = Depends(get_db)) -> OverviewRead:
 
     return OverviewRead(
         active_orders_count=active_orders_count,
+        assigned_orders_count=assigned_orders_count,
+        delivered_orders_count=delivered_orders_count,
+        failed_orders_count=failed_orders_count,
         vehicles_count=vehicles_count,
         drivers_online_count=drivers_online_count,
         routes_optimized_count=routes_optimized_count,

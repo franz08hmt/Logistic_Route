@@ -9,9 +9,9 @@ describe('getOptimizationSuccessMessage', () => {
     );
   });
 
-  it('explains that there are no pending orders when nothing was assigned', () => {
+  it('explains that there are no pending or failed orders when nothing was assigned', () => {
     expect(getOptimizationSuccessMessage(0)).toBe(
-      'Không còn đơn hàng PENDING cần tối ưu.',
+      'Không còn đơn PENDING hoặc FAILED cần tối ưu.',
     );
   });
 });

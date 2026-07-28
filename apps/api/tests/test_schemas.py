@@ -1,7 +1,7 @@
 import pytest
 from pydantic import ValidationError
 
-from app.schemas import OrderCreate, VehicleCreate
+from app.schemas import OrderCreate, OrderStatusUpdate, VehicleCreate
 
 
 def test_order_schema_accepts_valid_order() -> None:
@@ -32,3 +32,18 @@ def test_order_schema_rejects_invalid_coordinates() -> None:
             longitude=106.7,
             weight_kg=1,
         )
+
+
+def test_order_status_update_accepts_failed_reason_and_all_statuses() -> None:
+    update = OrderStatusUpdate(
+        status="FAILED",
+        failure_reason="Khach khong nghe may",
+    )
+
+    assert update.status.value == "FAILED"
+    assert update.failure_reason == "Khach khong nghe may"
+
+
+def test_order_status_update_rejects_unknown_status() -> None:
+    with pytest.raises(ValidationError):
+        OrderStatusUpdate(status="CANCELLED")

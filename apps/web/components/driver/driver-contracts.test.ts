@@ -32,6 +32,7 @@ describe('driver API contracts', () => {
         weight_kg: 12.5,
         status: 'DELIVERED',
         delivery_note: 'Đã giao',
+        failure_reason: null,
         pod_url: null,
       },
     ],
