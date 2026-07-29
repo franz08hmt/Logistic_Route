@@ -1,41 +1,46 @@
 'use client';
 
-import { useEffect, useMemo, useState, type FormEvent } from 'react';
-
-import { useAuth } from '@/context/AuthContext';
-import { requestApi } from '@/components/admin/api-contracts';
-import { ModalDialog } from '@/components/admin/ModalDialog';
+import {
+  useEffect,
+  useState,
+  type ChangeEvent,
+  type FormEvent,
+} from 'react';
 
 import {
-  DRIVER_ORDER_STATUSES,
+  isOrderList,
+  requestApi,
+} from '@/components/admin/api-contracts';
+import { publishOrdersUpdated } from '@/components/admin/orders-sync';
+import { useAuth } from '@/context/AuthContext';
+import { useI18n } from '@/context/I18nContext';
+
+import { DriverOverview } from './DriverOverview';
+import { DriverStatusDialog } from './DriverStatusDialog';
+import { DriverStopCard } from './DriverStopCard';
+import { DriverUnassignedEmptyState } from './DriverUnassignedEmptyState';
+import {
   isDriverRoute,
   isDriverStop,
   type DriverOrderStatus,
   type DriverRoute,
   type DriverStop,
 } from './driver-contracts';
+import {
+  isPodUpload,
+  validateDriverUpdate,
+  validatePodFile,
+} from './driver-pod';
+import { driverStatusTranslationKeys } from './driver-ui';
 
-const statusLabels: Record<DriverOrderStatus, string> = {
-  ASSIGNED: 'Đã phân công',
-  DELIVERING: 'Đang giao',
-  DELIVERED: 'Đã giao',
-  FAILED: 'Giao thất bại',
+type DriverToast = {
+  code: string;
+  status: DriverOrderStatus;
 };
-
-const terminalStatuses = new Set<DriverOrderStatus>(['DELIVERED', 'FAILED']);
-const updateStatuses: DriverOrderStatus[] = ['DELIVERED', 'FAILED'];
-
-function routeStatusClass(status: DriverOrderStatus): string {
-  return `driver-status driver-status-${status.toLowerCase()}`;
-}
-
-function mapNavigationUrl(stop: DriverStop): string {
-  const destination = encodeURIComponent(`${stop.latitude},${stop.longitude}`);
-  return `https://www.google.com/maps/dir/?api=1&destination=${destination}`;
-}
 
 export function DriverWorkspace() {
   const { user } = useAuth();
+  const { t } = useI18n();
   const [route, setRoute] = useState<DriverRoute | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -43,11 +48,17 @@ export function DriverWorkspace() {
   const [selectedStatus, setSelectedStatus] = useState<DriverOrderStatus>('DELIVERED');
   const [deliveryNote, setDeliveryNote] = useState('');
   const [podUrl, setPodUrl] = useState('');
+  const [failureReason, setFailureReason] = useState('');
+  const [podFile, setPodFile] = useState<File | null>(null);
+  const [podPreviewUrl, setPodPreviewUrl] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [toast, setToast] = useState<string | null>(null);
+  const [toast, setToast] = useState<DriverToast | null>(null);
+  const [refreshVersion, setRefreshVersion] = useState(0);
 
   useEffect(() => {
     const controller = new AbortController();
+    setIsLoading(true);
+    setError(null);
 
     async function loadRoute() {
       try {
@@ -55,7 +66,7 @@ export function DriverWorkspace() {
           signal: controller.signal,
         });
         if (!isDriverRoute(payload)) {
-          throw new Error('API returned an invalid driver route');
+          throw new Error(t('driver.invalidRoute'));
         }
         setRoute(payload);
       } catch (requestError) {
@@ -65,7 +76,7 @@ export function DriverWorkspace() {
         setError(
           requestError instanceof Error
             ? requestError.message
-            : 'Không thể tải lộ trình tài xế.',
+            : t('driver.loadError'),
         );
       } finally {
         setIsLoading(false);
@@ -74,36 +85,66 @@ export function DriverWorkspace() {
 
     void loadRoute();
     return () => controller.abort();
-  }, []);
+  }, [refreshVersion, t]);
 
   useEffect(() => {
     if (!toast) {
       return;
     }
-
     const timeoutId = window.setTimeout(() => setToast(null), 4500);
     return () => window.clearTimeout(timeoutId);
   }, [toast]);
-
-  const progressLabel = useMemo(() => {
-    if (!route) {
-      return '—/— đơn';
-    }
-    return `${route.completed_orders}/${route.total_orders} đơn`;
-  }, [route]);
 
   function openStatusDialog(stop: DriverStop) {
     setSelectedStop(stop);
     setSelectedStatus('DELIVERED');
     setDeliveryNote(stop.delivery_note ?? '');
     setPodUrl(stop.pod_url ?? '');
+    setFailureReason(stop.failure_reason ?? '');
+    setPodFile(null);
+    setPodPreviewUrl(stop.pod_url ?? '');
     setError(null);
   }
 
   function closeStatusDialog() {
     if (!isSubmitting) {
+      if (podPreviewUrl.startsWith('blob:')) {
+        URL.revokeObjectURL(podPreviewUrl);
+      }
       setSelectedStop(null);
+      setPodFile(null);
+      setPodPreviewUrl('');
     }
+  }
+
+  function refreshAssignment() {
+    setRefreshVersion((version) => version + 1);
+  }
+
+  function handlePodFileChange(event: ChangeEvent<HTMLInputElement>) {
+    const file = event.target.files?.[0] ?? null;
+    if (!file) {
+      return;
+    }
+    const validationError = validatePodFile(file);
+    if (validationError) {
+      setError(t(
+        validationError === 'TOO_LARGE'
+          ? 'driver.photoTooLarge'
+          : 'driver.photoInvalid',
+      ));
+      event.target.value = '';
+      return;
+    }
+
+    // Preview through a short-lived blob URL instead of converting the image
+    // to base64. Old URLs are revoked to avoid leaking browser memory.
+    if (podPreviewUrl.startsWith('blob:')) {
+      URL.revokeObjectURL(podPreviewUrl);
+    }
+    setPodFile(file);
+    setPodPreviewUrl(URL.createObjectURL(file));
+    setError(null);
   }
 
   async function handleStatusSubmit(event: FormEvent<HTMLFormElement>) {
@@ -112,10 +153,40 @@ export function DriverWorkspace() {
       return;
     }
 
+    const validationError = validateDriverUpdate({
+      status: selectedStatus,
+      hasExistingPod: Boolean(podUrl),
+      hasSelectedFile: Boolean(podFile),
+      failureReason,
+    });
+    if (validationError) {
+      setError(t(
+        validationError === 'PHOTO_REQUIRED'
+          ? 'driver.photoRequired'
+          : 'driver.failureReasonRequired',
+      ));
+      return;
+    }
+
     setIsSubmitting(true);
     setError(null);
-
     try {
+      let resolvedPodUrl = podUrl;
+      if (podFile) {
+        const upload = await requestApi(
+          `/api/v1/driver/orders/${selectedStop.id}/pod`,
+          {
+            method: 'POST',
+            headers: { 'Content-Type': podFile.type },
+            body: podFile,
+          },
+        );
+        if (!isPodUpload(upload)) {
+          throw new Error(t('driver.photoInvalid'));
+        }
+        resolvedPodUrl = upload.pod_url;
+      }
+
       const payload = await requestApi(
         `/api/v1/driver/orders/${selectedStop.id}/status`,
         {
@@ -124,19 +195,19 @@ export function DriverWorkspace() {
           body: JSON.stringify({
             status: selectedStatus,
             delivery_note: deliveryNote.trim() || null,
-            pod_url: podUrl.trim() || null,
+            failure_reason: selectedStatus === 'FAILED' ? failureReason : null,
+            pod_url: resolvedPodUrl || null,
           }),
         },
       );
       if (!isDriverStop(payload)) {
-        throw new Error('API returned an invalid order status response');
+        throw new Error(t('driver.invalidStatus'));
       }
 
       setRoute((currentRoute) => {
         if (!currentRoute) {
           return currentRoute;
         }
-
         const stops = currentRoute.stops.map((stop) =>
           stop.id === payload.id ? payload : stop,
         );
@@ -146,13 +217,22 @@ export function DriverWorkspace() {
           completed_orders: stops.filter((stop) => stop.status === 'DELIVERED').length,
         };
       });
-      setToast(`Đã cập nhật ${payload.order_code}: ${statusLabels[payload.status]}.`);
+      setToast({ code: payload.order_code, status: payload.status });
+      const ordersPayload = await requestApi('/api/v1/orders');
+      if (isOrderList(ordersPayload)) {
+        publishOrdersUpdated(ordersPayload);
+      }
+      if (podPreviewUrl.startsWith('blob:')) {
+        URL.revokeObjectURL(podPreviewUrl);
+      }
       setSelectedStop(null);
+      setPodFile(null);
+      setPodPreviewUrl('');
     } catch (requestError) {
       setError(
         requestError instanceof Error
           ? requestError.message
-          : 'Không thể cập nhật trạng thái đơn hàng.',
+          : t('driver.updateError'),
       );
     } finally {
       setIsSubmitting(false);
@@ -160,170 +240,80 @@ export function DriverWorkspace() {
   }
 
   if (isLoading) {
-    return <div className="driver-loading" role="status" aria-busy="true">Đang tải lộ trình hôm nay…</div>;
+    return (
+      <div className="grid min-h-[60vh] place-items-center" role="status" aria-busy="true">
+        <div className="text-center">
+          <span className="mx-auto block size-8 animate-spin rounded-full border-2 border-slate-300 border-t-teal-600" aria-hidden="true" />
+          <p className="mt-3 text-sm font-medium text-slate-600 dark:text-slate-300">{t('driver.loading')}</p>
+        </div>
+      </div>
+    );
   }
 
   return (
-    <section className="driver-workspace" aria-labelledby="driver-heading">
-      {toast && <div className="success-toast driver-toast" role="status">✓ {toast}</div>}
-
-      <header className="driver-header">
-        <div>
-          <span className="eyebrow">Driver workspace</span>
-          <h1 id="driver-heading">Chào {user?.full_name ?? 'tài xế'}</h1>
-          <p className="muted">Lộ trình giao hàng được phân công cho hôm nay.</p>
+    <section className="mx-auto max-w-3xl space-y-6" aria-label={t('driver.workspace')}>
+      {toast && (
+        <div className="fixed left-1/2 top-20 z-[1100] w-[calc(100%-2rem)] max-w-md -translate-x-1/2 rounded-xl border border-emerald-200 bg-white/95 px-4 py-3 text-sm font-semibold text-emerald-800 shadow-xl backdrop-blur dark:border-emerald-900 dark:bg-slate-900/95 dark:text-emerald-300" role="status">
+          ✓ {t('driver.updateSuccess', {
+            code: toast.code,
+            status: t(driverStatusTranslationKeys[toast.status]),
+          })}
         </div>
-        {route && (
-          <div className="driver-vehicle-card">
-            <span className="driver-vehicle-icon" aria-hidden="true">🚚</span>
-            <span>
-              <small>Xe được giao</small>
-              <strong>{route.vehicle.license_plate}</strong>
-              <em>{route.vehicle.status === 'ON_ROUTE' ? 'Đang hoạt động' : 'Sẵn sàng'}</em>
-            </span>
-          </div>
-        )}
-      </header>
+      )}
 
-      {error && <p className="management-alert" role="alert">{error}</p>}
+      {route?.vehicle ? (
+        <DriverOverview route={route} driverName={user?.full_name ?? t('driver.defaultName')} />
+      ) : route ? (
+        <DriverUnassignedEmptyState isRefreshing={isLoading} onRefresh={refreshAssignment} />
+      ) : null}
+      {error && (
+        <p className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700 dark:border-red-900 dark:bg-red-950/40 dark:text-red-300" role="alert">
+          {error}
+        </p>
+      )}
 
-      {route && (
-        <>
-          <div className="driver-summary" aria-label="Tổng quan lộ trình">
-            <article>
-              <span>Đơn hôm nay</span>
-              <strong>{route.total_orders}</strong>
-              <small>điểm giao</small>
-            </article>
-            <article>
-              <span>Tiến độ</span>
-              <strong>{progressLabel}</strong>
-              <small>đã hoàn thành</small>
-            </article>
-            <article>
-              <span>Điểm xuất phát</span>
-              <strong>Quận 12</strong>
-              <small>LogiRoute Depot</small>
-            </article>
-          </div>
-
-          <div className="driver-route-heading">
+      {route?.vehicle && (
+        <section aria-labelledby="driver-route-heading">
+          <div className="mb-4 flex items-end justify-between gap-4">
             <div>
-              <span className="eyebrow">Today&apos;s route</span>
-              <h2>Lộ trình giao hàng</h2>
+              <p className="text-xs font-bold uppercase tracking-[0.16em] text-teal-700 dark:text-teal-400">{t('driver.todayRoute')}</p>
+              <h2 id="driver-route-heading" className="mt-1 text-xl font-bold tracking-tight text-slate-950 dark:text-white">{t('driver.routeTitle')}</h2>
             </div>
-            <span className="driver-stop-count">{route.stops.length} điểm giao</span>
+            <span className="rounded-full bg-slate-200 px-3 py-1.5 text-xs font-bold text-slate-700 dark:bg-slate-800 dark:text-slate-200">{t('driver.stopCount', { count: route.stops.length })}</span>
           </div>
 
           {route.stops.length === 0 ? (
-            <div className="driver-empty" role="status">
-              <span aria-hidden="true">✓</span>
-              <strong>Chưa có điểm giao được phân công</strong>
-              <p>Điều phối viên sẽ cập nhật lộ trình khi có đơn mới.</p>
+            <div className="rounded-2xl border border-dashed border-slate-300 bg-white p-8 text-center dark:border-slate-700 dark:bg-slate-900" role="status">
+              <span className="mx-auto grid size-12 place-items-center rounded-full bg-emerald-50 text-xl text-emerald-700 dark:bg-emerald-950 dark:text-emerald-300" aria-hidden="true">✓</span>
+              <strong className="mt-4 block text-slate-950 dark:text-white">{t('driver.emptyTitle')}</strong>
+              <p className="mt-2 text-sm text-slate-500">{t('driver.emptyDescription')}</p>
             </div>
           ) : (
-            <ol className="driver-timeline">
-              {route.stops.map((stop) => {
-                const isTerminal = terminalStatuses.has(stop.status);
-                return (
-                  <li className={`driver-stop ${isTerminal ? 'driver-stop-complete' : ''}`} key={stop.id}>
-                    <div className="driver-stop-marker" aria-hidden="true">{stop.stop_sequence}</div>
-                    <article className="driver-stop-card">
-                      <header>
-                        <div>
-                          <small>STOP {String(stop.stop_sequence).padStart(2, '0')} · {stop.order_code}</small>
-                          <h3>{stop.customer_name}</h3>
-                        </div>
-                        <span className={routeStatusClass(stop.status)}>{statusLabels[stop.status]}</span>
-                      </header>
-                      <div className="driver-stop-details">
-                        <p><span aria-hidden="true">⌖</span>{stop.address}</p>
-                        <p>
-                          <span aria-hidden="true">☎</span>
-                          {stop.customer_phone ? (
-                            <a href={`tel:${stop.customer_phone}`}>{stop.customer_phone}</a>
-                          ) : 'Chưa có số điện thoại'}
-                        </p>
-                        <p><span aria-hidden="true">◈</span>{stop.weight_kg} kg</p>
-                      </div>
-                      {stop.delivery_note && <p className="driver-note">Ghi chú: {stop.delivery_note}</p>}
-                      {stop.failure_reason && <p className="driver-note driver-failure-note">Lý do thất bại: {stop.failure_reason}</p>}
-                      <footer className="driver-stop-actions">
-                        <a
-                          className="secondary-button driver-nav-button"
-                          href={mapNavigationUrl(stop)}
-                          target="_blank"
-                          rel="noreferrer"
-                        >
-                          ↗ Mở bản đồ Nav
-                        </a>
-                        <button
-                          className="primary-button driver-update-button"
-                          type="button"
-                          onClick={() => openStatusDialog(stop)}
-                          disabled={isTerminal}
-                        >
-                          {isTerminal ? 'Đã xử lý' : 'Cập nhật trạng thái'}
-                        </button>
-                      </footer>
-                    </article>
-                  </li>
-                );
-              })}
+            <ol>
+              {route.stops.map((stop) => (
+                <DriverStopCard key={stop.id} stop={stop} onUpdate={openStatusDialog} />
+              ))}
             </ol>
           )}
-        </>
+        </section>
       )}
 
-      <ModalDialog
-        open={selectedStop !== null}
-        title="Cập nhật trạng thái giao hàng"
-        description={selectedStop ? `${selectedStop.order_code} · ${selectedStop.customer_name}` : ''}
+      <DriverStatusDialog
+        stop={selectedStop}
+        status={selectedStatus}
+        deliveryNote={deliveryNote}
+        failureReason={failureReason}
+        podPreviewUrl={podPreviewUrl}
+        hasSelectedFile={podFile !== null}
+        error={error}
+        isSubmitting={isSubmitting}
+        onStatusChange={setSelectedStatus}
+        onDeliveryNoteChange={setDeliveryNote}
+        onFailureReasonChange={setFailureReason}
+        onPodFileChange={handlePodFileChange}
         onClose={closeStatusDialog}
-      >
-        <form className="management-form driver-status-form" onSubmit={handleStatusSubmit}>
-          <label>
-            Trạng thái mới
-            <select
-              value={selectedStatus}
-              onChange={(event) => setSelectedStatus(event.target.value as DriverOrderStatus)}
-              disabled={isSubmitting}
-            >
-              {updateStatuses.map((status) => (
-                <option key={status} value={status}>{statusLabels[status]}</option>
-              ))}
-            </select>
-          </label>
-          <label>
-            Ghi chú giao hàng
-            <textarea
-              value={deliveryNote}
-              onChange={(event) => setDeliveryNote(event.target.value)}
-              maxLength={2000}
-              placeholder="Ví dụ: Đã giao cho bảo vệ tầng trệt"
-              rows={4}
-              disabled={isSubmitting}
-            />
-          </label>
-          <label>
-            URL ảnh xác nhận (POD)
-            <input
-              type="url"
-              value={podUrl}
-              onChange={(event) => setPodUrl(event.target.value)}
-              placeholder="https://..."
-              disabled={isSubmitting}
-            />
-          </label>
-          {error && <p className="form-error" role="alert">{error}</p>}
-          <footer className="dialog-actions">
-            <button className="secondary-button" type="button" onClick={closeStatusDialog} disabled={isSubmitting}>Hủy</button>
-            <button className="primary-button" type="submit" disabled={isSubmitting}>
-              {isSubmitting ? 'Đang lưu…' : 'Lưu trạng thái'}
-            </button>
-          </footer>
-        </form>
-      </ModalDialog>
+        onSubmit={handleStatusSubmit}
+      />
     </section>
   );
 }

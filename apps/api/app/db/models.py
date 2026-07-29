@@ -28,6 +28,12 @@ class UserRole(str, Enum):
     DRIVER = "DRIVER"
 
 
+class UserStatus(str, Enum):
+    PENDING_APPROVAL = "PENDING_APPROVAL"
+    ACTIVE = "ACTIVE"
+    SUSPENDED = "SUSPENDED"
+
+
 class User(Base):
     __tablename__ = "users"
 
@@ -35,10 +41,17 @@ class User(Base):
     email: Mapped[str] = mapped_column(String(255), unique=True, index=True, nullable=False)
     hashed_password: Mapped[str] = mapped_column(String(255), nullable=False)
     full_name: Mapped[str] = mapped_column(String(150), nullable=False)
+    phone_number: Mapped[str | None] = mapped_column(String(30), nullable=True)
     role: Mapped[UserRole] = mapped_column(
         SqlEnum(UserRole, native_enum=False, length=16),
         nullable=False,
         default=UserRole.DISPATCHER,
+    )
+    status: Mapped[UserStatus] = mapped_column(
+        SqlEnum(UserStatus, native_enum=False, length=24),
+        nullable=False,
+        default=UserStatus.PENDING_APPROVAL,
+        server_default=UserStatus.PENDING_APPROVAL.value,
     )
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),
@@ -63,6 +76,9 @@ class Vehicle(Base):
     id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     license_plate: Mapped[str] = mapped_column(String(30), unique=True, index=True, nullable=False)
     capacity_kg: Mapped[float] = mapped_column(Double, nullable=False)
+    vehicle_type: Mapped[str] = mapped_column(
+        String(50), nullable=False, default="TRUCK", server_default="TRUCK"
+    )
     driver_name: Mapped[str | None] = mapped_column(String(150), nullable=True)
     driver_id: Mapped[uuid.UUID | None] = mapped_column(
         UUID(as_uuid=True),
@@ -75,6 +91,8 @@ class Vehicle(Base):
         nullable=False,
         default=VehicleStatus.IDLE,
     )
+    service_area: Mapped[str | None] = mapped_column(String(150), nullable=True)
+    assignment_note: Mapped[str | None] = mapped_column(Text, nullable=True)
 
 
 class Order(Base):
@@ -103,6 +121,7 @@ class Order(Base):
     delivery_note: Mapped[str | None] = mapped_column(Text, nullable=True)
     failure_reason: Mapped[str | None] = mapped_column(Text, nullable=True)
     pod_url: Mapped[str | None] = mapped_column(Text, nullable=True)
+    delivery_region: Mapped[str | None] = mapped_column(String(150), nullable=True)
 
 
 class RouteAnalyticsSnapshot(Base):

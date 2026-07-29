@@ -1,16 +1,13 @@
-import { Navigation } from '@/components/Navigation';
-import { RoleGuard } from '@/components/RoleGuard';
+import { AppShell } from '@/components/AppShell';
 import { DriverWorkspace } from '@/components/driver/DriverWorkspace';
+import { RoleGuard } from '@/components/RoleGuard';
 
 export default function DriverPage() {
   return (
-    <div className="shell driver-shell">
-      <Navigation />
-      <main className="content driver-content">
-        <RoleGuard allowedRoles={['DRIVER']} redirectTo="/dashboard">
-          <DriverWorkspace />
-        </RoleGuard>
-      </main>
-    </div>
+    <AppShell>
+      <RoleGuard allowedRoles={['DRIVER']} redirectTo="/dashboard">
+        <DriverWorkspace />
+      </RoleGuard>
+    </AppShell>
   );
 }

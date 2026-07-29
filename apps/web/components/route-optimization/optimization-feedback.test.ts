@@ -14,4 +14,10 @@ describe('getOptimizationSuccessMessage', () => {
       'Không còn đơn PENDING hoặc FAILED cần tối ưu.',
     );
   });
+
+  it('returns the English optimization message for the English locale', () => {
+    expect(getOptimizationSuccessMessage(3, 'en')).toBe(
+      'Routes optimized successfully for 3 orders!',
+    );
+  });
 });

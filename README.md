@@ -190,8 +190,11 @@ Base URL local: `http://localhost:8000`
 | Method | Endpoint | Mô tả |
 |---|---|---|
 | `GET` | `/api/health` | Kiểm tra trạng thái API |
+| `POST` | `/api/v1/auth/register` | Đăng ký tài khoản Dispatcher/Driver chờ duyệt |
 | `POST` | `/api/v1/auth/login` | Đăng nhập và nhận JWT access token |
 | `GET` | `/api/v1/auth/me` | Lấy thông tin user hiện tại |
+| `GET` | `/api/v1/admin/users` | Admin lấy danh sách tài khoản |
+| `PATCH` | `/api/v1/admin/users/{user_id}/status` | Admin duyệt hoặc khóa tài khoản |
 | `GET` | `/api/v1/overview` | KPI thực tế từ database |
 | `GET` | `/api/v1/orders` | Danh sách đơn hàng |
 | `POST` | `/api/v1/orders` | Tạo đơn hàng mới |
@@ -271,3 +274,31 @@ limit và điều khoản sử dụng phù hợp.
 - [x] Authentication và phân quyền RBAC cho API.
 - [ ] OSRM Table Service cho ma trận chi phí theo đường thực tế.
 - [ ] Lưu lịch sử phiên tối ưu và theo dõi xe thời gian thực.
+### Driver vehicle assignment
+
+The admin console exposes `PATCH /api/v1/admin/users/{user_id}/vehicle` for
+`ADMIN` and `DISPATCHER` users. It assigns an available `IDLE` vehicle to an
+active driver and persists the optional operating area and dispatcher note.
+
+### Dispatch geocoding and proof of delivery
+
+Create `apps/web/.env.local` and set `GEOAPIFY_API_KEY` to enable
+Vietnam-focused address suggestions. The key is used only by the authenticated
+Next.js server-side proxy; it is never sent to the browser. Geoapify returns the
+formatted address, latitude, and longitude in one autocomplete response, and
+the UI binds those values atomically to the order payload. The visible
+"Powered by Geoapify" attribution is required when using its free plan.
+Dispatchers can still select coordinates by dropping the Leaflet marker when
+the provider is unavailable.
+
+POD images are validated as JPEG, PNG, or WebP (maximum 5 MB), saved under
+`apps/api/uploads/pod`, and exposed through `/uploads/pod/{filename}`. Configure
+`POD_UPLOAD_DIR` and `POD_PUBLIC_BASE_URL` for each environment.
+
+| Method | Endpoint | Access | Description |
+|---|---|---|---|
+| `GET` | `/api/v1/admin/drivers/available` | Admin, Dispatcher | List active drivers with an idle assigned vehicle |
+| `POST` | `/api/v1/orders` | Admin, Dispatcher | Create an order and optionally assign a ready driver |
+| `GET` | `/api/v1/driver/route` | Driver | Get the authenticated driver's sequenced route |
+| `POST` | `/api/v1/driver/orders/{order_id}/pod` | Driver | Upload a validated POD image |
+| `PATCH` | `/api/v1/driver/orders/{order_id}/status` | Driver | Mark a stop delivering, delivered, or failed |

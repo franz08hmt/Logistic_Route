@@ -1,7 +1,14 @@
-export function getOptimizationSuccessMessage(assignedOrderCount: number): string {
+import { translate, type Locale } from '../../lib/i18n/i18n';
+
+export function getOptimizationSuccessMessage(
+  assignedOrderCount: number,
+  locale: Locale = 'vi',
+): string {
   if (assignedOrderCount === 0) {
-    return 'Không còn đơn PENDING hoặc FAILED cần tối ưu.';
+    return translate(locale, 'map.nothingToOptimize');
   }
 
-  return `Đã tối ưu lộ trình thành công cho ${assignedOrderCount} đơn hàng!`;
+  return translate(locale, 'map.optimizeSuccess', {
+    count: assignedOrderCount,
+  });
 }

@@ -67,6 +67,7 @@ const orders: Order[] = [
     delivery_note: null,
     failure_reason: null,
     pod_url: null,
+    delivery_region: null,
   },
   {
     id: 'order-2',
@@ -83,6 +84,7 @@ const orders: Order[] = [
     delivery_note: null,
     failure_reason: null,
     pod_url: null,
+    delivery_region: null,
   },
 ];
 

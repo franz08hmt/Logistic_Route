@@ -4,7 +4,16 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from app.core.security import get_password_hash
-from app.db.models import Depot, Order, OrderStatus, User, UserRole, Vehicle, VehicleStatus
+from app.db.models import (
+    Depot,
+    Order,
+    OrderStatus,
+    User,
+    UserRole,
+    UserStatus,
+    Vehicle,
+    VehicleStatus,
+)
 from app.db.session import get_db
 from app.schemas import DepotRead, SeedResponse, SeedUsersResponse, UserRead
 
@@ -183,6 +192,7 @@ def seed_users(db: Session = Depends(get_db)) -> SeedUsersResponse:
                     hashed_password=get_password_hash(user_data["password"]),
                     full_name=user_data["full_name"],
                     role=user_data["role"],
+                    status=UserStatus.ACTIVE,
                 )
             )
             created_count += 1

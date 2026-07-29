@@ -23,6 +23,7 @@ describe('admin API contracts', () => {
       delivery_note: null,
       failure_reason: null,
       pod_url: null,
+      delivery_region: null,
     };
 
     expect(isOrderList([order])).toBe(true);
@@ -35,6 +36,10 @@ describe('admin API contracts', () => {
       license_plate: '51D-12002',
       capacity_kg: 750,
       driver_name: 'Tran Minh Khoa',
+      driver_id: null,
+      vehicle_type: 'TRUCK',
+      service_area: null,
+      assignment_note: null,
       status: 'IDLE',
     };
 
@@ -42,9 +47,32 @@ describe('admin API contracts', () => {
     expect(isVehicleList([{ ...vehicle, status: 'MAINTENANCE' }])).toBe(false);
   });
 
+  it('distinguishes available vehicles from assigned vehicles', () => {
+    const vehicle = {
+      id: 'vehicle-1',
+      license_plate: '51D-12002',
+      capacity_kg: 750,
+      driver_name: null,
+      driver_id: null,
+      vehicle_type: 'TRUCK',
+      service_area: null,
+      assignment_note: null,
+      status: 'IDLE',
+    };
+
+    expect(isVehicleList([vehicle])).toBe(true);
+    expect(isVehicleList([{ ...vehicle, driver_id: 'driver-1' }])).toBe(true);
+  });
+
   it('extracts FastAPI detail messages and falls back safely', () => {
     expect(getApiErrorMessage({ detail: 'Order code already exists' }, 409))
       .toBe('Order code already exists');
+    expect(getApiErrorMessage({
+      detail: {
+        code: 'VEHICLE_CAPACITY_EXCEEDED',
+        message: 'Order weight exceeds the selected vehicle capacity',
+      },
+    }, 409)).toBe('Order weight exceeds the selected vehicle capacity');
     expect(getApiErrorMessage({ unexpected: true }, 500))
       .toBe('Yêu cầu thất bại (HTTP 500).');
   });

@@ -28,6 +28,8 @@ export const config = {
     '/fleet/:path*',
     '/map/:path*',
     '/driver/:path*',
+    '/admin/:path*',
     '/login',
+    '/register',
   ],
 };

@@ -7,6 +7,7 @@ describe('driver API contracts', () => {
     vehicle: {
       id: 'vehicle-1',
       license_plate: '51D-12001',
+      vehicle_type: 'TRUCK',
       driver_name: 'LogiRoute Driver 1',
       status: 'ON_ROUTE',
     },
@@ -47,5 +48,16 @@ describe('driver API contracts', () => {
       ...validRoute,
       stops: [{ ...validRoute.stops[0], status: 'PENDING' }],
     })).toBe(false);
+  });
+
+  it('accepts a driver route waiting for vehicle assignment', () => {
+    expect(isDriverRoute({
+      ...validRoute,
+      vehicle: null,
+      depot: null,
+      total_orders: 0,
+      completed_orders: 0,
+      stops: [],
+    })).toBe(true);
   });
 });

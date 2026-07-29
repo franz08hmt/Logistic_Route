@@ -27,6 +27,7 @@ export type Order = {
   delivery_note: string | null;
   failure_reason: string | null;
   pod_url: string | null;
+  delivery_region: string | null;
 };
 
 export type CreateOrderInput = {
@@ -37,17 +38,41 @@ export type CreateOrderInput = {
   latitude: number;
   longitude: number;
   weight_kg: number;
+  delivery_region?: string | null;
+  assigned_driver_id?: string | null;
+  force_region_mismatch?: boolean;
 };
 
 export type Vehicle = {
   id: string;
   license_plate: string;
   capacity_kg: number;
+  vehicle_type: string;
   driver_name: string | null;
+  driver_id: string | null;
   status: VehicleStatus;
+  service_area: string | null;
+  assignment_note: string | null;
 };
 
-export type CreateVehicleInput = Omit<Vehicle, 'id' | 'status'>;
+export type CreateVehicleInput = {
+  license_plate: string;
+  capacity_kg: number;
+  vehicle_type: string;
+  driver_name?: string | null;
+};
+
+export type AvailableDriver = {
+  driver_id: string;
+  full_name: string;
+  phone_number: string | null;
+  vehicle_id: string;
+  license_plate: string;
+  vehicle_type: string;
+  capacity_kg: number;
+  service_area: string | null;
+  readiness: 'READY';
+};
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null;
@@ -76,7 +101,8 @@ function isOrder(value: unknown): value is Order {
     (typeof value.stop_sequence === 'number' || value.stop_sequence === null) &&
     (typeof value.delivery_note === 'string' || value.delivery_note === null) &&
     (typeof value.failure_reason === 'string' || value.failure_reason === null) &&
-    (typeof value.pod_url === 'string' || value.pod_url === null)
+    (typeof value.pod_url === 'string' || value.pod_url === null) &&
+    (typeof value.delivery_region === 'string' || value.delivery_region === null)
   );
 }
 
@@ -89,8 +115,12 @@ function isVehicle(value: unknown): value is Vehicle {
     typeof value.id === 'string' &&
     typeof value.license_plate === 'string' &&
     isFiniteNumber(value.capacity_kg) &&
+    typeof value.vehicle_type === 'string' &&
     (typeof value.driver_name === 'string' || value.driver_name === null) &&
-    VEHICLE_STATUSES.includes(value.status as VehicleStatus)
+    (typeof value.driver_id === 'string' || value.driver_id === null) &&
+    VEHICLE_STATUSES.includes(value.status as VehicleStatus) &&
+    (typeof value.service_area === 'string' || value.service_area === null) &&
+    (typeof value.assignment_note === 'string' || value.assignment_note === null)
   );
 }
 
@@ -102,6 +132,27 @@ export function isVehicleList(value: unknown): value is Vehicle[] {
   return Array.isArray(value) && value.every(isVehicle);
 }
 
+function isAvailableDriver(value: unknown): value is AvailableDriver {
+  if (!isRecord(value)) {
+    return false;
+  }
+  return (
+    typeof value.driver_id === 'string'
+    && typeof value.full_name === 'string'
+    && (typeof value.phone_number === 'string' || value.phone_number === null)
+    && typeof value.vehicle_id === 'string'
+    && typeof value.license_plate === 'string'
+    && typeof value.vehicle_type === 'string'
+    && isFiniteNumber(value.capacity_kg)
+    && (typeof value.service_area === 'string' || value.service_area === null)
+    && value.readiness === 'READY'
+  );
+}
+
+export function isAvailableDriverList(value: unknown): value is AvailableDriver[] {
+  return Array.isArray(value) && value.every(isAvailableDriver);
+}
+
 export function getApiErrorMessage(payload: unknown, status: number): string {
   if (
     isRecord(payload) &&
@@ -109,6 +160,15 @@ export function getApiErrorMessage(payload: unknown, status: number): string {
     payload.detail.trim()
   ) {
     return payload.detail;
+  }
+
+  if (
+    isRecord(payload)
+    && isRecord(payload.detail)
+    && typeof payload.detail.message === 'string'
+    && payload.detail.message.trim()
+  ) {
+    return payload.detail.message;
   }
 
   return `Yêu cầu thất bại (HTTP ${status}).`;

@@ -1,31 +1,24 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import { useI18n } from '@/context/I18nContext';
 
 import {
   isOrderList,
+  isAvailableDriverList,
   requestApi,
+  type AvailableDriver,
   type CreateOrderInput,
   type Order,
-  type OrderStatus,
 } from './api-contracts';
 import { CreateOrderDialog } from './CreateOrderDialog';
+import { OrderList } from './OrderList';
 import { subscribeToOrdersUpdated } from './orders-sync';
 
-const weightFormatter = new Intl.NumberFormat('vi-VN', {
-  maximumFractionDigits: 1,
-});
-
-const statusLabels: Record<OrderStatus, string> = {
-  PENDING: 'Chờ phân tuyến',
-  ASSIGNED: 'Đã phân tuyến',
-  DELIVERING: 'Đang giao',
-  DELIVERED: 'Đã giao',
-  FAILED: 'Giao thất bại',
-};
-
 export function OrdersManager() {
+  const { t } = useI18n();
   const [orders, setOrders] = useState<Order[]>([]);
+  const [availableDrivers, setAvailableDrivers] = useState<AvailableDriver[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isCreateOpen, setIsCreateOpen] = useState(false);
   const [deletingId, setDeletingId] = useState<string | null>(null);
@@ -36,19 +29,23 @@ export function OrdersManager() {
 
     async function loadOrders() {
       try {
-        const payload = await requestApi('/api/v1/orders');
-        if (!isOrderList(payload)) {
-          throw new Error('API trả về danh sách đơn hàng không hợp lệ.');
+        const [payload, driversPayload] = await Promise.all([
+          requestApi('/api/v1/orders'),
+          requestApi('/api/v1/admin/drivers/available'),
+        ]);
+        if (!isOrderList(payload) || !isAvailableDriverList(driversPayload)) {
+          throw new Error(t('orders.invalidList'));
         }
         if (active) {
           setOrders(payload);
+          setAvailableDrivers(driversPayload);
         }
       } catch (requestError) {
         if (active) {
           setError(
             requestError instanceof Error
               ? requestError.message
-              : 'Không thể tải đơn hàng.',
+              : t('orders.loadError'),
           );
         }
       } finally {
@@ -75,7 +72,7 @@ export function OrdersManager() {
       window.clearInterval(refreshInterval);
       unsubscribe();
     };
-  }, []);
+  }, [t]);
 
   async function createOrder(input: CreateOrderInput) {
     const payload = await requestApi('/api/v1/orders', {
@@ -85,7 +82,7 @@ export function OrdersManager() {
     });
     const createdOrders = [payload];
     if (!isOrderList(createdOrders)) {
-      throw new Error('API trả về đơn hàng không hợp lệ.');
+      throw new Error(t('orders.invalidItem'));
     }
 
     setOrders((current) => [createdOrders[0], ...current]);
@@ -93,7 +90,7 @@ export function OrdersManager() {
 
   async function deleteOrder(order: Order) {
     const confirmed = window.confirm(
-      `Xóa đơn ${order.order_code}? Thao tác này không thể hoàn tác.`,
+      t('orders.deleteConfirm', { code: order.order_code }),
     );
     if (!confirmed) {
       return;
@@ -108,7 +105,7 @@ export function OrdersManager() {
       setError(
         requestError instanceof Error
           ? requestError.message
-          : 'Không thể xóa đơn hàng.',
+          : t('orders.deleteError'),
       );
     } finally {
       setDeletingId(null);
@@ -121,107 +118,47 @@ export function OrdersManager() {
   const deliveredCount = orders.filter((order) => order.status === 'DELIVERED').length;
 
   return (
-    <section className="management-workspace" aria-labelledby="orders-heading">
-      <header className="management-toolbar">
+    <section className="space-y-4" aria-labelledby="orders-heading">
+      <header className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h2 id="orders-heading">Danh sách đơn hàng</h2>
-          <p>
-            {orders.length} đơn · {pendingCount} đang chờ · {assignedCount} đã phân tuyến · {failedCount} thất bại · {deliveredCount} đã giao
-          </p>
+          <h2 id="orders-heading" className="text-lg font-semibold text-slate-950 dark:text-white">{t('orders.listTitle')}</h2>
+          <div className="mt-2 flex flex-wrap gap-2 text-xs text-slate-500">
+            <span>{t('orders.summary.total', { count: orders.length })}</span><span aria-hidden="true">·</span>
+            <span>{t('orders.summary.pending', { count: pendingCount })}</span><span aria-hidden="true">·</span>
+            <span>{t('orders.summary.assigned', { count: assignedCount })}</span><span aria-hidden="true">·</span>
+            <span>{t('orders.summary.failed', { count: failedCount })}</span><span aria-hidden="true">·</span>
+            <span>{t('orders.summary.delivered', { count: deliveredCount })}</span>
+          </div>
         </div>
         <button
-          className="primary-button"
+          className="inline-flex h-10 items-center justify-center gap-2 rounded-xl bg-teal-600 px-4 text-sm font-semibold text-white shadow-sm transition hover:bg-teal-700 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-teal-600"
           type="button"
           onClick={() => setIsCreateOpen(true)}
         >
-          <span aria-hidden="true">＋</span>
-          Tạo đơn hàng mới
+          <span className="text-lg leading-none" aria-hidden="true">＋</span>
+          {t('orders.create')}
         </button>
       </header>
 
-      {error && <p className="management-alert" role="alert">{error}</p>}
+      {error && (
+        <p className="rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700 dark:border-rose-900 dark:bg-rose-950/50 dark:text-rose-300" role="alert">
+          {error}
+        </p>
+      )}
 
-      <div className="table-panel">
-        <div className="table-scroll">
-          <table className="management-table">
-            <caption className="sr-only">Danh sách đơn hàng LogiRoute</caption>
-            <thead>
-              <tr>
-                <th scope="col">Mã đơn</th>
-                <th scope="col">Khách hàng</th>
-                <th scope="col">Điểm giao</th>
-                <th scope="col">Khối lượng</th>
-                <th scope="col">Trạng thái</th>
-                <th scope="col"><span className="sr-only">Hành động</span></th>
-              </tr>
-            </thead>
-            <tbody>
-              {isLoading &&
-                Array.from({ length: 4 }, (_, index) => (
-                  <tr className="skeleton-row" key={index} aria-hidden="true">
-                    <td colSpan={6}><span /></td>
-                  </tr>
-                ))}
-              {!isLoading && orders.length === 0 && (
-                <tr>
-                  <td className="table-empty" colSpan={6}>
-                    <strong>Chưa có đơn hàng</strong>
-                    <span>Tạo đơn đầu tiên để bắt đầu lập kế hoạch giao hàng.</span>
-                  </td>
-                </tr>
-              )}
-              {!isLoading && orders.map((order) => (
-                <tr key={order.id}>
-                  <td><strong>{order.order_code}</strong></td>
-                  <td>{order.customer_name}</td>
-                  <td>
-                    <span className="table-primary">{order.address}</span>
-                    <small>{order.latitude.toFixed(4)}, {order.longitude.toFixed(4)}</small>
-                  </td>
-                  <td>{weightFormatter.format(order.weight_kg)} kg</td>
-                  <td>
-                    <span className={`status-badge status-${order.status.toLowerCase()}`}>
-                      {statusLabels[order.status]}
-                    </span>
-                    {order.status === 'FAILED' && (
-                      <details className="order-exception-details">
-                        <summary>Xem exception</summary>
-                        <div>
-                          <strong>Lý do: </strong>
-                          {order.failure_reason || 'Chưa có lý do'}
-                          <br />
-                          <strong>Ghi chú POD: </strong>
-                          {order.delivery_note || 'Chưa có ghi chú'}
-                          {order.pod_url && (
-                            <a href={order.pod_url} target="_blank" rel="noreferrer">
-                              Mở ảnh POD
-                            </a>
-                          )}
-                        </div>
-                      </details>
-                    )}
-                  </td>
-                  <td className="table-actions">
-                    <button
-                      className="danger-button"
-                      type="button"
-                      onClick={() => void deleteOrder(order)}
-                      disabled={deletingId === order.id}
-                      aria-label={`Xóa đơn ${order.order_code}`}
-                    >
-                      {deletingId === order.id ? 'Đang xóa…' : 'Xóa'}
-                    </button>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+      <div className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm shadow-slate-950/5 dark:border-slate-800 dark:bg-slate-900 dark:shadow-none">
+        <OrderList
+          orders={orders}
+          isLoading={isLoading}
+          deletingId={deletingId}
+          onDelete={(order) => void deleteOrder(order)}
+        />
       </div>
 
       {isCreateOpen && (
         <CreateOrderDialog
           open
+          availableDrivers={availableDrivers}
           onClose={() => setIsCreateOpen(false)}
           onCreate={createOrder}
         />

@@ -1,4 +1,12 @@
-const protectedRoutePrefixes = ['/dashboard', '/orders', '/fleet', '/map', '/driver'];
+const protectedRoutePrefixes = [
+  '/dashboard',
+  '/orders',
+  '/fleet',
+  '/map',
+  '/driver',
+  '/admin',
+];
+const guestOnlyRoutes = ['/login', '/register'];
 
 export type RouteAccessDecision = 'allow' | 'login' | 'dashboard';
 
@@ -14,7 +22,7 @@ export function getRouteAccessDecision(
     return 'login';
   }
 
-  if (pathname === '/login' && hasSession) {
+  if (guestOnlyRoutes.includes(pathname) && hasSession) {
     return 'dashboard';
   }
 

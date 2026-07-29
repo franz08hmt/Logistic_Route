@@ -1,19 +1,21 @@
 import { DashboardOverview } from '@/components/DashboardOverview';
-import { Navigation } from '@/components/Navigation';
+import { AppShell } from '@/components/AppShell';
+import { LocalizedPageHeader } from '@/components/LocalizedPageHeader';
 import { RoleGuard } from '@/components/RoleGuard';
 
 export default function DashboardPage() {
   return (
-    <div className="shell">
-      <Navigation />
-      <main className="content">
+    <AppShell>
+      <div className="mx-auto max-w-7xl space-y-6">
         <RoleGuard allowedRoles={['ADMIN', 'DISPATCHER']} redirectTo="/driver">
-          <span className="eyebrow">Dashboard</span>
-          <h1>Operations overview</h1>
-          <p className="muted">Live KPIs from the LogiRoute VN API.</p>
+          <LocalizedPageHeader
+            eyebrowKey="dashboard.eyebrow"
+            titleKey="dashboard.title"
+            descriptionKey="dashboard.description"
+          />
           <DashboardOverview />
         </RoleGuard>
-      </main>
-    </div>
+      </div>
+    </AppShell>
   );
 }

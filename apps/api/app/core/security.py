@@ -14,7 +14,7 @@ from app.core.config import (
     JWT_ALGORITHM,
     JWT_SECRET_KEY,
 )
-from app.db.models import User, UserRole
+from app.db.models import User, UserRole, UserStatus
 from app.db.session import get_db
 
 
@@ -83,6 +83,11 @@ def get_current_user(
     user = db.get(User, user_id)
     if user is None:
         raise _unauthorized()
+    if user.status is not UserStatus.ACTIVE:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Account is not active",
+        )
     return user
 
 

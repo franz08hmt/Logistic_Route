@@ -1,26 +1,19 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import { useI18n } from '@/context/I18nContext';
 
 import {
   isVehicleList,
   requestApi,
   type CreateVehicleInput,
   type Vehicle,
-  type VehicleStatus,
 } from './api-contracts';
 import { CreateVehicleDialog } from './CreateVehicleDialog';
-
-const weightFormatter = new Intl.NumberFormat('vi-VN', {
-  maximumFractionDigits: 1,
-});
-
-const statusLabels: Record<VehicleStatus, string> = {
-  IDLE: 'Sẵn sàng',
-  ON_ROUTE: 'Đang giao hàng',
-};
+import { FleetList } from './FleetList';
 
 export function FleetManager() {
+  const { locale, t } = useI18n();
   const [vehicles, setVehicles] = useState<Vehicle[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isCreateOpen, setIsCreateOpen] = useState(false);
@@ -33,7 +26,7 @@ export function FleetManager() {
       try {
         const payload = await requestApi('/api/v1/vehicles');
         if (!isVehicleList(payload)) {
-          throw new Error('API trả về danh sách đội xe không hợp lệ.');
+          throw new Error(t('fleet.invalidList'));
         }
         if (active) {
           setVehicles(payload);
@@ -43,7 +36,7 @@ export function FleetManager() {
           setError(
             requestError instanceof Error
               ? requestError.message
-              : 'Không thể tải đội xe.',
+              : t('fleet.loadError'),
           );
         }
       } finally {
@@ -57,7 +50,7 @@ export function FleetManager() {
     return () => {
       active = false;
     };
-  }, []);
+  }, [t]);
 
   async function createVehicle(input: CreateVehicleInput) {
     const payload = await requestApi('/api/v1/vehicles', {
@@ -67,7 +60,7 @@ export function FleetManager() {
     });
     const createdVehicles = [payload];
     if (!isVehicleList(createdVehicles)) {
-      throw new Error('API trả về phương tiện không hợp lệ.');
+      throw new Error(t('fleet.invalidItem'));
     }
 
     setVehicles((current) => [createdVehicles[0], ...current]);
@@ -78,82 +71,42 @@ export function FleetManager() {
     (total, vehicle) => total + vehicle.capacity_kg,
     0,
   );
+  const weightFormatter = new Intl.NumberFormat(
+    locale === 'vi' ? 'vi-VN' : 'en-US',
+    { maximumFractionDigits: 1 },
+  );
 
   return (
-    <section className="management-workspace" aria-labelledby="fleet-heading">
-      <header className="management-toolbar">
+    <section className="space-y-4" aria-labelledby="fleet-heading">
+      <header className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h2 id="fleet-heading">Danh sách phương tiện</h2>
-          <p>
-            {vehicles.length} xe · {availableCount} sẵn sàng ·{' '}
-            {weightFormatter.format(totalCapacity)} kg tổng tải trọng
+          <h2 id="fleet-heading" className="text-lg font-semibold text-slate-950 dark:text-white">{t('fleet.listTitle')}</h2>
+          <p className="mt-2 text-xs text-slate-500">
+            {t('fleet.summary', {
+              total: vehicles.length,
+              available: availableCount,
+              capacity: weightFormatter.format(totalCapacity),
+            })}
           </p>
         </div>
         <button
-          className="primary-button"
+          className="inline-flex h-10 items-center justify-center gap-2 rounded-xl bg-teal-600 px-4 text-sm font-semibold text-white shadow-sm transition hover:bg-teal-700 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-teal-600"
           type="button"
           onClick={() => setIsCreateOpen(true)}
         >
-          <span aria-hidden="true">＋</span>
-          Thêm xe mới
+          <span className="text-lg leading-none" aria-hidden="true">＋</span>
+          {t('fleet.add')}
         </button>
       </header>
 
-      {error && <p className="management-alert" role="alert">{error}</p>}
+      {error && (
+        <p className="rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700 dark:border-rose-900 dark:bg-rose-950/50 dark:text-rose-300" role="alert">
+          {error}
+        </p>
+      )}
 
-      <div className="table-panel">
-        <div className="table-scroll">
-          <table className="management-table">
-            <caption className="sr-only">Danh sách đội xe LogiRoute</caption>
-            <thead>
-              <tr>
-                <th scope="col">Biển số</th>
-                <th scope="col">Tải trọng tối đa</th>
-                <th scope="col">Tài xế</th>
-                <th scope="col">Trạng thái</th>
-              </tr>
-            </thead>
-            <tbody>
-              {isLoading &&
-                Array.from({ length: 3 }, (_, index) => (
-                  <tr className="skeleton-row" key={index} aria-hidden="true">
-                    <td colSpan={4}><span /></td>
-                  </tr>
-                ))}
-              {!isLoading && vehicles.length === 0 && (
-                <tr>
-                  <td className="table-empty" colSpan={4}>
-                    <strong>Chưa có phương tiện</strong>
-                    <span>Thêm xe đầu tiên để bắt đầu điều phối.</span>
-                  </td>
-                </tr>
-              )}
-              {!isLoading && vehicles.map((vehicle) => (
-                <tr key={vehicle.id}>
-                  <td><strong>{vehicle.license_plate}</strong></td>
-                  <td>{weightFormatter.format(vehicle.capacity_kg)} kg</td>
-                  <td>
-                    {vehicle.driver_name ? (
-                      <span className="driver-cell">
-                        <i aria-hidden="true">
-                          {vehicle.driver_name.charAt(0).toUpperCase()}
-                        </i>
-                        {vehicle.driver_name}
-                      </span>
-                    ) : (
-                      <span className="muted">Chưa phân công</span>
-                    )}
-                  </td>
-                  <td>
-                    <span className={`status-badge status-${vehicle.status.toLowerCase()}`}>
-                      {statusLabels[vehicle.status]}
-                    </span>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+      <div className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm shadow-slate-950/5 dark:border-slate-800 dark:bg-slate-900 dark:shadow-none">
+        <FleetList vehicles={vehicles} isLoading={isLoading} />
       </div>
 
       {isCreateOpen && (

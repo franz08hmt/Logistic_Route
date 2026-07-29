@@ -20,3 +20,5 @@ def test_driver_api_contract_is_exposed_in_openapi() -> None:
     assert "get" in paths["/api/v1/driver/route"]
     assert "/api/v1/driver/orders/{order_id}/status" in paths
     assert "patch" in paths["/api/v1/driver/orders/{order_id}/status"]
+    assert "/api/v1/driver/orders/{order_id}/pod" in paths
+    assert "post" in paths["/api/v1/driver/orders/{order_id}/pod"]

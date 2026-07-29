@@ -26,3 +26,4 @@ venv/
 
 # Local database data
 postgres_data/
+apps/api/uploads/

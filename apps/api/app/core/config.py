@@ -1,4 +1,5 @@
 from os import getenv
+from pathlib import Path
 
 from dotenv import load_dotenv
 
@@ -14,6 +15,16 @@ DATABASE_URL = getenv(
 JWT_SECRET_KEY = getenv("JWT_SECRET_KEY", "logiroute-dev-secret-change-me")
 JWT_ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_MINUTES = int(getenv("ACCESS_TOKEN_EXPIRE_MINUTES", "60"))
+POD_UPLOAD_DIR = Path(
+    getenv(
+        "POD_UPLOAD_DIR",
+        str(Path(__file__).resolve().parents[2] / "uploads" / "pod"),
+    )
+)
+POD_PUBLIC_BASE_URL = getenv(
+    "POD_PUBLIC_BASE_URL",
+    "http://localhost:8000",
+).rstrip("/")
 
 _default_web_origins = ",".join(
     (

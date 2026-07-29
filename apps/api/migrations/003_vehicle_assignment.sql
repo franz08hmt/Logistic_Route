@@ -1,0 +1,8 @@
+ALTER TABLE vehicles
+    ADD COLUMN IF NOT EXISTS vehicle_type VARCHAR(50) DEFAULT 'TRUCK';
+
+ALTER TABLE vehicles
+    ADD COLUMN IF NOT EXISTS service_area VARCHAR(150);
+
+ALTER TABLE vehicles
+    ADD COLUMN IF NOT EXISTS assignment_note TEXT;

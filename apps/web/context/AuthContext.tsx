@@ -11,6 +11,7 @@ import {
 } from 'react';
 import { useRouter } from 'next/navigation';
 
+import { useI18n } from '@/context/I18nContext';
 import {
   type AuthUser,
   type LoginInput,
@@ -22,6 +23,7 @@ import {
   AUTH_UNAUTHORIZED_EVENT,
   backendProxyPath,
 } from '@/lib/api-client';
+import type { TranslationKey } from '@/lib/i18n/i18n';
 
 type AuthContextValue = {
   user: AuthUser | null;
@@ -37,9 +39,19 @@ async function responsePayload(response: Response): Promise<unknown> {
   return response.json().catch(() => null);
 }
 
-function errorMessage(payload: unknown, status: number): string {
+function errorMessage(
+  payload: unknown,
+  status: number,
+  t: (key: TranslationKey) => string,
+): string {
   if (status === 401) {
-    return 'Email hoặc mật khẩu không đúng.';
+    return t('auth.invalidCredentials');
+  }
+
+  if (status === 403 && isRecord(payload) && typeof payload.detail === 'string') {
+    return payload.detail.includes('chờ')
+      ? t('auth.pendingApproval')
+      : t('auth.suspended');
   }
 
   if (
@@ -50,11 +62,12 @@ function errorMessage(payload: unknown, status: number): string {
     return payload.detail;
   }
 
-  return `Đăng nhập thất bại (HTTP ${status}).`;
+  return t('auth.loginError');
 }
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const router = useRouter();
+  const { t } = useI18n();
   const [user, setUser] = useState<AuthUser | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
@@ -78,16 +91,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const payload = await responsePayload(response);
 
     if (!response.ok) {
-      throw new Error(errorMessage(payload, response.status));
+      throw new Error(errorMessage(payload, response.status, t));
     }
     if (!isLoginResult(payload)) {
-      throw new Error('Phản hồi đăng nhập không hợp lệ.');
+      throw new Error(t('auth.invalidResponse'));
     }
 
     setUser(payload.user);
     router.replace(payload.user.role === 'DRIVER' ? '/driver' : '/dashboard');
     router.refresh();
-  }, [router]);
+  }, [router, t]);
 
   useEffect(() => {
     let isActive = true;
@@ -107,8 +120,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           return;
         }
 
-        if (response.status === 401) {
+        if (response.status === 401 || response.status === 403) {
           await clearSession();
+          if (isActive) {
+            router.replace('/login');
+            router.refresh();
+          }
         }
       } finally {
         if (isActive) {
@@ -121,7 +138,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return () => {
       isActive = false;
     };
-  }, [clearSession]);
+  }, [clearSession, router]);
 
   useEffect(() => {
     function handleUnauthorized() {
