@@ -1,5 +1,5 @@
 import uuid
-from datetime import datetime
+from datetime import datetime, timezone
 from enum import Enum
 
 from sqlalchemy import DateTime, Double, Enum as SqlEnum, ForeignKey, String, Text, func
@@ -111,9 +111,21 @@ class Order(Base):
         nullable=False,
         default=OrderStatus.PENDING,
     )
+    status_updated_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True),
+        nullable=True,
+        default=lambda: datetime.now(timezone.utc),
+        server_default=func.now(),
+        index=True,
+    )
     assigned_vehicle_id: Mapped[uuid.UUID | None] = mapped_column(
         UUID(as_uuid=True),
         ForeignKey("vehicles.id", ondelete="SET NULL"),
+        nullable=True,
+        index=True,
+    )
+    route_batch_id: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True),
         nullable=True,
         index=True,
     )
@@ -121,6 +133,10 @@ class Order(Base):
     delivery_note: Mapped[str | None] = mapped_column(Text, nullable=True)
     failure_reason: Mapped[str | None] = mapped_column(Text, nullable=True)
     pod_url: Mapped[str | None] = mapped_column(Text, nullable=True)
+    pod_uploaded_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True),
+        nullable=True,
+    )
     delivery_region: Mapped[str | None] = mapped_column(String(150), nullable=True)
 
 

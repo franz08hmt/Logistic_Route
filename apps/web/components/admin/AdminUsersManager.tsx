@@ -9,6 +9,7 @@ import type { AuthUser, UserStatus } from '@/lib/auth/contracts';
 import { UserStatusBadge } from './UserStatusBadge';
 import { VehicleAssignmentModal } from './VehicleAssignmentModal';
 import { isVehicleList, type Vehicle } from './api-contracts';
+import { publishDataInvalidated } from './orders-sync';
 import { isAdminUserList, nextAccountAction } from './user-management';
 
 async function readPayload(response: Response): Promise<unknown> {
@@ -137,6 +138,7 @@ export function AdminUsersManager() {
       }
       setSelectedDriver(null);
       setNotice(t('admin.assignment.success'));
+      publishDataInvalidated(['fleet', 'driver', 'overview']);
     } catch (requestError) {
       setError(
         requestError instanceof Error

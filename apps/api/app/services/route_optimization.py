@@ -1,5 +1,5 @@
 from dataclasses import dataclass
-from uuid import UUID
+from uuid import UUID, uuid4
 
 from sqlalchemy import select
 from sqlalchemy.orm import Session
@@ -13,6 +13,8 @@ from app.db.models import (
     VehicleStatus,
 )
 from app.services.cost_calculator import CostCalculation, calculate_route_costs
+from app.services.driver_availability import vehicle_is_available_clause
+from app.services.order_status import set_order_status
 from core_engine.solver import (
     Depot as SolverDepot,
     Order as SolverOrder,
@@ -47,11 +49,14 @@ def optimize_pending_routes(db: Session) -> OptimizationRun:
 
     vehicles = list(
         db.scalars(
-            select(DatabaseVehicle).order_by(DatabaseVehicle.license_plate)
+            select(DatabaseVehicle)
+            .where(vehicle_is_available_clause())
+            .order_by(DatabaseVehicle.license_plate)
+            .with_for_update()
         ).all()
     )
     if not vehicles:
-        raise RouteOptimizationError(409, "At least one vehicle is required")
+        raise RouteOptimizationError(409, "No available vehicle can receive a route")
 
     pending_orders = list(
         db.scalars(
@@ -103,11 +108,13 @@ def optimize_pending_routes(db: Session) -> OptimizationRun:
         for stop in route.stops
     }
     vehicles_by_id = {str(vehicle.id): vehicle for vehicle in vehicles}
+    route_batch_id = uuid4()
     for order in pending_orders:
         assignment = assignments.get(str(order.id))
         if assignment:
-            order.status = OrderStatus.ASSIGNED
+            set_order_status(order, OrderStatus.ASSIGNED)
             order.assigned_vehicle_id = UUID(assignment[0])
+            order.route_batch_id = route_batch_id
             order.stop_sequence = assignment[1]
             order.failure_reason = None
 

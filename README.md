@@ -197,7 +197,8 @@ Base URL local: `http://localhost:8000`
 | `PATCH` | `/api/v1/admin/users/{user_id}/status` | Admin duyệt hoặc khóa tài khoản |
 | `GET` | `/api/v1/overview` | KPI thực tế từ database |
 | `GET` | `/api/v1/orders` | Danh sách đơn hàng |
-| `POST` | `/api/v1/orders` | Tạo đơn hàng mới |
+| `POST` | `/api/v1/orders` | Tạo đơn mới ở trạng thái `PENDING` |
+| `POST` | `/api/v1/orders/{order_id}/dispatch` | Chủ động phân công đơn cho tài xế sẵn sàng |
 | `DELETE` | `/api/v1/orders/{order_id}` | Xóa đơn hàng |
 | `GET` | `/api/v1/vehicles` | Danh sách đội xe |
 | `POST` | `/api/v1/vehicles` | Tạo xe mới |
@@ -205,6 +206,7 @@ Base URL local: `http://localhost:8000`
 | `POST` | `/api/v1/seed` | Tạo dữ liệu demo TP.HCM |
 | `POST` | `/api/v1/seed/users` | Tạo tài khoản demo local |
 | `POST` | `/api/v1/routes/optimize` | Phân tuyến các đơn `PENDING` |
+| `POST` | `/api/v1/routes/dispatch` | Tối ưu và gán một nhóm đơn `PENDING` đã chọn |
 
 OpenAPI tương tác có tại [http://localhost:8000/docs](http://localhost:8000/docs).
 
@@ -292,13 +294,17 @@ Dispatchers can still select coordinates by dropping the Leaflet marker when
 the provider is unavailable.
 
 POD images are validated as JPEG, PNG, or WebP (maximum 5 MB), saved under
-`apps/api/uploads/pod`, and exposed through `/uploads/pod/{filename}`. Configure
-`POD_UPLOAD_DIR` and `POD_PUBLIC_BASE_URL` for each environment.
+`apps/api/uploads/pod`, and exposed through `/uploads/pod/{filename}`. The
+database stores both the public URL and upload timestamp for audit display in
+the Orders console. Configure `POD_UPLOAD_DIR` and `POD_PUBLIC_BASE_URL` for
+each environment.
 
 | Method | Endpoint | Access | Description |
 |---|---|---|---|
 | `GET` | `/api/v1/admin/drivers/available` | Admin, Dispatcher | List active drivers with an idle assigned vehicle |
-| `POST` | `/api/v1/orders` | Admin, Dispatcher | Create an order and optionally assign a ready driver |
+| `POST` | `/api/v1/orders` | Admin, Dispatcher | Create an unassigned `PENDING` order |
+| `POST` | `/api/v1/orders/{order_id}/dispatch` | Admin, Dispatcher | Explicitly assign a pending/failed order to a ready driver |
+| `POST` | `/api/v1/routes/dispatch` | Admin, Dispatcher | Optimize selected pending stops and atomically assign one route batch |
 | `GET` | `/api/v1/driver/route` | Driver | Get the authenticated driver's sequenced route |
 | `POST` | `/api/v1/driver/orders/{order_id}/pod` | Driver | Upload a validated POD image |
 | `PATCH` | `/api/v1/driver/orders/{order_id}/status` | Driver | Mark a stop delivering, delivered, or failed |

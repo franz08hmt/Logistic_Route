@@ -65,8 +65,33 @@ def main() -> None:
             "ALTER TABLE orders ADD COLUMN IF NOT EXISTS pod_url TEXT"
         ))
         connection.execute(text(
+            "ALTER TABLE orders ADD COLUMN IF NOT EXISTS pod_uploaded_at TIMESTAMPTZ"
+        ))
+        connection.execute(text(
+            "ALTER TABLE orders ADD COLUMN IF NOT EXISTS "
+            "status_updated_at TIMESTAMPTZ"
+        ))
+        connection.execute(text(
+            "UPDATE orders SET status_updated_at = pod_uploaded_at "
+            "WHERE status_updated_at IS NULL AND pod_uploaded_at IS NOT NULL"
+        ))
+        connection.execute(text(
+            "ALTER TABLE orders ALTER COLUMN status_updated_at SET DEFAULT NOW()"
+        ))
+        connection.execute(text(
+            "CREATE INDEX IF NOT EXISTS ix_orders_status_updated_at "
+            "ON orders (status_updated_at)"
+        ))
+        connection.execute(text(
             "ALTER TABLE orders ADD COLUMN IF NOT EXISTS "
             "delivery_region VARCHAR(150)"
+        ))
+        connection.execute(text(
+            "ALTER TABLE orders ADD COLUMN IF NOT EXISTS route_batch_id UUID"
+        ))
+        connection.execute(text(
+            "CREATE INDEX IF NOT EXISTS ix_orders_route_batch_id "
+            "ON orders (route_batch_id)"
         ))
         connection.execute(text(
             "UPDATE vehicles SET status = 'IDLE' "

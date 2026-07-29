@@ -10,13 +10,14 @@ import { LanguageSwitcher } from './LanguageSwitcher';
 import { ThemeToggle } from './ThemeToggle';
 import { UserProfileMenu } from './UserProfileMenu';
 
-type NavIconName = 'dashboard' | 'orders' | 'fleet' | 'map' | 'driver' | 'users';
+type NavIconName = 'dashboard' | 'orders' | 'fleet' | 'dispatch' | 'driver' | 'users';
 
 const adminLinks = [
   { labelKey: 'navigation.dashboard', href: '/dashboard', icon: 'dashboard' },
   { labelKey: 'navigation.orders', href: '/orders', icon: 'orders' },
+  { labelKey: 'navigation.dispatch', href: '/dispatch', icon: 'dispatch' },
   { labelKey: 'navigation.fleet', href: '/fleet', icon: 'fleet' },
-  { labelKey: 'navigation.dispatch', href: '/map', icon: 'map' },
+  { labelKey: 'navigation.drivers', href: '/drivers', icon: 'driver' },
 ] satisfies Array<{ labelKey: TranslationKey; href: string; icon: NavIconName }>;
 
 const driverLinks = [
@@ -48,8 +49,8 @@ function NavIcon({ name }: { name: NavIconName }) {
   if (name === 'fleet') {
     return <svg {...common}><path d="M3 7h11v9H3zM14 10h4l3 3v3h-7z" /><circle cx="7" cy="18" r="2" /><circle cx="17" cy="18" r="2" /></svg>;
   }
-  if (name === 'map') {
-    return <svg {...common}><path d="m3 6 6-3 6 3 6-3v15l-6 3-6-3-6 3Z" /><path d="M9 3v15M15 6v15" /></svg>;
+  if (name === 'dispatch') {
+    return <svg {...common}><path d="M4 5h10M4 12h7M4 19h10" /><circle cx="18" cy="5" r="2" /><circle cx="15" cy="12" r="2" /><circle cx="18" cy="19" r="2" /></svg>;
   }
   if (name === 'users') {
     return <svg {...common}><path d="M16 20v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" /><circle cx="9" cy="7" r="4" /><path d="M22 20v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75" /></svg>;
@@ -84,8 +85,10 @@ export function Navigation() {
   const links =
     user?.role === 'DRIVER'
       ? driverLinks
-      : user?.role === 'ADMIN' || user?.role === 'DISPATCHER'
+      : user?.role === 'ADMIN'
         ? [...adminLinks, userManagementLink]
+        : user?.role === 'DISPATCHER'
+          ? adminLinks
         : adminLinks;
 
   return (
@@ -179,6 +182,8 @@ export function Navigation() {
             ? 'grid-cols-1'
             : links.length === 5
               ? 'grid-cols-5'
+              : links.length === 6
+                ? 'grid-cols-6'
               : 'grid-cols-4'
         }`}
         aria-label={t('navigation.mobile')}

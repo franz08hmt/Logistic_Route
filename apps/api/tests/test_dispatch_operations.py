@@ -1,4 +1,5 @@
 import asyncio
+from uuid import uuid4
 
 import pytest
 from fastapi import HTTPException, Request
@@ -7,11 +8,16 @@ from sqlalchemy.orm import Session
 from sqlalchemy.pool import StaticPool
 
 from app.api.v1.admin import list_available_drivers
-from app.api.v1.driver import _read_limited_pod_body, update_driver_order_status
-from app.api.v1.orders import create_order, update_order_status
+from app.api.v1.driver import (
+    _read_limited_pod_body,
+    get_driver_route,
+    update_driver_order_status,
+)
+from app.api.v1.orders import create_order, dispatch_order, update_order_status
 from app.core.security import get_password_hash
 from app.db.base import Base
 from app.db.models import (
+    Depot,
     Order,
     OrderStatus,
     User,
@@ -24,6 +30,7 @@ from app.schemas import (
     DriverOrderStatus,
     DriverOrderStatusUpdate,
     OrderCreate,
+    OrderDispatchRequest,
     OrderStatusUpdate,
 )
 from app.services.pod_storage import MAX_POD_BYTES, validate_pod_content
@@ -65,7 +72,7 @@ def test_region_matcher_maps_hcm_districts_to_operating_zones() -> None:
     assert not regions_match("Quan 6", "northwest")
 
 
-def test_dispatcher_must_confirm_a_region_mismatch_before_assignment(
+def test_create_order_stays_pending_until_dispatcher_explicitly_assigns_it(
     db: Session,
 ) -> None:
     dispatcher = active_user(
@@ -86,7 +93,17 @@ def test_dispatcher_must_confirm_a_region_mismatch_before_assignment(
         status=VehicleStatus.IDLE,
         service_area="east",
     )
-    db.add(vehicle)
+    db.add_all(
+        [
+            vehicle,
+            Depot(
+                name="Test Depot",
+                address="Quan 12",
+                latitude=10.86,
+                longitude=106.65,
+            ),
+        ]
+    )
     db.commit()
 
     payload = OrderCreate(
@@ -97,30 +114,123 @@ def test_dispatcher_must_confirm_a_region_mismatch_before_assignment(
         longitude=106.587,
         weight_kg=10,
         delivery_region="Huyện Hóc Môn",
-        assigned_driver_id=driver.id,
     )
 
+    created = create_order(payload=payload, db=db, _current_user=dispatcher)
+    assert created.status is OrderStatus.PENDING
+    assert created.assigned_vehicle_id is None
+    assert created.stop_sequence is None
+    db.refresh(vehicle)
+    assert vehicle.status is VehicleStatus.IDLE
+
     with pytest.raises(HTTPException) as mismatch:
-        create_order(payload=payload, db=db, _current_user=dispatcher)
+        dispatch_order(
+            order_id=created.id,
+            payload=OrderDispatchRequest(driver_id=driver.id),
+            db=db,
+            _current_user=dispatcher,
+        )
 
     assert mismatch.value.status_code == 409
     assert mismatch.value.detail["code"] == "REGION_MISMATCH"
 
-    assigned = create_order(
-        payload=payload.model_copy(
-            update={
-                "order_code": "REGION-002",
-                "force_region_mismatch": True,
-            }
+    assigned = dispatch_order(
+        order_id=created.id,
+        payload=OrderDispatchRequest(
+            driver_id=driver.id,
+            force_region_mismatch=True,
         ),
         db=db,
         _current_user=dispatcher,
     )
     assert assigned.assigned_vehicle_id == vehicle.id
     assert assigned.delivery_region == "Huyện Hóc Môn"
-    assert assigned.status.value == "ASSIGNED"
+    assert assigned.status is OrderStatus.ASSIGNED
+    assert assigned.route_batch_id is not None
     db.refresh(vehicle)
     assert vehicle.status is VehicleStatus.ON_ROUTE
+
+
+def test_driver_route_excludes_completed_stops_from_previous_batches(
+    db: Session,
+) -> None:
+    driver = active_user(
+        db,
+        role=UserRole.DRIVER,
+        email="driver.current-batch@test.vn",
+    )
+    vehicle = Vehicle(
+        license_plate="51D-BATCH",
+        capacity_kg=800,
+        driver_id=driver.id,
+        driver_name=driver.full_name,
+        status=VehicleStatus.ON_ROUTE,
+    )
+    db.add_all(
+        [
+            vehicle,
+            Depot(
+                name="Current Batch Depot",
+                address="Quan 12",
+                latitude=10.86,
+                longitude=106.65,
+            ),
+        ]
+    )
+    db.flush()
+
+    old_batch_id = uuid4()
+    current_batch_id = uuid4()
+    db.add_all(
+        [
+            Order(
+                order_code="OLD-DELIVERED",
+                customer_name="Old Customer",
+                address="Quan 1",
+                latitude=10.77,
+                longitude=106.70,
+                weight_kg=5,
+                status=OrderStatus.DELIVERED,
+                assigned_vehicle_id=vehicle.id,
+                stop_sequence=1,
+                route_batch_id=old_batch_id,
+            ),
+            Order(
+                order_code="CURRENT-DELIVERED",
+                customer_name="Current Customer One",
+                address="Quan 3",
+                latitude=10.78,
+                longitude=106.68,
+                weight_kg=5,
+                status=OrderStatus.DELIVERED,
+                assigned_vehicle_id=vehicle.id,
+                stop_sequence=1,
+                route_batch_id=current_batch_id,
+            ),
+            Order(
+                order_code="CURRENT-ACTIVE",
+                customer_name="Current Customer Two",
+                address="Quan 5",
+                latitude=10.76,
+                longitude=106.67,
+                weight_kg=5,
+                status=OrderStatus.ASSIGNED,
+                assigned_vehicle_id=vehicle.id,
+                stop_sequence=2,
+                route_batch_id=current_batch_id,
+            ),
+        ]
+    )
+    db.commit()
+
+    route = get_driver_route(db=db, current_user=driver)
+
+    assert route.total_orders == 2
+    assert route.completed_orders == 1
+    assert [stop.order_code for stop in route.stops] == [
+        "CURRENT-DELIVERED",
+        "CURRENT-ACTIVE",
+    ]
 
 
 def test_available_driver_list_includes_idle_or_no_active_order_vehicles(
@@ -301,6 +411,7 @@ def test_driver_delivery_update_enforces_pod_and_failure_reason(
 
     assert updated.status is OrderStatus.DELIVERED
     assert updated.pod_url == "http://localhost:8000/uploads/pod/proof.jpg"
+    assert updated.pod_uploaded_at is not None
     db.refresh(vehicle)
     assert vehicle.status is VehicleStatus.IDLE
 

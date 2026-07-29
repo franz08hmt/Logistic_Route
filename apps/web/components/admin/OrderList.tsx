@@ -1,12 +1,35 @@
 'use client';
 
+import { useState } from 'react';
+
 import { useI18n } from '@/context/I18nContext';
 import { failureReasonTranslationKey } from '../delivery-failure';
 import type { Order } from './api-contracts';
+import { PodPreviewModal } from './PodPreviewModal';
 import { StatusBadge } from './StatusBadge';
 
-function ExceptionDetails({ order }: { order: Order }) {
+function DeliveryEvidence({
+  order,
+  onOpenPod,
+}: {
+  order: Order;
+  onOpenPod: (order: Order) => void;
+}) {
   const { t } = useI18n();
+
+  if (order.status === 'DELIVERED') {
+    return order.pod_url ? (
+      <button
+        type="button"
+        className="mt-2 block text-xs font-semibold text-teal-700 underline-offset-2 hover:underline dark:text-teal-300"
+        onClick={() => onOpenPod(order)}
+      >
+        {t('orders.openPod')}
+      </button>
+    ) : (
+      <small className="mt-2 block text-xs text-slate-400">{t('orders.noPodImage')}</small>
+    );
+  }
 
   if (order.status !== 'FAILED') {
     return null;
@@ -27,9 +50,13 @@ function ExceptionDetails({ order }: { order: Order }) {
         </p>
         <p><strong>{t('orders.podNote')}</strong> {order.delivery_note || t('orders.noPodNote')}</p>
         {order.pod_url && (
-          <a className="mt-1 inline-block font-semibold text-teal-700 underline-offset-2 hover:underline dark:text-teal-300" href={order.pod_url} target="_blank" rel="noreferrer">
+          <button
+            type="button"
+            className="mt-1 inline-block font-semibold text-teal-700 underline-offset-2 hover:underline dark:text-teal-300"
+            onClick={() => onOpenPod(order)}
+          >
             {t('orders.openPod')}
-          </a>
+          </button>
         )}
       </div>
     </details>
@@ -41,13 +68,16 @@ export function OrderList({
   isLoading,
   deletingId,
   onDelete,
+  onDispatch,
 }: {
   orders: Order[];
   isLoading: boolean;
   deletingId: string | null;
   onDelete: (order: Order) => void;
+  onDispatch: (order: Order) => void;
 }) {
   const { locale, t } = useI18n();
+  const [podOrder, setPodOrder] = useState<Order | null>(null);
   const weightFormatter = new Intl.NumberFormat(
     locale === 'vi' ? 'vi-VN' : 'en-US',
     { maximumFractionDigits: 1 },
@@ -91,15 +121,26 @@ export function OrderList({
               <p className="leading-5 text-slate-700 dark:text-slate-300">{order.address}</p>
               <p className="mt-1 text-xs text-slate-500">{order.latitude.toFixed(4)}, {order.longitude.toFixed(4)} · {weightFormatter.format(order.weight_kg)} kg</p>
             </div>
-            <ExceptionDetails order={order} />
-            <button
-              type="button"
-              className="text-xs font-semibold text-rose-700 hover:underline disabled:opacity-50 dark:text-rose-300"
-              onClick={() => onDelete(order)}
-              disabled={deletingId === order.id}
-            >
-              {deletingId === order.id ? t('orders.deleting') : t('orders.deleteOrder')}
-            </button>
+            <DeliveryEvidence order={order} onOpenPod={setPodOrder} />
+            <div className="flex flex-wrap gap-3">
+              {(order.status === 'PENDING' || order.status === 'FAILED') && (
+                <button
+                  type="button"
+                  className="text-xs font-semibold text-teal-700 hover:underline dark:text-teal-300"
+                  onClick={() => onDispatch(order)}
+                >
+                  {t('orders.dispatchAction')}
+                </button>
+              )}
+              <button
+                type="button"
+                className="text-xs font-semibold text-rose-700 hover:underline disabled:opacity-50 dark:text-rose-300"
+                onClick={() => onDelete(order)}
+                disabled={deletingId === order.id}
+              >
+                {deletingId === order.id ? t('orders.deleting') : t('orders.deleteOrder')}
+              </button>
+            </div>
           </article>
         ))}
       </div>
@@ -126,24 +167,36 @@ export function OrderList({
                 <td className="whitespace-nowrap px-5 py-4 text-sm text-slate-700 dark:text-slate-300">{weightFormatter.format(order.weight_kg)} kg</td>
                 <td className="px-5 py-4">
                   <StatusBadge status={order.status} />
-                  <ExceptionDetails order={order} />
+                  <DeliveryEvidence order={order} onOpenPod={setPodOrder} />
                 </td>
                 <td className="px-5 py-4 text-right">
-                  <button
-                    type="button"
-                    className="rounded-lg px-2.5 py-1.5 text-xs font-semibold text-rose-700 hover:bg-rose-50 focus-visible:outline-2 focus-visible:outline-rose-600 disabled:opacity-50 dark:text-rose-300 dark:hover:bg-rose-950/50"
-                    onClick={() => onDelete(order)}
-                    disabled={deletingId === order.id}
-                    aria-label={t('orders.deleteLabel', { code: order.order_code })}
-                  >
-                    {deletingId === order.id ? t('orders.deleting') : t('orders.delete')}
-                  </button>
+                  <div className="flex justify-end gap-2">
+                    {(order.status === 'PENDING' || order.status === 'FAILED') && (
+                      <button
+                        type="button"
+                        className="rounded-lg bg-teal-50 px-2.5 py-1.5 text-xs font-semibold text-teal-800 hover:bg-teal-100 focus-visible:outline-2 focus-visible:outline-teal-600 dark:bg-teal-950/50 dark:text-teal-300"
+                        onClick={() => onDispatch(order)}
+                      >
+                        {t('orders.dispatchAction')}
+                      </button>
+                    )}
+                    <button
+                      type="button"
+                      className="rounded-lg px-2.5 py-1.5 text-xs font-semibold text-rose-700 hover:bg-rose-50 focus-visible:outline-2 focus-visible:outline-rose-600 disabled:opacity-50 dark:text-rose-300 dark:hover:bg-rose-950/50"
+                      onClick={() => onDelete(order)}
+                      disabled={deletingId === order.id}
+                      aria-label={t('orders.deleteLabel', { code: order.order_code })}
+                    >
+                      {deletingId === order.id ? t('orders.deleting') : t('orders.delete')}
+                    </button>
+                  </div>
                 </td>
               </tr>
             ))}
           </tbody>
         </table>
       </div>
+      <PodPreviewModal order={podOrder} onClose={() => setPodOrder(null)} />
     </>
   );
 }

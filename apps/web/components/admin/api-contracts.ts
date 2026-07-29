@@ -23,10 +23,12 @@ export type Order = {
   weight_kg: number;
   status: OrderStatus;
   assigned_vehicle_id: string | null;
+  route_batch_id: string | null;
   stop_sequence: number | null;
   delivery_note: string | null;
   failure_reason: string | null;
   pod_url: string | null;
+  pod_uploaded_at: string | null;
   delivery_region: string | null;
 };
 
@@ -39,7 +41,10 @@ export type CreateOrderInput = {
   longitude: number;
   weight_kg: number;
   delivery_region?: string | null;
-  assigned_driver_id?: string | null;
+};
+
+export type DispatchOrderInput = {
+  driver_id: string;
   force_region_mismatch?: boolean;
 };
 
@@ -82,6 +87,11 @@ function isFiniteNumber(value: unknown): value is number {
   return typeof value === 'number' && Number.isFinite(value);
 }
 
+function isNullableIsoDate(value: unknown): value is string | null {
+  return value === null
+    || (typeof value === 'string' && !Number.isNaN(Date.parse(value)));
+}
+
 function isOrder(value: unknown): value is Order {
   if (!isRecord(value)) {
     return false;
@@ -98,10 +108,12 @@ function isOrder(value: unknown): value is Order {
     isFiniteNumber(value.weight_kg) &&
     ORDER_STATUSES.includes(value.status as OrderStatus) &&
     (typeof value.assigned_vehicle_id === 'string' || value.assigned_vehicle_id === null) &&
+    (typeof value.route_batch_id === 'string' || value.route_batch_id === null) &&
     (typeof value.stop_sequence === 'number' || value.stop_sequence === null) &&
     (typeof value.delivery_note === 'string' || value.delivery_note === null) &&
     (typeof value.failure_reason === 'string' || value.failure_reason === null) &&
     (typeof value.pod_url === 'string' || value.pod_url === null) &&
+    isNullableIsoDate(value.pod_uploaded_at) &&
     (typeof value.delivery_region === 'string' || value.delivery_region === null)
   );
 }

@@ -47,6 +47,7 @@ def test_protected_endpoints_publish_bearer_security_scheme() -> None:
         "/api/v1/orders",
         "/api/v1/vehicles",
         "/api/v1/routes/optimize",
+        "/api/v1/routes/dispatch",
         "/api/v1/orders/{order_id}/status",
     ):
         methods = openapi["paths"][path]

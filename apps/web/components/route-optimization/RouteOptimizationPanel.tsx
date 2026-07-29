@@ -5,7 +5,11 @@ import { useEffect, useState } from 'react';
 import { useI18n } from '@/context/I18nContext';
 
 import { isOrderList, requestApi, type Order } from '../admin/api-contracts';
-import { publishOrdersUpdated } from '../admin/orders-sync';
+import {
+  publishDataInvalidated,
+  publishOrdersUpdated,
+  subscribeToDataInvalidated,
+} from '../admin/orders-sync';
 import { downloadManifestCsv } from './manifest-export';
 import { getOptimizationSuccessMessage } from './optimization-feedback';
 import { RouteCostSummary } from './RouteCostSummary';
@@ -62,9 +66,14 @@ export function RouteOptimizationPanel() {
 
     void loadOrders();
     const refreshInterval = window.setInterval(() => void loadOrders(), 10000);
+    const unsubscribe = subscribeToDataInvalidated(
+      ['orders'],
+      () => void loadOrders(),
+    );
     return () => {
       active = false;
       window.clearInterval(refreshInterval);
+      unsubscribe();
     };
   }, []);
 
@@ -103,6 +112,7 @@ export function RouteOptimizationPanel() {
         }
         setOrders(ordersPayload);
         publishOrdersUpdated(ordersPayload);
+        publishDataInvalidated(['orders', 'fleet', 'driver', 'overview']);
       } catch {
         setError(
           t('map.syncError'),

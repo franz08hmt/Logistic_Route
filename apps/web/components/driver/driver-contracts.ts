@@ -21,6 +21,7 @@ export type DriverStop = {
   delivery_note: string | null;
   failure_reason: string | null;
   pod_url: string | null;
+  pod_uploaded_at: string | null;
 };
 
 export type DriverRoute = {
@@ -71,7 +72,8 @@ export function isDriverStop(value: unknown): value is DriverStop {
     DRIVER_ORDER_STATUSES.includes(value.status as DriverOrderStatus) &&
     (typeof value.delivery_note === 'string' || value.delivery_note === null) &&
     (typeof value.failure_reason === 'string' || value.failure_reason === null) &&
-    (typeof value.pod_url === 'string' || value.pod_url === null)
+    (typeof value.pod_url === 'string' || value.pod_url === null) &&
+    (typeof value.pod_uploaded_at === 'string' || value.pod_uploaded_at === null)
   );
 }
 

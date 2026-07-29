@@ -19,15 +19,19 @@ describe('admin API contracts', () => {
       weight_kg: 25,
       status: 'PENDING',
       assigned_vehicle_id: null,
+      route_batch_id: null,
       stop_sequence: null,
       delivery_note: null,
       failure_reason: null,
       pod_url: null,
+      pod_uploaded_at: null,
       delivery_region: null,
     };
 
     expect(isOrderList([order])).toBe(true);
     expect(isOrderList([{ ...order, latitude: '10.7769' }])).toBe(false);
+    expect(isOrderList([{ ...order, pod_uploaded_at: 123 }])).toBe(false);
+    expect(isOrderList([{ ...order, pod_uploaded_at: 'not-a-date' }])).toBe(false);
   });
 
   it('accepts vehicle status values defined by the backend contract', () => {

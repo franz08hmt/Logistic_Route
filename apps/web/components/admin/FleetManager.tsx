@@ -11,6 +11,7 @@ import {
 } from './api-contracts';
 import { CreateVehicleDialog } from './CreateVehicleDialog';
 import { FleetList } from './FleetList';
+import { subscribeToDataInvalidated } from './orders-sync';
 
 export function FleetManager() {
   const { locale, t } = useI18n();
@@ -47,8 +48,15 @@ export function FleetManager() {
     }
 
     void loadVehicles();
+    const refreshInterval = window.setInterval(() => void loadVehicles(), 10000);
+    const unsubscribe = subscribeToDataInvalidated(
+      ['fleet'],
+      () => void loadVehicles(),
+    );
     return () => {
       active = false;
+      window.clearInterval(refreshInterval);
+      unsubscribe();
     };
   }, [t]);
 

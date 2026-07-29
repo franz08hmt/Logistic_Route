@@ -141,17 +141,30 @@ class OrderBase(BaseModel):
 
 class OrderCreate(OrderBase):
     delivery_region: str | None = Field(default=None, max_length=150)
-    assigned_driver_id: UUID | None = None
+
+    @field_validator("status")
+    @classmethod
+    def require_pending_status(cls, value: OrderStatus) -> OrderStatus:
+        if value is not OrderStatus.PENDING:
+            raise ValueError("new orders must start in PENDING status")
+        return value
+
+
+class OrderDispatchRequest(BaseModel):
+    driver_id: UUID
     force_region_mismatch: bool = False
 
 
 class OrderRead(OrderBase, OrmSchema):
     id: UUID
+    status_updated_at: datetime | None
     assigned_vehicle_id: UUID | None = None
+    route_batch_id: UUID | None = None
     stop_sequence: int | None = Field(default=None, ge=1)
     delivery_note: str | None = None
     failure_reason: str | None = None
     pod_url: str | None = None
+    pod_uploaded_at: datetime | None = None
     delivery_region: str | None = None
 
 
@@ -165,6 +178,24 @@ class AvailableDriverRead(BaseModel):
     capacity_kg: float
     service_area: str | None
     readiness: str = "READY"
+
+
+class DriverDetailRead(BaseModel):
+    id: UUID
+    full_name: str
+    email: str
+    phone_number: str | None
+    status: UserStatus
+    created_at: datetime
+    vehicle_id: UUID | None
+    license_plate: str | None
+    vehicle_type: str | None
+    vehicle_status: VehicleStatus | None
+    capacity_kg: float | None
+    service_area: str | None
+    active_orders_count: int = Field(ge=0)
+    delivered_today_count: int = Field(ge=0)
+    failed_today_count: int = Field(ge=0)
 
 
 class OrderStatusUpdate(BaseModel):
@@ -211,6 +242,45 @@ class RouteOptimizationResponse(BaseModel):
     cost_metrics: RouteCostMetrics
     unassigned_orders: list[str]
     routes: list[OptimizedRoute]
+
+
+class MultiStopDispatchRequest(BaseModel):
+    order_ids: list[UUID] = Field(min_length=2, max_length=100)
+    driver_id: UUID
+    force_region_mismatch: bool = False
+
+    @field_validator("order_ids")
+    @classmethod
+    def require_unique_order_ids(cls, value: list[UUID]) -> list[UUID]:
+        if len(set(value)) != len(value):
+            raise ValueError("order_ids must be unique")
+        return value
+
+
+class MultiStopDispatchStop(BaseModel):
+    order_id: UUID
+    order_code: str
+    stop_sequence: int = Field(ge=1)
+    customer_name: str
+    address: str
+    latitude: float = Field(ge=-90, le=90)
+    longitude: float = Field(ge=-180, le=180)
+    weight_kg: float = Field(gt=0)
+
+
+class MultiStopDispatchResponse(BaseModel):
+    status: str
+    route_batch_id: UUID
+    driver_id: UUID
+    driver_name: str
+    vehicle_id: UUID
+    license_plate: str
+    depot: DepotRead
+    total_distance_km: float = Field(ge=0)
+    total_duration_mins: float = Field(ge=0)
+    total_weight_kg: float = Field(gt=0)
+    cost_metrics: RouteCostMetrics
+    stops: list[MultiStopDispatchStop]
 
 
 class DriverOrderStatus(str, Enum):
@@ -271,6 +341,7 @@ class DriverStopRead(OrmSchema):
     delivery_note: str | None
     failure_reason: str | None
     pod_url: str | None
+    pod_uploaded_at: datetime | None
 
 
 class DriverRouteRead(BaseModel):

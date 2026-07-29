@@ -17,6 +17,19 @@ def test_order_schema_accepts_valid_order() -> None:
     assert order.status.value == "PENDING"
 
 
+def test_new_order_schema_rejects_preassigned_status() -> None:
+    with pytest.raises(ValidationError, match="PENDING"):
+        OrderCreate(
+            order_code="ORD-PREASSIGNED",
+            customer_name="Nguyen Van A",
+            address="Quan 1, Ho Chi Minh City",
+            latitude=10.7769,
+            longitude=106.7009,
+            weight_kg=2.5,
+            status="ASSIGNED",
+        )
+
+
 def test_vehicle_schema_rejects_invalid_capacity() -> None:
     with pytest.raises(ValidationError):
         VehicleCreate(license_plate="51D-12345", capacity_kg=0)

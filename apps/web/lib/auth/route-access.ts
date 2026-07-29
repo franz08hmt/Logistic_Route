@@ -1,6 +1,8 @@
 const protectedRoutePrefixes = [
   '/dashboard',
   '/orders',
+  '/dispatch',
+  '/drivers',
   '/fleet',
   '/map',
   '/driver',

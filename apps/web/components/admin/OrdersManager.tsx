@@ -1,19 +1,26 @@
 'use client';
 
-import { useEffect, useState } from 'react';
-import { useI18n } from '@/context/I18nContext';
+import { useCallback, useEffect, useState } from 'react';
 
+import { useI18n } from '@/context/I18nContext';
 import {
-  isOrderList,
   isAvailableDriverList,
+  isOrderList,
   requestApi,
   type AvailableDriver,
   type CreateOrderInput,
+  type DispatchOrderInput,
   type Order,
 } from './api-contracts';
 import { CreateOrderDialog } from './CreateOrderDialog';
+import { DispatchOrderDialog } from './DispatchOrderDialog';
 import { OrderList } from './OrderList';
-import { subscribeToOrdersUpdated } from './orders-sync';
+import {
+  publishDataInvalidated,
+  publishOrdersUpdated,
+  subscribeToDataInvalidated,
+  subscribeToOrdersUpdated,
+} from './orders-sync';
 
 export function OrdersManager() {
   const { t } = useI18n();
@@ -21,58 +28,68 @@ export function OrdersManager() {
   const [availableDrivers, setAvailableDrivers] = useState<AvailableDriver[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isCreateOpen, setIsCreateOpen] = useState(false);
+  const [dispatchOrder, setDispatchOrder] = useState<Order | null>(null);
+  const [isDispatching, setIsDispatching] = useState(false);
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
+  const loadData = useCallback(async () => {
+    try {
+      const [ordersPayload, driversPayload] = await Promise.all([
+        requestApi('/api/v1/orders'),
+        requestApi('/api/v1/admin/drivers/available'),
+      ]);
+      if (
+        !isOrderList(ordersPayload)
+        || !isAvailableDriverList(driversPayload)
+      ) {
+        throw new Error(t('orders.invalidList'));
+      }
+      setOrders(ordersPayload);
+      setAvailableDrivers(driversPayload);
+      setError(null);
+      return ordersPayload;
+    } catch (requestError) {
+      setError(
+        requestError instanceof Error
+          ? requestError.message
+          : t('orders.loadError'),
+      );
+      return null;
+    } finally {
+      setIsLoading(false);
+    }
+  }, [t]);
+
   useEffect(() => {
     let active = true;
-
-    async function loadOrders() {
-      try {
-        const [payload, driversPayload] = await Promise.all([
-          requestApi('/api/v1/orders'),
-          requestApi('/api/v1/admin/drivers/available'),
-        ]);
-        if (!isOrderList(payload) || !isAvailableDriverList(driversPayload)) {
-          throw new Error(t('orders.invalidList'));
-        }
-        if (active) {
-          setOrders(payload);
-          setAvailableDrivers(driversPayload);
-        }
-      } catch (requestError) {
-        if (active) {
-          setError(
-            requestError instanceof Error
-              ? requestError.message
-              : t('orders.loadError'),
-          );
-        }
-      } finally {
-        if (active) {
-          setIsLoading(false);
-        }
+    const refresh = () => {
+      if (active) {
+        void loadData();
       }
-    }
+    };
 
-    void loadOrders();
-    const refreshInterval = window.setInterval(() => {
-      void loadOrders();
-    }, 10000);
-    const unsubscribe = subscribeToOrdersUpdated((updatedOrders) => {
+    refresh();
+    const refreshInterval = window.setInterval(refresh, 10000);
+    const unsubscribeOrders = subscribeToOrdersUpdated((updatedOrders) => {
       if (active) {
         setOrders(updatedOrders);
         setError(null);
         setIsLoading(false);
       }
     });
+    const unsubscribeInvalidation = subscribeToDataInvalidated(
+      ['orders'],
+      refresh,
+    );
 
     return () => {
       active = false;
       window.clearInterval(refreshInterval);
-      unsubscribe();
+      unsubscribeOrders();
+      unsubscribeInvalidation();
     };
-  }, [t]);
+  }, [loadData]);
 
   async function createOrder(input: CreateOrderInput) {
     const payload = await requestApi('/api/v1/orders', {
@@ -80,12 +97,38 @@ export function OrdersManager() {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(input),
     });
-    const createdOrders = [payload];
-    if (!isOrderList(createdOrders)) {
+    if (!isOrderList([payload])) {
       throw new Error(t('orders.invalidItem'));
     }
 
-    setOrders((current) => [createdOrders[0], ...current]);
+    const refreshed = await loadData();
+    if (refreshed) {
+      publishOrdersUpdated(refreshed);
+    }
+    publishDataInvalidated(['orders', 'overview']);
+  }
+
+  async function assignOrder(orderId: string, input: DispatchOrderInput) {
+    setIsDispatching(true);
+    try {
+      const payload = await requestApi(`/api/v1/orders/${orderId}/dispatch`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(input),
+      });
+      if (!isOrderList([payload])) {
+        throw new Error(t('orders.invalidItem'));
+      }
+
+      const refreshed = await loadData();
+      if (refreshed) {
+        publishOrdersUpdated(refreshed);
+      }
+      publishDataInvalidated(['orders', 'fleet', 'driver', 'overview']);
+      setDispatchOrder(null);
+    } finally {
+      setIsDispatching(false);
+    }
   }
 
   async function deleteOrder(order: Order) {
@@ -100,7 +143,11 @@ export function OrdersManager() {
     setError(null);
     try {
       await requestApi(`/api/v1/orders/${order.id}`, { method: 'DELETE' });
-      setOrders((current) => current.filter((item) => item.id !== order.id));
+      const refreshed = await loadData();
+      if (refreshed) {
+        publishOrdersUpdated(refreshed);
+      }
+      publishDataInvalidated(['orders', 'fleet', 'driver', 'overview']);
     } catch (requestError) {
       setError(
         requestError instanceof Error
@@ -152,17 +199,24 @@ export function OrdersManager() {
           isLoading={isLoading}
           deletingId={deletingId}
           onDelete={(order) => void deleteOrder(order)}
+          onDispatch={setDispatchOrder}
         />
       </div>
 
       {isCreateOpen && (
         <CreateOrderDialog
           open
-          availableDrivers={availableDrivers}
           onClose={() => setIsCreateOpen(false)}
           onCreate={createOrder}
         />
       )}
+      <DispatchOrderDialog
+        order={dispatchOrder}
+        availableDrivers={availableDrivers}
+        isSubmitting={isDispatching}
+        onClose={() => setDispatchOrder(null)}
+        onDispatch={assignOrder}
+      />
     </section>
   );
 }

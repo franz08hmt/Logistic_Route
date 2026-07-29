@@ -1,7 +1,7 @@
 # Database migrations
 
 The current bootstrap migration is intentionally small and executable without
-Alembic. Run `python scripts/init_db.py` from `apps/api` after starting the
+Alembic. Run `python -m scripts.init_db` from `apps/api` after starting the
 PostGIS container. It enables the PostGIS extension and creates the `depots`,
 `users`, `vehicles`, `orders`, and `route_analytics_snapshots` tables if they do
 not exist. It also adds the
@@ -20,6 +20,14 @@ stored outside the database under the configured `POD_UPLOAD_DIR`.
 Migration `005_reconcile_vehicle_availability.sql` repairs legacy `ON_ROUTE`
 vehicles that have no pending, assigned, or delivering orders. New driver
 status updates perform this reconciliation in the same transaction.
+Migration `006_order_route_batch.sql` groups assigned stops into a dispatch
+batch so the Driver Workspace can show the current trip without counting
+completed stops from historical trips.
+Migration `007_pod_uploaded_at.sql` records when a proof-of-delivery image was
+stored so dispatchers can audit successful and failed delivery evidence.
+Migration `008_order_status_updated_at.sql` records the latest status transition
+time used by the driver operations dashboard for reliable daily delivery and
+failure counts.
 The local container is
 published on host port `5433` so it does not collide with another PostgreSQL
 instance on host port `5432`.

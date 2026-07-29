@@ -5,7 +5,10 @@ import { useEffect, useState } from 'react';
 import { useI18n } from '@/context/I18nContext';
 import { apiFetch } from '@/lib/api-client';
 import type { TranslationKey } from '@/lib/i18n/i18n';
-import { subscribeToOrdersUpdated } from './admin/orders-sync';
+import {
+  subscribeToDataInvalidated,
+  subscribeToOrdersUpdated,
+} from './admin/orders-sync';
 
 type Overview = {
   active_orders_count: number;
@@ -92,14 +95,19 @@ export function DashboardOverview() {
     const refreshInterval = window.setInterval(() => {
       void loadOverview();
     }, 10_000);
-    const unsubscribe = subscribeToOrdersUpdated(() => {
+    const unsubscribeOrders = subscribeToOrdersUpdated(() => {
       void loadOverview();
     });
+    const unsubscribeInvalidation = subscribeToDataInvalidated(
+      ['overview'],
+      () => void loadOverview(),
+    );
 
     return () => {
       controller.abort();
       window.clearInterval(refreshInterval);
-      unsubscribe();
+      unsubscribeOrders();
+      unsubscribeInvalidation();
     };
   }, []);
 

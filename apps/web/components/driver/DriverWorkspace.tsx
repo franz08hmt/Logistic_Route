@@ -11,7 +11,11 @@ import {
   isOrderList,
   requestApi,
 } from '@/components/admin/api-contracts';
-import { publishOrdersUpdated } from '@/components/admin/orders-sync';
+import {
+  publishDataInvalidated,
+  publishOrdersUpdated,
+  subscribeToDataInvalidated,
+} from '@/components/admin/orders-sync';
 import { useAuth } from '@/context/AuthContext';
 import { useI18n } from '@/context/I18nContext';
 
@@ -94,6 +98,14 @@ export function DriverWorkspace() {
     const timeoutId = window.setTimeout(() => setToast(null), 4500);
     return () => window.clearTimeout(timeoutId);
   }, [toast]);
+
+  useEffect(
+    () => subscribeToDataInvalidated(
+      ['driver'],
+      () => setRefreshVersion((version) => version + 1),
+    ),
+    [],
+  );
 
   function openStatusDialog(stop: DriverStop) {
     setSelectedStop(stop);
@@ -222,6 +234,7 @@ export function DriverWorkspace() {
       if (isOrderList(ordersPayload)) {
         publishOrdersUpdated(ordersPayload);
       }
+      publishDataInvalidated(['orders', 'fleet', 'driver', 'overview']);
       if (podPreviewUrl.startsWith('blob:')) {
         URL.revokeObjectURL(podPreviewUrl);
       }

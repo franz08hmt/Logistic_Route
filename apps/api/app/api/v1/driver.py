@@ -1,3 +1,4 @@
+from datetime import datetime, timezone
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, Request, status
@@ -17,7 +18,11 @@ from app.schemas import (
     PodUploadRead,
 )
 from app.services.pod_storage import MAX_POD_BYTES, store_pod_content
-from app.services.driver_availability import reconcile_vehicle_availability
+from app.services.driver_availability import (
+    ACTIVE_ROUTE_STATUSES,
+    reconcile_vehicle_availability,
+)
+from app.services.order_status import set_order_status
 
 
 router = APIRouter(prefix="/driver", tags=["driver"])
@@ -105,8 +110,13 @@ async def upload_order_pod(
     except ValueError as error:
         raise HTTPException(status_code=422, detail=str(error)) from error
 
+    pod_url = f"{POD_PUBLIC_BASE_URL}/uploads/pod/{filename}"
+    order.pod_url = pod_url
+    order.pod_uploaded_at = datetime.now(timezone.utc)
+    db.commit()
+
     return PodUploadRead(
-        pod_url=f"{POD_PUBLIC_BASE_URL}/uploads/pod/{filename}",
+        pod_url=pod_url,
         content_type=content_type,
         size_bytes=size_bytes,
     )
@@ -133,10 +143,38 @@ def get_driver_route(
             detail="No depot is configured",
         )
 
+    active_order = db.scalar(
+        select(Order)
+        .where(
+            Order.assigned_vehicle_id == vehicle.id,
+            Order.status.in_(ACTIVE_ROUTE_STATUSES),
+        )
+        .order_by(Order.stop_sequence.nulls_last(), Order.order_code)
+        .limit(1)
+    )
+    if active_order is None:
+        return DriverRouteRead(
+            vehicle=DriverVehicleRead.model_validate(vehicle),
+            depot=DepotRead.model_validate(depot),
+            total_orders=0,
+            completed_orders=0,
+            stops=[],
+        )
+
+    current_statuses = (*ACTIVE_ROUTE_STATUSES, OrderStatus.DELIVERED, OrderStatus.FAILED)
+    route_filter = (
+        Order.route_batch_id == active_order.route_batch_id
+        if active_order.route_batch_id is not None
+        else Order.status.in_(ACTIVE_ROUTE_STATUSES)
+    )
     orders = list(
         db.scalars(
             select(Order)
-            .where(Order.assigned_vehicle_id == vehicle.id)
+            .where(
+                Order.assigned_vehicle_id == vehicle.id,
+                Order.status.in_(current_statuses),
+                route_filter,
+            )
             .order_by(Order.stop_sequence.nulls_last(), Order.order_code)
         ).all()
     )
@@ -146,7 +184,8 @@ def get_driver_route(
         depot=DepotRead.model_validate(depot),
         total_orders=len(orders),
         completed_orders=sum(
-            order.status is OrderStatus.DELIVERED for order in orders
+            order.status in {OrderStatus.DELIVERED, OrderStatus.FAILED}
+            for order in orders
         ),
         stops=[DriverStopRead.model_validate(order) for order in orders],
     )
@@ -199,12 +238,14 @@ def update_driver_order_status(
             detail="Failure reason is required for a failed delivery",
         )
 
-    order.status = requested_status
+    set_order_status(order, requested_status)
     order.delivery_note = payload.delivery_note
     order.failure_reason = (
         payload.failure_reason if requested_status is OrderStatus.FAILED else None
     )
     order.pod_url = effective_pod_url
+    if effective_pod_url and order.pod_uploaded_at is None:
+        order.pod_uploaded_at = datetime.now(timezone.utc)
     db.flush()
     reconcile_vehicle_availability(db, vehicle)
     # Order status and vehicle availability are committed atomically.

@@ -1,6 +1,6 @@
 from uuid import UUID
 
-from sqlalchemy import exists, func, or_, select
+from sqlalchemy import exists, func, select
 from sqlalchemy.orm import Session
 from sqlalchemy.sql.elements import ColumnElement
 
@@ -15,14 +15,14 @@ ACTIVE_ROUTE_STATUSES = (
 
 
 def vehicle_is_available_clause() -> ColumnElement[bool]:
-    """Treat an IDLE vehicle or a stale ON_ROUTE vehicle with no active stops as ready."""
+    """A vehicle is ready only when the database has no active assigned stops."""
     active_order_exists = exists(
         select(Order.id).where(
             Order.assigned_vehicle_id == Vehicle.id,
             Order.status.in_(ACTIVE_ROUTE_STATUSES),
         )
     )
-    return or_(Vehicle.status == VehicleStatus.IDLE, ~active_order_exists)
+    return ~active_order_exists
 
 
 def count_active_vehicle_orders(db: Session, vehicle_id: UUID) -> int:

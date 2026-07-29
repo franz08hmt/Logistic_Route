@@ -35,6 +35,7 @@ describe('driver API contracts', () => {
         delivery_note: 'Đã giao',
         failure_reason: null,
         pod_url: null,
+        pod_uploaded_at: null,
       },
     ],
   };
