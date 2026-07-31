@@ -29,7 +29,7 @@ router = APIRouter(prefix="/routes", tags=["route-optimization"])
 def dispatch_multi_stop_route(
     payload: MultiStopDispatchRequest,
     db: Session = Depends(get_db),
-    _current_user: User = Depends(require_roles(UserRole.ADMIN, UserRole.DISPATCHER)),
+    current_user: User = Depends(require_roles(UserRole.ADMIN, UserRole.DISPATCHER)),
 ) -> MultiStopDispatchResponse:
     """Optimize and atomically assign an explicitly selected set of pending orders."""
     try:
@@ -38,6 +38,7 @@ def dispatch_multi_stop_route(
             order_ids=payload.order_ids,
             driver_id=payload.driver_id,
             force_region_mismatch=payload.force_region_mismatch,
+            actor=current_user,
         )
     except MultiStopDispatchError as exc:
         raise HTTPException(status_code=exc.status_code, detail=exc.detail) from exc
@@ -81,11 +82,11 @@ def dispatch_multi_stop_route(
 @router.post("/optimize", response_model=RouteOptimizationResponse)
 def optimize_routes(
     db: Session = Depends(get_db),
-    _current_user: User = Depends(require_roles(UserRole.ADMIN, UserRole.DISPATCHER)),
+    current_user: User = Depends(require_roles(UserRole.ADMIN, UserRole.DISPATCHER)),
 ) -> RouteOptimizationResponse:
     """Optimize all pending and failed orders using the configured depot and fleet."""
     try:
-        run = optimize_pending_routes(db)
+        run = optimize_pending_routes(db, actor=current_user)
     except RouteOptimizationError as exc:
         raise HTTPException(status_code=exc.status_code, detail=exc.detail) from exc
 

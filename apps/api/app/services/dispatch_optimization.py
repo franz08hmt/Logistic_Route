@@ -19,6 +19,7 @@ from app.db.models import (
     VehicleStatus,
 )
 from app.services.cost_calculator import CostCalculation, calculate_route_costs
+from app.services.activity_logger import log_order_activity
 from app.services.driver_availability import vehicle_is_available_clause
 from app.services.order_status import set_order_status
 from app.services.region_matcher import regions_match
@@ -68,6 +69,7 @@ def dispatch_optimized_route(
     order_ids: list[UUID],
     driver_id: UUID,
     force_region_mismatch: bool = False,
+    actor: User | None = None,
 ) -> MultiStopDispatchRun:
     """Optimize selected pending stops and persist one atomic dispatch batch."""
     depot = db.scalar(
@@ -233,6 +235,18 @@ def dispatch_optimized_route(
         order.stop_sequence = stop.stop_sequence
         order.failure_reason = None
     vehicle.status = VehicleStatus.ON_ROUTE
+
+    db.flush()
+    for order in orders:
+        log_order_activity(
+            db,
+            order_id=order.id,
+            action="ASSIGNED",
+            actor=actor,
+            old_status=OrderStatus.PENDING.value,
+            new_status=OrderStatus.ASSIGNED.value,
+            detail="Batch optimization",
+        )
 
     cost_metrics = calculate_route_costs(
         total_distance_km=result.total_distance_km,

@@ -7,10 +7,16 @@ from sqlalchemy.orm import Session
 from sqlalchemy.pool import StaticPool
 
 from app.api.v1.analytics import get_analytics_history
-from app.api.v1.seed import build_seed_analytics_snapshots, seed_data
+from app.api.v1.seed import SEED_ORDERS, build_seed_analytics_snapshots, seed_data
 from app.core.security import get_password_hash, require_roles
 from app.db.base import Base
-from app.db.models import RouteAnalyticsSnapshot, User, UserRole, UserStatus
+from app.db.models import (
+    OrderActivityLog,
+    RouteAnalyticsSnapshot,
+    User,
+    UserRole,
+    UserStatus,
+)
 from app.services.analytics_history import build_analytics_history
 
 
@@ -153,14 +159,20 @@ def test_seed_creates_analytics_history_once() -> None:
 
     with Session(engine) as db:
         first = seed_data(db)
+        db.query(OrderActivityLog).delete()
+        db.commit()
         second = seed_data(db)
         snapshot_count = db.scalar(
             select(func.count()).select_from(RouteAnalyticsSnapshot)
+        )
+        activity_count = db.scalar(
+            select(func.count()).select_from(OrderActivityLog)
         )
 
     assert first.analytics_snapshots_created == 25
     assert second.analytics_snapshots_created == 0
     assert snapshot_count == 25
+    assert activity_count == len(SEED_ORDERS)
 
 
 def test_analytics_history_endpoint_queries_persisted_snapshots() -> None:

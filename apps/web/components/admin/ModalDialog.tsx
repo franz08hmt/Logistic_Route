@@ -44,7 +44,10 @@ export function ModalDialog({
       className="m-auto max-h-[calc(100vh-2rem)] w-[min(42rem,calc(100%-2rem))] overflow-hidden rounded-xl border border-slate-200 bg-white p-0 text-slate-950 shadow-2xl backdrop:bg-slate-950/60 backdrop:backdrop-blur-sm dark:border-slate-700 dark:bg-slate-900 dark:text-white"
       aria-labelledby={titleId}
       aria-describedby={descriptionId}
-      onCancel={onClose}
+      onCancel={(event) => {
+        event.preventDefault();
+        onClose();
+      }}
       onClick={(event) => {
         if (event.target === event.currentTarget) {
           onClose();

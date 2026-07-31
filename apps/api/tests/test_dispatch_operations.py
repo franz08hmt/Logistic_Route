@@ -3,7 +3,7 @@ from uuid import uuid4
 
 import pytest
 from fastapi import HTTPException, Request
-from sqlalchemy import create_engine
+from sqlalchemy import create_engine, select
 from sqlalchemy.orm import Session
 from sqlalchemy.pool import StaticPool
 
@@ -19,6 +19,7 @@ from app.db.base import Base
 from app.db.models import (
     Depot,
     Order,
+    OrderActivityLog,
     OrderStatus,
     User,
     UserRole,
@@ -149,6 +150,19 @@ def test_create_order_stays_pending_until_dispatcher_explicitly_assigns_it(
     assert assigned.route_batch_id is not None
     db.refresh(vehicle)
     assert vehicle.status is VehicleStatus.ON_ROUTE
+    activities = list(
+        db.scalars(
+            select(OrderActivityLog)
+            .where(OrderActivityLog.order_id == assigned.id)
+            .order_by(OrderActivityLog.created_at, OrderActivityLog.id)
+        ).all()
+    )
+    assert [activity.action for activity in activities] == [
+        "CREATED",
+        "ASSIGNED",
+    ]
+    assert activities[-1].actor_id == dispatcher.id
+    assert vehicle.license_plate in (activities[-1].detail or "")
 
 
 def test_driver_route_excludes_completed_stops_from_previous_batches(
@@ -414,6 +428,16 @@ def test_driver_delivery_update_enforces_pod_and_failure_reason(
     assert updated.pod_uploaded_at is not None
     db.refresh(vehicle)
     assert vehicle.status is VehicleStatus.IDLE
+    activity = db.scalar(
+        select(OrderActivityLog).where(
+            OrderActivityLog.order_id == order.id,
+            OrderActivityLog.action == "STATUS_CHANGED",
+        )
+    )
+    assert activity is not None
+    assert activity.actor_id == driver.id
+    assert activity.old_status == "DELIVERING"
+    assert activity.new_status == "DELIVERED"
 
 
 def test_vehicle_stays_on_route_while_another_active_stop_remains(

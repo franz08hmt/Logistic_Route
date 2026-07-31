@@ -2,7 +2,14 @@ from uuid import uuid4
 
 import pytest
 
-from app.db.models import Depot, Order, OrderStatus, Vehicle, VehicleStatus
+from app.db.models import (
+    Depot,
+    Order,
+    OrderActivityLog,
+    OrderStatus,
+    Vehicle,
+    VehicleStatus,
+)
 from app.services.route_optimization import (
     RouteOptimizationError,
     optimize_pending_routes,
@@ -42,6 +49,9 @@ class _FakeSession:
 
     def add(self, value: object) -> None:
         self.added.append(value)
+
+    def flush(self) -> None:
+        return None
 
 
 def test_optimize_pending_and_failed_routes_assigns_only_orders_present_in_routes(
@@ -130,7 +140,13 @@ def test_optimize_pending_and_failed_routes_assigns_only_orders_present_in_route
     assert assigned_order.status == OrderStatus.ASSIGNED
     assert unassigned_order.status == OrderStatus.FAILED
     assert session.commit_count == 1
-    assert len(session.added) == 1
+    assert len(session.added) == 2
+    activity = next(
+        value for value in session.added if isinstance(value, OrderActivityLog)
+    )
+    assert activity.order_id == assigned_order.id
+    assert activity.action == "ASSIGNED"
+    assert activity.detail == "Batch optimization"
     assert run.cost_metrics.total_cost_vnd == pytest.approx(189_888)
 
 

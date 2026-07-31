@@ -1,7 +1,7 @@
 from uuid import uuid4
 
 import pytest
-from sqlalchemy import create_engine
+from sqlalchemy import create_engine, select
 from sqlalchemy.orm import Session
 from sqlalchemy.pool import StaticPool
 
@@ -10,6 +10,7 @@ from app.db.base import Base
 from app.db.models import (
     Depot,
     Order,
+    OrderActivityLog,
     OrderStatus,
     User,
     UserRole,
@@ -151,6 +152,15 @@ def test_multi_stop_dispatch_persists_solver_order_in_one_batch(
     assert first.assigned_vehicle_id == vehicle.id
     assert second.assigned_vehicle_id == vehicle.id
     assert vehicle.status is VehicleStatus.ON_ROUTE
+    activities = list(
+        db.scalars(
+            select(OrderActivityLog).order_by(OrderActivityLog.order_id)
+        ).all()
+    )
+    assert len(activities) == 2
+    assert {activity.order_id for activity in activities} == {first.id, second.id}
+    assert {activity.action for activity in activities} == {"ASSIGNED"}
+    assert all(activity.detail == "Batch optimization" for activity in activities)
 
 
 def test_multi_stop_dispatch_rejects_non_pending_orders_without_partial_changes(

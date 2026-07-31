@@ -10,6 +10,7 @@ from app.core.security import get_password_hash
 from app.db.models import (
     Depot,
     Order,
+    OrderActivityLog,
     OrderStatus,
     RouteAnalyticsSnapshot,
     User,
@@ -21,6 +22,7 @@ from app.db.models import (
 from app.db.session import get_db
 from app.schemas import DepotRead, SeedResponse, SeedUsersResponse, UserRead
 from app.services.cost_calculator import calculate_route_costs
+from app.services.activity_logger import log_order_activity
 
 
 router = APIRouter(tags=["seed"])
@@ -189,13 +191,18 @@ def seed_data(db: Session = Depends(get_db)) -> SeedResponse:
             vehicles_created += 1
 
     orders_created = 0
+    seeded_orders: list[Order] = []
     for order_data in SEED_ORDERS:
         exists = db.scalar(select(Order).where(Order.order_code == order_data["order_code"]))
         if exists is None:
-            db.add(Order(**order_data))
+            order = Order(**order_data)
+            db.add(order)
+            seeded_orders.append(order)
             orders_created += 1
-        elif exists.customer_phone is None:
-            exists.customer_phone = order_data["customer_phone"]
+        else:
+            if exists.customer_phone is None:
+                exists.customer_phone = order_data["customer_phone"]
+            seeded_orders.append(exists)
 
     existing_analytics = int(db.scalar(
         select(func.count()).select_from(RouteAnalyticsSnapshot)
@@ -208,6 +215,25 @@ def seed_data(db: Session = Depends(get_db)) -> SeedResponse:
         db.add_all(snapshots)
 
     try:
+        db.flush()
+        seeded_order_ids = [order.id for order in seeded_orders]
+        logged_seed_order_ids = set(
+            db.scalars(
+                select(OrderActivityLog.order_id).where(
+                    OrderActivityLog.order_id.in_(seeded_order_ids),
+                    OrderActivityLog.action == "CREATED",
+                )
+            ).all()
+        )
+        for order in seeded_orders:
+            if order.id not in logged_seed_order_ids:
+                log_order_activity(
+                    db,
+                    order_id=order.id,
+                    action="CREATED",
+                    new_status=order.status.value,
+                    detail="Seeded demo order",
+                )
         db.commit()
     except IntegrityError as exc:
         db.rollback()

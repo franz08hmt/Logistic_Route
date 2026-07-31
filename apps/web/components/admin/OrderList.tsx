@@ -22,7 +22,10 @@ function DeliveryEvidence({
       <button
         type="button"
         className="mt-2 block text-xs font-semibold text-teal-700 underline-offset-2 hover:underline dark:text-teal-300"
-        onClick={() => onOpenPod(order)}
+        onClick={(event) => {
+          event.stopPropagation();
+          onOpenPod(order);
+        }}
       >
         {t('orders.openPod')}
       </button>
@@ -39,7 +42,7 @@ function DeliveryEvidence({
   );
 
   return (
-    <details className="mt-2 text-xs">
+    <details className="mt-2 text-xs" onClick={(event) => event.stopPropagation()}>
       <summary className="font-semibold text-rose-700 dark:text-rose-300">{t('orders.exceptionDetails')}</summary>
       <div className="mt-2 rounded-lg border border-rose-200 bg-rose-50 p-3 leading-5 text-slate-700 dark:border-rose-900 dark:bg-rose-950/40 dark:text-slate-300">
         <p>
@@ -69,12 +72,14 @@ export function OrderList({
   deletingId,
   onDelete,
   onDispatch,
+  onOpenDetails,
 }: {
   orders: Order[];
   isLoading: boolean;
   deletingId: string | null;
   onDelete: (order: Order) => void;
   onDispatch: (order: Order) => void;
+  onOpenDetails: (order: Order) => void;
 }) {
   const { locale, t } = useI18n();
   const [podOrder, setPodOrder] = useState<Order | null>(null);
@@ -109,10 +114,10 @@ export function OrderList({
     <>
       <div className="divide-y divide-slate-200 dark:divide-slate-800 md:hidden">
         {orders.map((order) => (
-          <article key={order.id} className="space-y-3 p-4">
+          <article key={order.id} className="space-y-3 p-4 transition hover:bg-slate-50/70 dark:hover:bg-slate-800/40" onClick={() => onOpenDetails(order)}>
             <div className="flex items-start justify-between gap-3">
               <div>
-                <strong className="text-sm text-slate-950 dark:text-white">{order.order_code}</strong>
+                <button type="button" className="text-left text-sm font-semibold text-slate-950 hover:text-teal-700 focus-visible:outline-2 focus-visible:outline-teal-600 dark:text-white dark:hover:text-teal-300" onClick={(event) => { event.stopPropagation(); onOpenDetails(order); }}>{order.order_code}</button>
                 <p className="mt-0.5 text-sm text-slate-600 dark:text-slate-400">{order.customer_name}</p>
               </div>
               <StatusBadge status={order.status} />
@@ -127,7 +132,10 @@ export function OrderList({
                 <button
                   type="button"
                   className="text-xs font-semibold text-teal-700 hover:underline dark:text-teal-300"
-                  onClick={() => onDispatch(order)}
+                  onClick={(event) => {
+                    event.stopPropagation();
+                    onDispatch(order);
+                  }}
                 >
                   {t('orders.dispatchAction')}
                 </button>
@@ -135,7 +143,10 @@ export function OrderList({
               <button
                 type="button"
                 className="text-xs font-semibold text-rose-700 hover:underline disabled:opacity-50 dark:text-rose-300"
-                onClick={() => onDelete(order)}
+                onClick={(event) => {
+                  event.stopPropagation();
+                  onDelete(order);
+                }}
                 disabled={deletingId === order.id}
               >
                 {deletingId === order.id ? t('orders.deleting') : t('orders.deleteOrder')}
@@ -157,8 +168,8 @@ export function OrderList({
           </thead>
           <tbody className="divide-y divide-slate-200 dark:divide-slate-800">
             {orders.map((order) => (
-              <tr key={order.id} className="transition hover:bg-slate-50/70 dark:hover:bg-slate-800/40">
-                <td className="whitespace-nowrap px-5 py-4 text-sm font-semibold text-slate-950 dark:text-white">{order.order_code}</td>
+              <tr key={order.id} className="cursor-pointer transition hover:bg-slate-50/70 dark:hover:bg-slate-800/40" onClick={() => onOpenDetails(order)}>
+                <td className="whitespace-nowrap px-5 py-4"><button type="button" className="text-sm font-semibold text-slate-950 hover:text-teal-700 focus-visible:outline-2 focus-visible:outline-teal-600 dark:text-white dark:hover:text-teal-300" onClick={(event) => { event.stopPropagation(); onOpenDetails(order); }}>{order.order_code}</button></td>
                 <td className="px-5 py-4 text-sm text-slate-700 dark:text-slate-300">{order.customer_name}</td>
                 <td className="max-w-sm px-5 py-4">
                   <p className="text-sm leading-5 text-slate-700 dark:text-slate-300">{order.address}</p>
@@ -175,7 +186,10 @@ export function OrderList({
                       <button
                         type="button"
                         className="rounded-lg bg-teal-50 px-2.5 py-1.5 text-xs font-semibold text-teal-800 hover:bg-teal-100 focus-visible:outline-2 focus-visible:outline-teal-600 dark:bg-teal-950/50 dark:text-teal-300"
-                        onClick={() => onDispatch(order)}
+                        onClick={(event) => {
+                          event.stopPropagation();
+                          onDispatch(order);
+                        }}
                       >
                         {t('orders.dispatchAction')}
                       </button>
@@ -183,7 +197,10 @@ export function OrderList({
                     <button
                       type="button"
                       className="rounded-lg px-2.5 py-1.5 text-xs font-semibold text-rose-700 hover:bg-rose-50 focus-visible:outline-2 focus-visible:outline-rose-600 disabled:opacity-50 dark:text-rose-300 dark:hover:bg-rose-950/50"
-                      onClick={() => onDelete(order)}
+                      onClick={(event) => {
+                        event.stopPropagation();
+                        onDelete(order);
+                      }}
                       disabled={deletingId === order.id}
                       aria-label={t('orders.deleteLabel', { code: order.order_code })}
                     >

@@ -9,10 +9,12 @@ from app.db.models import (
     Order as DatabaseOrder,
     OrderStatus,
     RouteAnalyticsSnapshot,
+    User,
     Vehicle as DatabaseVehicle,
     VehicleStatus,
 )
 from app.services.cost_calculator import CostCalculation, calculate_route_costs
+from app.services.activity_logger import log_order_activity
 from app.services.driver_availability import vehicle_is_available_clause
 from app.services.order_status import set_order_status
 from core_engine.solver import (
@@ -39,7 +41,11 @@ class RouteOptimizationError(Exception):
         self.detail = detail
 
 
-def optimize_pending_routes(db: Session) -> OptimizationRun:
+def optimize_pending_routes(
+    db: Session,
+    *,
+    actor: User | None = None,
+) -> OptimizationRun:
     """Solve pending and failed orders and persist only returned assignments."""
     depot = db.scalar(
         select(DatabaseDepot).order_by(DatabaseDepot.name, DatabaseDepot.id).limit(1)
@@ -109,9 +115,11 @@ def optimize_pending_routes(db: Session) -> OptimizationRun:
     }
     vehicles_by_id = {str(vehicle.id): vehicle for vehicle in vehicles}
     route_batch_id = uuid4()
+    assigned_transitions: list[tuple[DatabaseOrder, str]] = []
     for order in pending_orders:
         assignment = assignments.get(str(order.id))
         if assignment:
+            old_status = order.status.value
             set_order_status(order, OrderStatus.ASSIGNED)
             order.assigned_vehicle_id = UUID(assignment[0])
             order.route_batch_id = route_batch_id
@@ -121,6 +129,19 @@ def optimize_pending_routes(db: Session) -> OptimizationRun:
             vehicle = vehicles_by_id.get(assignment[0])
             if vehicle is not None:
                 vehicle.status = VehicleStatus.ON_ROUTE
+            assigned_transitions.append((order, old_status))
+
+    db.flush()
+    for order, old_status in assigned_transitions:
+        log_order_activity(
+            db,
+            order_id=order.id,
+            action="ASSIGNED",
+            actor=actor,
+            old_status=old_status,
+            new_status=OrderStatus.ASSIGNED.value,
+            detail="Batch optimization",
+        )
 
     db.add(
         RouteAnalyticsSnapshot(

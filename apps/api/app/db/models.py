@@ -140,6 +140,38 @@ class Order(Base):
     delivery_region: Mapped[str | None] = mapped_column(String(150), nullable=True)
 
 
+class OrderActivityLog(Base):
+    __tablename__ = "order_activity_logs"
+
+    id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True),
+        primary_key=True,
+        default=uuid.uuid4,
+    )
+    order_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True),
+        ForeignKey("orders.id", ondelete="CASCADE"),
+        nullable=False,
+        index=True,
+    )
+    action: Mapped[str] = mapped_column(String(50), nullable=False)
+    old_status: Mapped[str | None] = mapped_column(String(16), nullable=True)
+    new_status: Mapped[str | None] = mapped_column(String(16), nullable=True)
+    actor_id: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True),
+        nullable=True,
+    )
+    actor_name: Mapped[str | None] = mapped_column(String(150), nullable=True)
+    actor_role: Mapped[str | None] = mapped_column(String(16), nullable=True)
+    detail: Mapped[str | None] = mapped_column(Text, nullable=True)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        nullable=False,
+        server_default=func.now(),
+        index=True,
+    )
+
+
 class RouteAnalyticsSnapshot(Base):
     __tablename__ = "route_analytics_snapshots"
 

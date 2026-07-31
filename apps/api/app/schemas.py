@@ -168,6 +168,36 @@ class OrderRead(OrderBase, OrmSchema):
     delivery_region: str | None = None
 
 
+class BulkImportRowError(BaseModel):
+    row: int = Field(ge=1)
+    order_code: str | None
+    errors: list[str] = Field(min_length=1)
+
+
+class BulkImportResponse(BaseModel):
+    total_rows: int = Field(ge=0)
+    created_count: int = Field(ge=0)
+    error_count: int = Field(ge=0)
+    errors: list[BulkImportRowError]
+
+
+class OrderActivityRead(OrmSchema):
+    id: UUID
+    action: str
+    old_status: str | None
+    new_status: str | None
+    actor_name: str | None
+    actor_role: str | None
+    detail: str | None
+    created_at: datetime
+
+
+class OrderActivityListResponse(BaseModel):
+    order_id: UUID
+    order_code: str
+    activities: list[OrderActivityRead]
+
+
 class AvailableDriverRead(BaseModel):
     driver_id: UUID
     full_name: str

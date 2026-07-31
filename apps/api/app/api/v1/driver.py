@@ -18,6 +18,7 @@ from app.schemas import (
     PodUploadRead,
 )
 from app.services.pod_storage import MAX_POD_BYTES, store_pod_content
+from app.services.activity_logger import log_order_activity
 from app.services.driver_availability import (
     ACTIVE_ROUTE_STATUSES,
     reconcile_vehicle_availability,
@@ -113,6 +114,14 @@ async def upload_order_pod(
     pod_url = f"{POD_PUBLIC_BASE_URL}/uploads/pod/{filename}"
     order.pod_url = pod_url
     order.pod_uploaded_at = datetime.now(timezone.utc)
+    db.flush()
+    log_order_activity(
+        db,
+        order_id=order.id,
+        action="POD_UPLOADED",
+        actor=current_user,
+        detail="POD uploaded",
+    )
     db.commit()
 
     return PodUploadRead(
@@ -238,6 +247,7 @@ def update_driver_order_status(
             detail="Failure reason is required for a failed delivery",
         )
 
+    old_status = order.status.value
     set_order_status(order, requested_status)
     order.delivery_note = payload.delivery_note
     order.failure_reason = (
@@ -247,6 +257,19 @@ def update_driver_order_status(
     if effective_pod_url and order.pod_uploaded_at is None:
         order.pod_uploaded_at = datetime.now(timezone.utc)
     db.flush()
+    log_order_activity(
+        db,
+        order_id=order.id,
+        action="STATUS_CHANGED",
+        actor=current_user,
+        old_status=old_status,
+        new_status=requested_status.value,
+        detail=(
+            order.failure_reason
+            if requested_status is OrderStatus.FAILED
+            else order.delivery_note
+        ),
+    )
     reconcile_vehicle_availability(db, vehicle)
     # Order status and vehicle availability are committed atomically.
     db.commit()
