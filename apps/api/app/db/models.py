@@ -7,6 +7,7 @@ from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.db.base import Base
+from app.services.public_tracking import generate_tracking_token
 
 
 class VehicleStatus(str, Enum):
@@ -100,6 +101,13 @@ class Order(Base):
 
     id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     order_code: Mapped[str] = mapped_column(String(50), unique=True, index=True, nullable=False)
+    tracking_token: Mapped[str] = mapped_column(
+        String(64),
+        unique=True,
+        index=True,
+        nullable=False,
+        default=generate_tracking_token,
+    )
     customer_name: Mapped[str] = mapped_column(String(150), nullable=False)
     customer_phone: Mapped[str | None] = mapped_column(String(30), nullable=True)
     address: Mapped[str] = mapped_column(Text, nullable=False)

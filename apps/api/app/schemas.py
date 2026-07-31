@@ -157,6 +157,7 @@ class OrderDispatchRequest(BaseModel):
 
 class OrderRead(OrderBase, OrmSchema):
     id: UUID
+    tracking_token: str = Field(min_length=32, max_length=64)
     status_updated_at: datetime | None
     assigned_vehicle_id: UUID | None = None
     route_batch_id: UUID | None = None
@@ -196,6 +197,35 @@ class OrderActivityListResponse(BaseModel):
     order_id: UUID
     order_code: str
     activities: list[OrderActivityRead]
+
+
+class PublicTrackingOrder(BaseModel):
+    order_code: str
+    customer_name_masked: str
+    customer_phone_masked: str | None
+    address: str
+    latitude: float = Field(ge=-90, le=90)
+    longitude: float = Field(ge=-180, le=180)
+    status: OrderStatus
+    status_updated_at: datetime | None
+    delivery_note: str | None
+    failure_reason: str | None
+
+
+class PublicTrackingDriver(BaseModel):
+    driver_name: str
+    driver_phone: str | None
+    license_plate: str
+    vehicle_type: str
+
+
+class PublicTrackingResponse(BaseModel):
+    order: PublicTrackingOrder
+    depot: DepotRead
+    driver: PublicTrackingDriver | None
+    stops_remaining_before: int = Field(ge=0)
+    route_batch_id: UUID | None
+    estimated_arrival_minutes: int | None = Field(default=None, ge=0)
 
 
 class AvailableDriverRead(BaseModel):

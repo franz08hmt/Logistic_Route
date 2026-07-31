@@ -37,6 +37,7 @@ export function OrderDetailDrawer({
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [isPodOpen, setIsPodOpen] = useState(false);
+  const [copyState, setCopyState] = useState<'idle' | 'copied' | 'error'>('idle');
   const panelRef = useRef<HTMLElement>(null);
   const closeRef = useRef<HTMLButtonElement>(null);
   const titleId = useId();
@@ -49,6 +50,7 @@ export function OrderDetailDrawer({
       setLastOrder(order);
       setLastVehicle(vehicle);
       setIsPodOpen(false);
+      setCopyState('idle');
     }
   }, [order, vehicle]);
 
@@ -132,6 +134,33 @@ export function OrderDetailDrawer({
     { maximumFractionDigits: 1 },
   );
 
+  async function copyTrackingLink() {
+    if (!activeOrder) {
+      return;
+    }
+    const trackingLink = `${window.location.origin}/track/${activeOrder.tracking_token}`;
+    try {
+      if (navigator.clipboard?.writeText) {
+        await navigator.clipboard.writeText(trackingLink);
+      } else {
+        const textArea = document.createElement('textarea');
+        textArea.value = trackingLink;
+        textArea.setAttribute('readonly', '');
+        textArea.className = 'fixed left-[-9999px] top-0';
+        document.body.appendChild(textArea);
+        textArea.select();
+        const copied = document.execCommand('copy');
+        textArea.remove();
+        if (!copied) {
+          throw new Error('Clipboard API unavailable');
+        }
+      }
+      setCopyState('copied');
+    } catch {
+      setCopyState('error');
+    }
+  }
+
   return (
     <div className={`fixed inset-0 z-50 ${open ? 'pointer-events-auto' : 'pointer-events-none'}`} aria-hidden={!open}>
       <button
@@ -172,6 +201,13 @@ export function OrderDetailDrawer({
                   <Info label={t('orderDetail.region')} value={activeOrder.delivery_region || t('orderDetail.notAvailable')} />
                   {activeVehicle && <><Info label={t('orderDetail.vehicle')} value={activeVehicle.license_plate} /><Info label={t('orderDetail.driver')} value={activeVehicle.driver_name || t('orderDetail.notAvailable')} /></>}
                 </dl>
+                <button type="button" className="mt-3 inline-flex w-full items-center justify-center gap-2 rounded-lg border border-teal-200 bg-teal-50 px-4 py-2.5 text-sm font-semibold text-teal-800 transition hover:bg-teal-100 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-teal-600 dark:border-teal-900 dark:bg-teal-950/50 dark:text-teal-200 dark:hover:bg-teal-950" onClick={() => void copyTrackingLink()}>
+                  <span aria-hidden="true">🔗</span>
+                  {copyState === 'copied' ? t('orderDetail.trackingLinkCopied') : t('orderDetail.copyTrackingLink')}
+                </button>
+                <p className={`mt-2 text-xs ${copyState === 'error' ? 'text-rose-600 dark:text-rose-300' : 'text-slate-500'}`} aria-live="polite">
+                  {copyState === 'error' ? t('orderDetail.trackingLinkCopyError') : copyState === 'copied' ? t('orderDetail.trackingLinkCopiedHint') : ''}
+                </p>
               </section>
 
               {activeOrder.failure_reason && <div className="mt-4 rounded-xl border border-rose-200 bg-rose-50 p-4 text-sm text-rose-800 dark:border-rose-900 dark:bg-rose-950/40 dark:text-rose-200"><strong>{t('orderDetail.failureReason')}</strong><p className="mt-1 leading-6">{activeOrder.failure_reason}</p></div>}

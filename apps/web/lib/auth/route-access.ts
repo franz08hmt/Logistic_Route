@@ -31,3 +31,7 @@ export function getRouteAccessDecision(
 
   return 'allow';
 }
+
+export function getSessionRestoreRedirect(pathname: string): '/login' | null {
+  return getRouteAccessDecision(pathname, false) === 'login' ? '/login' : null;
+}

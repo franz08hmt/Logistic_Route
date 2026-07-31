@@ -10,12 +10,44 @@ from app.db.models import (  # noqa: F401 - register ORM tables
     Vehicle,
 )
 from app.db.session import engine
+from app.services.public_tracking import generate_tracking_token
 
 
 def main() -> None:
     with engine.begin() as connection:
         connection.execute(text("CREATE EXTENSION IF NOT EXISTS postgis"))
+        orders_table_exists = bool(connection.scalar(text(
+            "SELECT to_regclass('public.orders') IS NOT NULL"
+        )))
+        if orders_table_exists:
+            # Add the nullable column before create_all() attempts to create its
+            # unique index on an existing orders table.
+            connection.execute(text(
+                "ALTER TABLE orders ADD COLUMN IF NOT EXISTS "
+                "tracking_token VARCHAR(64)"
+            ))
         Base.metadata.create_all(bind=connection)
+        missing_tracking_ids = list(connection.scalars(text(
+            "SELECT id FROM orders WHERE tracking_token IS NULL"
+        )).all())
+        for order_id in missing_tracking_ids:
+            connection.execute(
+                text(
+                    "UPDATE orders SET tracking_token = :tracking_token "
+                    "WHERE id = :order_id"
+                ),
+                {
+                    "tracking_token": generate_tracking_token(),
+                    "order_id": order_id,
+                },
+            )
+        connection.execute(text(
+            "CREATE UNIQUE INDEX IF NOT EXISTS ix_orders_tracking_token "
+            "ON orders (tracking_token)"
+        ))
+        connection.execute(text(
+            "ALTER TABLE orders ALTER COLUMN tracking_token SET NOT NULL"
+        ))
         connection.execute(text(
             "ALTER TABLE users ADD COLUMN IF NOT EXISTS phone_number VARCHAR(30)"
         ))

@@ -4,13 +4,14 @@ import logging
 from typing import Annotated
 from uuid import UUID, uuid4
 
-from fastapi import APIRouter, Depends, File, HTTPException, Response, UploadFile, status
+from fastapi import APIRouter, Depends, File, HTTPException, Path, Response, UploadFile, status
 from pydantic import ValidationError
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from app.db.models import (
+    Depot,
     Order,
     OrderActivityLog,
     OrderStatus,
@@ -25,23 +26,34 @@ from app.core.security import get_current_user, require_roles
 from app.schemas import (
     BulkImportResponse,
     BulkImportRowError,
+    DepotRead,
     OrderCreate,
     OrderActivityListResponse,
     OrderActivityRead,
     OrderDispatchRequest,
     OrderRead,
     OrderStatusUpdate,
+    PublicTrackingDriver,
+    PublicTrackingOrder,
+    PublicTrackingResponse,
 )
+from app.services.activity_logger import log_order_activity
 from app.services.driver_availability import (
     reconcile_vehicle_availability,
     vehicle_is_available_clause,
 )
-from app.services.activity_logger import log_order_activity
 from app.services.order_status import set_order_status
+from app.services.public_tracking import (
+    estimate_arrival_minutes,
+    generate_tracking_token,
+    mask_customer_name,
+    mask_phone_number,
+)
 from app.services.region_matcher import regions_match
 
 
 router = APIRouter(prefix="/orders", tags=["orders"])
+public_router = APIRouter(prefix="/public", tags=["public-tracking"])
 logger = logging.getLogger(__name__)
 
 MAX_CSV_IMPORT_BYTES = 2 * 1024 * 1024
@@ -164,6 +176,7 @@ def create_order(
     # only happens through POST /orders/{id}/dispatch.
     order = Order(
         **payload.model_dump(exclude={"status"}),
+        tracking_token=generate_tracking_token(),
         status=OrderStatus.PENDING,
         assigned_vehicle_id=None,
         route_batch_id=None,
@@ -322,6 +335,7 @@ async def import_orders(
 
         order = Order(
             **payload.model_dump(exclude={"status"}),
+            tracking_token=generate_tracking_token(),
             status=OrderStatus.PENDING,
             assigned_vehicle_id=None,
             route_batch_id=None,
@@ -364,6 +378,102 @@ async def import_orders(
         created_count=created_count,
         error_count=len(errors),
         errors=errors,
+    )
+
+
+@public_router.get(
+    "/track/{tracking_token}",
+    response_model=PublicTrackingResponse,
+)
+def get_public_tracking(
+    tracking_token: Annotated[
+        str,
+        Path(min_length=32, max_length=64, pattern=r"^[A-Za-z0-9_-]+$"),
+    ],
+    db: Session = Depends(get_db),
+) -> PublicTrackingResponse:
+    """Return a privacy-reduced tracking view without requiring authentication."""
+    order = db.scalar(select(Order).where(Order.tracking_token == tracking_token))
+    if order is None:
+        raise HTTPException(status_code=404, detail="Tracking information not found")
+
+    depot = db.scalar(select(Depot).order_by(Depot.id).limit(1))
+    if depot is None:
+        raise HTTPException(
+            status_code=503,
+            detail="Tracking information is temporarily unavailable",
+        )
+
+    driver_payload: PublicTrackingDriver | None = None
+    if (
+        order.status in {OrderStatus.ASSIGNED, OrderStatus.DELIVERING}
+        and order.assigned_vehicle_id is not None
+    ):
+        vehicle = db.scalar(
+            select(Vehicle).where(Vehicle.id == order.assigned_vehicle_id)
+        )
+        if vehicle is not None:
+            driver = (
+                db.scalar(select(User).where(User.id == vehicle.driver_id))
+                if vehicle.driver_id is not None
+                else None
+            )
+            driver_name = (
+                driver.full_name
+                if driver is not None
+                else vehicle.driver_name or "LogiRoute Driver"
+            )
+            driver_payload = PublicTrackingDriver(
+                driver_name=driver_name,
+                driver_phone=mask_phone_number(
+                    driver.phone_number if driver is not None else None
+                ),
+                license_plate=vehicle.license_plate,
+                vehicle_type=vehicle.vehicle_type,
+            )
+
+    stops_remaining_before = 0
+    if (
+        order.status in {OrderStatus.ASSIGNED, OrderStatus.DELIVERING}
+        and order.route_batch_id is not None
+        and order.assigned_vehicle_id is not None
+        and order.stop_sequence is not None
+    ):
+        stops_remaining_before = int(
+            db.scalar(
+                select(func.count())
+                .select_from(Order)
+                .where(
+                    Order.route_batch_id == order.route_batch_id,
+                    Order.assigned_vehicle_id == order.assigned_vehicle_id,
+                    Order.stop_sequence < order.stop_sequence,
+                    Order.status.in_((OrderStatus.ASSIGNED, OrderStatus.DELIVERING)),
+                )
+            )
+            or 0
+        )
+
+    return PublicTrackingResponse(
+        order=PublicTrackingOrder(
+            order_code=order.order_code,
+            customer_name_masked=mask_customer_name(order.customer_name),
+            customer_phone_masked=mask_phone_number(order.customer_phone),
+            address=order.address,
+            latitude=order.latitude,
+            longitude=order.longitude,
+            status=order.status,
+            status_updated_at=order.status_updated_at,
+            delivery_note=order.delivery_note,
+            failure_reason=order.failure_reason,
+        ),
+        depot=DepotRead.model_validate(depot),
+        driver=driver_payload,
+        stops_remaining_before=stops_remaining_before,
+        route_batch_id=order.route_batch_id,
+        estimated_arrival_minutes=estimate_arrival_minutes(
+            order.status.value,
+            stops_remaining_before,
+        ),
     )
 
 

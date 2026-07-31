@@ -9,7 +9,7 @@ import {
   useState,
   type ReactNode,
 } from 'react';
-import { useRouter } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
 
 import { useI18n } from '@/context/I18nContext';
 import {
@@ -24,6 +24,7 @@ import {
   backendProxyPath,
 } from '@/lib/api-client';
 import type { TranslationKey } from '@/lib/i18n/i18n';
+import { getSessionRestoreRedirect } from '@/lib/auth/route-access';
 
 type AuthContextValue = {
   user: AuthUser | null;
@@ -67,6 +68,7 @@ function errorMessage(
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const router = useRouter();
+  const pathname = usePathname();
   const { t } = useI18n();
   const [user, setUser] = useState<AuthUser | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -81,6 +83,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     router.replace('/login');
     router.refresh();
   }, [clearSession, router]);
+
+  const clearExpiredSession = useCallback(async () => {
+    await clearSession();
+    const redirectPath = getSessionRestoreRedirect(pathname);
+    if (redirectPath) {
+      router.replace(redirectPath);
+      router.refresh();
+    }
+  }, [clearSession, pathname, router]);
 
   const login = useCallback(async (input: LoginInput) => {
     const response = await fetch('/api/auth/login', {
@@ -121,10 +132,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         }
 
         if (response.status === 401 || response.status === 403) {
-          await clearSession();
           if (isActive) {
-            router.replace('/login');
-            router.refresh();
+            await clearExpiredSession();
           }
         }
       } finally {
@@ -138,18 +147,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return () => {
       isActive = false;
     };
-  }, [clearSession, router]);
+  }, [clearExpiredSession]);
 
   useEffect(() => {
     function handleUnauthorized() {
-      void logout();
+      void clearExpiredSession();
     }
 
     window.addEventListener(AUTH_UNAUTHORIZED_EVENT, handleUnauthorized);
     return () => {
       window.removeEventListener(AUTH_UNAUTHORIZED_EVENT, handleUnauthorized);
     };
-  }, [logout]);
+  }, [clearExpiredSession]);
 
   const value = useMemo<AuthContextValue>(() => ({
     user,

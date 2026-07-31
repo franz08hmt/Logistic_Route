@@ -55,6 +55,7 @@ const orders: Order[] = [
   {
     id: 'order-1',
     order_code: 'LR-001',
+    tracking_token: 'a'.repeat(43),
     customer_name: '=Injected formula',
     customer_phone: '0901000001',
     address: '=HYPERLINK("https://unsafe.example")',
@@ -74,6 +75,7 @@ const orders: Order[] = [
   {
     id: 'order-2',
     order_code: 'LR-002',
+    tracking_token: 'b'.repeat(43),
     customer_name: 'Customer Two',
     customer_phone: null,
     address: 'Binh Tan',

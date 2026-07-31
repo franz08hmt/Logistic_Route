@@ -23,6 +23,7 @@ from app.db.session import get_db
 from app.schemas import DepotRead, SeedResponse, SeedUsersResponse, UserRead
 from app.services.cost_calculator import calculate_route_costs
 from app.services.activity_logger import log_order_activity
+from app.services.public_tracking import generate_tracking_token
 
 
 router = APIRouter(tags=["seed"])
@@ -195,11 +196,13 @@ def seed_data(db: Session = Depends(get_db)) -> SeedResponse:
     for order_data in SEED_ORDERS:
         exists = db.scalar(select(Order).where(Order.order_code == order_data["order_code"]))
         if exists is None:
-            order = Order(**order_data)
+            order = Order(**order_data, tracking_token=generate_tracking_token())
             db.add(order)
             seeded_orders.append(order)
             orders_created += 1
         else:
+            if not exists.tracking_token:
+                exists.tracking_token = generate_tracking_token()
             if exists.customer_phone is None:
                 exists.customer_phone = order_data["customer_phone"]
             seeded_orders.append(exists)

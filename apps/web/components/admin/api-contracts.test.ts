@@ -11,6 +11,7 @@ describe('admin API contracts', () => {
     const order = {
       id: 'order-1',
       order_code: 'LR-001',
+      tracking_token: 'a'.repeat(43),
       customer_name: 'Nguyen Van A',
       customer_phone: null,
       address: 'Quan 1, TP.HCM',

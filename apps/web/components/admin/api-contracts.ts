@@ -15,6 +15,7 @@ export type VehicleStatus = (typeof VEHICLE_STATUSES)[number];
 export type Order = {
   id: string;
   order_code: string;
+  tracking_token: string;
   customer_name: string;
   customer_phone: string | null;
   address: string;
@@ -100,6 +101,9 @@ function isOrder(value: unknown): value is Order {
   return (
     typeof value.id === 'string' &&
     typeof value.order_code === 'string' &&
+    typeof value.tracking_token === 'string' &&
+    value.tracking_token.length >= 32 &&
+    value.tracking_token.length <= 64 &&
     typeof value.customer_name === 'string' &&
     (typeof value.customer_phone === 'string' || value.customer_phone === null) &&
     typeof value.address === 'string' &&
