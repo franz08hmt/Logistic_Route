@@ -221,7 +221,38 @@ class SeedResponse(BaseModel):
     depot_created: bool
     vehicles_created: int
     orders_created: int
+    analytics_snapshots_created: int = Field(default=0, ge=0)
     depot: DepotRead
+
+
+class AnalyticsDataPoint(BaseModel):
+    date: str
+    total_distance_km: float = Field(ge=0)
+    total_duration_mins: float = Field(ge=0)
+    total_cost_vnd: float = Field(ge=0)
+    fuel_cost_vnd: float = Field(ge=0)
+    driver_cost_vnd: float = Field(ge=0)
+    co2_emissions_kg: float = Field(ge=0)
+    estimated_savings_vnd: float = Field(ge=0)
+    estimated_co2_savings_kg: float = Field(ge=0)
+    optimization_runs: int = Field(ge=0)
+
+
+class AnalyticsSummary(BaseModel):
+    period_label: str
+    total_optimizations: int = Field(ge=0)
+    total_distance_km: float = Field(ge=0)
+    total_cost_vnd: float = Field(ge=0)
+    total_savings_vnd: float = Field(ge=0)
+    total_co2_saved_kg: float = Field(ge=0)
+    avg_savings_rate: float = Field(ge=0, le=1)
+    best_day: str | None
+    best_day_savings_vnd: float = Field(ge=0)
+
+
+class AnalyticsHistoryResponse(BaseModel):
+    summary: AnalyticsSummary
+    data_points: list[AnalyticsDataPoint]
 
 
 class RouteCostMetrics(BaseModel):

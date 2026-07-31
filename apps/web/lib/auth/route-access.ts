@@ -4,6 +4,7 @@ const protectedRoutePrefixes = [
   '/dispatch',
   '/drivers',
   '/fleet',
+  '/analytics',
   '/map',
   '/driver',
   '/admin',

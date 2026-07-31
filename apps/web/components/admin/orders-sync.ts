@@ -4,7 +4,7 @@ const ORDERS_UPDATED_EVENT = 'logiroute:orders-updated';
 const DATA_INVALIDATED_EVENT = 'logiroute:data-invalidated';
 const ORDERS_UPDATED_CHANNEL = 'logiroute-orders';
 
-export type DataResource = 'orders' | 'fleet' | 'driver' | 'overview';
+export type DataResource = 'orders' | 'fleet' | 'driver' | 'overview' | 'analytics';
 
 type DataInvalidationMessage = {
   type: 'DATA_INVALIDATED';

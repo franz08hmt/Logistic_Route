@@ -10,7 +10,7 @@ import { LanguageSwitcher } from './LanguageSwitcher';
 import { ThemeToggle } from './ThemeToggle';
 import { UserProfileMenu } from './UserProfileMenu';
 
-type NavIconName = 'dashboard' | 'orders' | 'fleet' | 'dispatch' | 'driver' | 'users';
+type NavIconName = 'dashboard' | 'orders' | 'fleet' | 'dispatch' | 'driver' | 'users' | 'analytics';
 
 const adminLinks = [
   { labelKey: 'navigation.dashboard', href: '/dashboard', icon: 'dashboard' },
@@ -18,6 +18,7 @@ const adminLinks = [
   { labelKey: 'navigation.dispatch', href: '/dispatch', icon: 'dispatch' },
   { labelKey: 'navigation.fleet', href: '/fleet', icon: 'fleet' },
   { labelKey: 'navigation.drivers', href: '/drivers', icon: 'driver' },
+  { labelKey: 'navigation.analytics', href: '/analytics', icon: 'analytics' },
 ] satisfies Array<{ labelKey: TranslationKey; href: string; icon: NavIconName }>;
 
 const driverLinks = [
@@ -55,6 +56,9 @@ function NavIcon({ name }: { name: NavIconName }) {
   if (name === 'users') {
     return <svg {...common}><path d="M16 20v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" /><circle cx="9" cy="7" r="4" /><path d="M22 20v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75" /></svg>;
   }
+  if (name === 'analytics') {
+    return <svg {...common}><path d="M4 19V9M10 19V5M16 19v-7M22 19H2" /><path d="m4 7 6-4 6 6 5-5" /></svg>;
+  }
   return <svg {...common}><path d="M5 19h14M7 17v-6l5-7 5 7v6M9 12h6" /><circle cx="12" cy="9" r="1.5" /></svg>;
 }
 
@@ -90,6 +94,12 @@ export function Navigation() {
         : user?.role === 'DISPATCHER'
           ? adminLinks
         : adminLinks;
+  const mobileGridClass = {
+    1: 'grid-cols-1',
+    5: 'grid-cols-5',
+    6: 'grid-cols-6',
+    7: 'grid-cols-7',
+  }[links.length] ?? 'grid-cols-4';
 
   return (
     <>
@@ -177,15 +187,7 @@ export function Navigation() {
       </aside>
 
       <nav
-        className={`fixed inset-x-0 bottom-0 z-[1000] grid border-t border-slate-200 bg-white/95 px-2 pb-[max(.5rem,env(safe-area-inset-bottom))] pt-2 backdrop-blur-xl dark:border-slate-800 dark:bg-slate-950/95 lg:hidden ${
-          links.length === 1
-            ? 'grid-cols-1'
-            : links.length === 5
-              ? 'grid-cols-5'
-              : links.length === 6
-                ? 'grid-cols-6'
-              : 'grid-cols-4'
-        }`}
+        className={`fixed inset-x-0 bottom-0 z-[1000] grid border-t border-slate-200 bg-white/95 px-2 pb-[max(.5rem,env(safe-area-inset-bottom))] pt-2 backdrop-blur-xl dark:border-slate-800 dark:bg-slate-950/95 lg:hidden ${mobileGridClass}`}
         aria-label={t('navigation.mobile')}
       >
         {links.map((link) => {

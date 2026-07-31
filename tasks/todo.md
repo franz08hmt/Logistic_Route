@@ -17,5 +17,6 @@
 - [x] Render optimized routes on real roads with OSRM and refresh Orders state after optimization.
 - [x] Add User authentication, JWT access tokens, and role-based protection for operational APIs.
 - [x] Add route cost analytics, persistent optimization snapshots, Dashboard sustainability metrics, and CSV manifest export.
+- [x] Add the protected Analytics history API and `/analytics` dashboard with period filters, charts, and CSV export.
 
 - [ ] Use a road-network cost matrix and add advanced optimization constraints.

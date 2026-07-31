@@ -28,6 +28,7 @@ export const config = {
     '/dispatch/:path*',
     '/drivers/:path*',
     '/fleet/:path*',
+    '/analytics/:path*',
     '/map/:path*',
     '/driver/:path*',
     '/admin/:path*',

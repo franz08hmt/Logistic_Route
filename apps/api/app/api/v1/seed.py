@@ -1,5 +1,8 @@
+import random
+from datetime import datetime, timedelta, timezone
+
 from fastapi import APIRouter, Depends, HTTPException, status
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
@@ -8,6 +11,7 @@ from app.db.models import (
     Depot,
     Order,
     OrderStatus,
+    RouteAnalyticsSnapshot,
     User,
     UserRole,
     UserStatus,
@@ -16,6 +20,7 @@ from app.db.models import (
 )
 from app.db.session import get_db
 from app.schemas import DepotRead, SeedResponse, SeedUsersResponse, UserRead
+from app.services.cost_calculator import calculate_route_costs
 
 
 router = APIRouter(tags=["seed"])
@@ -117,6 +122,54 @@ SEED_USERS = [
 ]
 
 
+def build_seed_analytics_snapshots(
+    *,
+    now: datetime | None = None,
+    count: int = 25,
+) -> list[RouteAnalyticsSnapshot]:
+    """Build deterministic, realistic demo history without touching the database."""
+    reference = now or datetime.now(timezone.utc)
+    generator = random.Random(20260731)
+    snapshots: list[RouteAnalyticsSnapshot] = []
+
+    for index in range(count):
+        distance = round(generator.uniform(40, 120), 2)
+        duration = round(generator.uniform(95, 260), 2)
+        savings_rate = round(generator.uniform(0.15, 0.22), 4)
+        costs = calculate_route_costs(
+            total_distance_km=distance,
+            total_time_minutes=duration,
+        )
+        day_offset = round(index * 29 / max(count - 1, 1))
+        created_at = (
+            reference
+            - timedelta(days=day_offset)
+            - timedelta(hours=generator.randint(0, 18))
+        )
+        snapshots.append(
+            RouteAnalyticsSnapshot(
+                total_distance_km=distance,
+                total_duration_mins=duration,
+                fuel_cost_vnd=costs.fuel_cost_vnd,
+                driver_cost_vnd=costs.driver_cost_vnd,
+                total_cost_vnd=costs.total_cost_vnd,
+                co2_emissions_kg=costs.co2_emissions_kg,
+                estimated_savings_vnd=round(
+                    costs.total_cost_vnd * savings_rate,
+                    2,
+                ),
+                estimated_co2_savings_kg=round(
+                    costs.co2_emissions_kg * savings_rate,
+                    3,
+                ),
+                savings_rate=savings_rate,
+                created_at=created_at,
+            )
+        )
+
+    return snapshots
+
+
 @router.post("/seed", response_model=SeedResponse, status_code=status.HTTP_201_CREATED)
 def seed_data(db: Session = Depends(get_db)) -> SeedResponse:
     """Insert the local demo dataset once; repeated calls remain idempotent."""
@@ -143,6 +196,16 @@ def seed_data(db: Session = Depends(get_db)) -> SeedResponse:
             orders_created += 1
         elif exists.customer_phone is None:
             exists.customer_phone = order_data["customer_phone"]
+
+    existing_analytics = int(db.scalar(
+        select(func.count()).select_from(RouteAnalyticsSnapshot)
+    ) or 0)
+    analytics_snapshots_created = max(0, 25 - existing_analytics)
+    if analytics_snapshots_created:
+        snapshots = build_seed_analytics_snapshots(
+            count=analytics_snapshots_created
+        )
+        db.add_all(snapshots)
 
     try:
         db.commit()
@@ -175,6 +238,7 @@ def seed_data(db: Session = Depends(get_db)) -> SeedResponse:
         depot_created=depot_created,
         vehicles_created=vehicles_created,
         orders_created=orders_created,
+        analytics_snapshots_created=analytics_snapshots_created,
         depot=DepotRead.model_validate(depot),
     )
 

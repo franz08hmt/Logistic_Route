@@ -182,6 +182,7 @@ Mở URL do Next.js in ra, sau đó kiểm tra:
 - `/orders` — tạo, xem và xóa đơn hàng.
 - `/fleet` — tạo, xem và xóa xe.
 - `/map` — tối ưu và hiển thị tuyến giao hàng thực tế.
+- `/analytics` — KPI, biểu đồ và lịch sử tối ưu tuyến theo thời gian.
 
 ## API endpoints
 
@@ -196,6 +197,7 @@ Base URL local: `http://localhost:8000`
 | `GET` | `/api/v1/admin/users` | Admin lấy danh sách tài khoản |
 | `PATCH` | `/api/v1/admin/users/{user_id}/status` | Admin duyệt hoặc khóa tài khoản |
 | `GET` | `/api/v1/overview` | KPI thực tế từ database |
+| `GET` | `/api/v1/analytics/history?days=30&group_by=day` | Lịch sử chi phí và hiệu quả tối ưu theo ngày/tuần |
 | `GET` | `/api/v1/orders` | Danh sách đơn hàng |
 | `POST` | `/api/v1/orders` | Tạo đơn mới ở trạng thái `PENDING` |
 | `POST` | `/api/v1/orders/{order_id}/dispatch` | Chủ động phân công đơn cho tài xế sẵn sàng |
@@ -302,6 +304,7 @@ each environment.
 | Method | Endpoint | Access | Description |
 |---|---|---|---|
 | `GET` | `/api/v1/admin/drivers/available` | Admin, Dispatcher | List active drivers with an idle assigned vehicle |
+| `GET` | `/api/v1/analytics/history` | Admin, Dispatcher | Aggregate route cost and sustainability history by day or week |
 | `POST` | `/api/v1/orders` | Admin, Dispatcher | Create an unassigned `PENDING` order |
 | `POST` | `/api/v1/orders/{order_id}/dispatch` | Admin, Dispatcher | Explicitly assign a pending/failed order to a ready driver |
 | `POST` | `/api/v1/routes/dispatch` | Admin, Dispatcher | Optimize selected pending stops and atomically assign one route batch |

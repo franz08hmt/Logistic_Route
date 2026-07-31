@@ -15,11 +15,21 @@
 :root {
   color-scheme: light;
   background: #f8fafc;
+  --chart-grid: #e2e8f0;
+  --chart-muted: #64748b;
+  --chart-text: #0f172a;
+  --chart-surface: #ffffff;
+  --chart-tooltip-bg: #ffffff;
 }
 
 .dark {
   color-scheme: dark;
   background: #020617;
+  --chart-grid: #334155;
+  --chart-muted: #94a3b8;
+  --chart-text: #f8fafc;
+  --chart-surface: #0f172a;
+  --chart-tooltip-bg: #0f172a;
 }
 
 html {

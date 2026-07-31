@@ -119,7 +119,7 @@ export function DispatchWorkspace({
         publishOrdersUpdated(refreshedOrders);
       }
       onRoutePlanned?.(dispatchResult, refreshedOrders ?? orders);
-      publishDataInvalidated(['orders', 'fleet', 'driver', 'overview']);
+      publishDataInvalidated(['orders', 'fleet', 'driver', 'overview', 'analytics']);
     } catch (requestError) {
       if (
         requestError instanceof DispatchApiError

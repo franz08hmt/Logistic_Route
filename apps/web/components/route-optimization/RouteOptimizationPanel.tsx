@@ -112,7 +112,7 @@ export function RouteOptimizationPanel() {
         }
         setOrders(ordersPayload);
         publishOrdersUpdated(ordersPayload);
-        publishDataInvalidated(['orders', 'fleet', 'driver', 'overview']);
+        publishDataInvalidated(['orders', 'fleet', 'driver', 'overview', 'analytics']);
       } catch {
         setError(
           t('map.syncError'),
