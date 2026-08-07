@@ -2,7 +2,7 @@ from datetime import datetime
 from enum import Enum
 from uuid import UUID
 
-from pydantic import BaseModel, ConfigDict, Field, field_validator
+from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
 from app.db.models import OrderStatus, UserRole, UserStatus, VehicleStatus
 from core_engine.solver import Route as OptimizedRoute
@@ -327,12 +327,50 @@ class RouteCostMetrics(BaseModel):
 
 class RouteOptimizationResponse(BaseModel):
     status: str
+    route_batch_id: UUID | None = None
     depot: DepotRead
     total_distance_km: float
     total_duration_mins: float
     cost_metrics: RouteCostMetrics
     unassigned_orders: list[str]
     routes: list[OptimizedRoute]
+
+
+class StopReorderInput(BaseModel):
+    order_id: UUID
+    stop_sequence: int = Field(ge=1)
+
+
+class VehicleRouteReorderInput(BaseModel):
+    vehicle_id: UUID
+    stops: list[StopReorderInput] = Field(max_length=100)
+
+    @model_validator(mode="after")
+    def require_contiguous_unique_sequences(self) -> "VehicleRouteReorderInput":
+        order_ids = [stop.order_id for stop in self.stops]
+        if len(set(order_ids)) != len(order_ids):
+            raise ValueError("route stops must contain unique order_ids")
+        sequences = sorted(stop.stop_sequence for stop in self.stops)
+        if sequences != list(range(1, len(self.stops) + 1)):
+            raise ValueError("stop_sequence values must be contiguous starting at 1")
+        return self
+
+
+class RouteReorderRequest(BaseModel):
+    route_batch_id: UUID
+    routes: list[VehicleRouteReorderInput] = Field(min_length=1, max_length=100)
+
+    @model_validator(mode="after")
+    def require_unique_routes_and_orders(self) -> "RouteReorderRequest":
+        vehicle_ids = [route.vehicle_id for route in self.routes]
+        if len(set(vehicle_ids)) != len(vehicle_ids):
+            raise ValueError("routes must contain unique vehicle_ids")
+        order_ids = [stop.order_id for route in self.routes for stop in route.stops]
+        if not order_ids:
+            raise ValueError("at least one route stop is required")
+        if len(set(order_ids)) != len(order_ids):
+            raise ValueError("an order can only appear once across routes")
+        return self
 
 
 class MultiStopDispatchRequest(BaseModel):

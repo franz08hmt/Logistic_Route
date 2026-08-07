@@ -47,3 +47,31 @@ Create a clean monorepo foundation for LogiRoute VN with a Next.js App Router fr
 | Project source is deleted accidentally | High | Keep source under Git and use explicit, reviewed paths for future cleanup. |
 | Frontend and API ports differ locally | Medium | Configure explicit CORS for `http://localhost:3000`. |
 | Database volume format changes with PostgreSQL 18 | Medium | Pin PostgreSQL 17 / PostGIS 3.5 and document the volume path. |
+
+## Phase 7: Manual Route Reordering
+
+### Architecture decisions
+
+- Extend optimization responses with `route_batch_id` so a persisted route plan can be edited safely.
+- Keep drag-and-drop state local until the dispatcher explicitly saves it.
+- Validate route ownership, complete batch coverage, contiguous sequences, and vehicle capacity again on the server.
+- Recalculate route metrics with OSRM when available and fall back to Haversine distance multiplied by 1.25.
+- Persist order changes, audit logs, vehicle states, and the analytics snapshot in one transaction.
+
+### Task list
+
+- [x] Add typed reorder request contracts and backend validation tests.
+- [x] Implement transactional `POST /api/v1/routes/reorder` and route metric fallback.
+- [x] Add testable frontend helpers for moving stops, capacity checks, and preview metrics.
+- [x] Integrate accessible drag-and-drop lists into the Dispatch Center.
+- [x] Add save/cancel feedback, data invalidation, and VI/EN translations.
+- [x] Run backend/frontend tests, typecheck, build, and browser verification.
+
+### Risks and mitigations
+
+| Risk | Impact | Mitigation |
+| --- | --- | --- |
+| Concurrent driver updates overwrite a manual plan | High | Lock and revalidate all batch orders; reject routes already in progress. |
+| External OSRM latency blocks saving | Medium | Use a short timeout and deterministic Haversine fallback. |
+| Cross-vehicle drag exceeds capacity | High | Check on both client and server before persistence. |
+| Frontend and backend route totals diverge | Medium | Treat client values as preview only and replace them with the server response after save. |

@@ -29,6 +29,7 @@ from core_engine.solver import (
 
 @dataclass(frozen=True)
 class OptimizationRun:
+    route_batch_id: UUID
     depot: DatabaseDepot
     result: VRPOutput
     cost_metrics: CostCalculation
@@ -159,6 +160,7 @@ def optimize_pending_routes(
     db.commit()
 
     return OptimizationRun(
+        route_batch_id=route_batch_id,
         depot=depot,
         result=result,
         cost_metrics=cost_metrics,

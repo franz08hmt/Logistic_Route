@@ -20,3 +20,12 @@
 - [x] Add the protected Analytics history API and `/analytics` dashboard with period filters, charts, and CSV export.
 
 - [ ] Use a road-network cost matrix and add advanced optimization constraints.
+
+## Phase 7: Manual Route Reordering
+
+- [x] Add route batch identity and reorder API contracts.
+- [x] Persist manual stop ordering and cross-vehicle assignments transactionally.
+- [x] Recalculate distance, duration, cost, and CO2 with OSRM fallback.
+- [x] Add accessible drag-and-drop route editing with capacity validation.
+- [x] Add save/cancel controls and synchronize map, orders, fleet, driver, overview, and analytics data.
+- [x] Verify backend tests, frontend tests, typecheck, production build, and browser behavior.

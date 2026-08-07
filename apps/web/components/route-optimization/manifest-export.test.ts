@@ -6,6 +6,7 @@ import { isOptimizationResult, type OptimizationResult } from './types';
 
 const result: OptimizationResult = {
   status: 'OPTIMAL',
+  route_batch_id: 'batch-1',
   depot: {
     id: 'depot-1',
     name: 'LogiRoute Depot',

@@ -6,11 +6,14 @@ from sqlalchemy.orm import Session
 from app.db.session import get_db
 from app.core.security import require_roles
 from app.db.models import User, UserRole
-from app.schemas import DepotRead, RouteCostMetrics, RouteOptimizationResponse
 from app.schemas import (
+    DepotRead,
     MultiStopDispatchRequest,
     MultiStopDispatchResponse,
     MultiStopDispatchStop,
+    RouteCostMetrics,
+    RouteOptimizationResponse,
+    RouteReorderRequest,
 )
 from app.services.dispatch_optimization import (
     MultiStopDispatchError,
@@ -20,6 +23,7 @@ from app.services.route_optimization import (
     RouteOptimizationError,
     optimize_pending_routes,
 )
+from app.services.route_reordering import RouteReorderError, reorder_routes
 
 
 router = APIRouter(prefix="/routes", tags=["route-optimization"])
@@ -91,6 +95,30 @@ def optimize_routes(
         raise HTTPException(status_code=exc.status_code, detail=exc.detail) from exc
 
     return RouteOptimizationResponse(
+        route_batch_id=run.route_batch_id,
+        depot=DepotRead.model_validate(run.depot),
+        cost_metrics=RouteCostMetrics.model_validate(
+            run.cost_metrics,
+            from_attributes=True,
+        ),
+        **run.result.model_dump(),
+    )
+
+
+@router.post("/reorder", response_model=RouteOptimizationResponse)
+def reorder_route_stops(
+    payload: RouteReorderRequest,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_roles(UserRole.ADMIN, UserRole.DISPATCHER)),
+) -> RouteOptimizationResponse:
+    """Persist one dispatcher-authored route order as an atomic batch update."""
+    try:
+        run = reorder_routes(db, payload=payload, actor=current_user)
+    except RouteReorderError as exc:
+        raise HTTPException(status_code=exc.status_code, detail=exc.detail) from exc
+
+    return RouteOptimizationResponse(
+        route_batch_id=run.route_batch_id,
         depot=DepotRead.model_validate(run.depot),
         cost_metrics=RouteCostMetrics.model_validate(
             run.cost_metrics,

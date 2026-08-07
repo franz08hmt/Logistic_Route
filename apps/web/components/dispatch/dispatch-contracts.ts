@@ -3,6 +3,8 @@ import type {
   OptimizationResult,
   RouteCostMetrics,
 } from '../route-optimization/types';
+import { isOptimizationResult } from '../route-optimization/types';
+import type { RouteReorderPayload } from '../route-optimization/manual-route-editor';
 
 export type MultiStopDispatchInput = {
   order_ids: string[];
@@ -142,6 +144,7 @@ export function toOptimizationResult(
 ): OptimizationResult {
   return {
     status: result.status,
+    route_batch_id: result.route_batch_id,
     depot: result.depot,
     total_distance_km: result.total_distance_km,
     total_duration_mins: result.total_duration_mins,
@@ -201,4 +204,36 @@ export async function requestMultiStopDispatch(
     throw new DispatchApiError('Invalid multi-stop dispatch response', 502, null);
   }
   return payload;
+}
+
+async function requestOptimizationResult(
+  path: string,
+  body?: RouteReorderPayload,
+): Promise<OptimizationResult> {
+  const response = await apiFetch(path, {
+    method: 'POST',
+    headers: body ? { 'Content-Type': 'application/json' } : undefined,
+    body: body ? JSON.stringify(body) : undefined,
+  });
+  const payload: unknown = await response.json().catch(() => null);
+  if (!response.ok) {
+    const message = isRecord(payload) && typeof payload.detail === 'string'
+      ? payload.detail
+      : `Route request failed (HTTP ${response.status})`;
+    throw new DispatchApiError(message, response.status, null);
+  }
+  if (!isOptimizationResult(payload)) {
+    throw new DispatchApiError('Invalid route optimization response', 502, null);
+  }
+  return payload;
+}
+
+export function requestFleetOptimization(): Promise<OptimizationResult> {
+  return requestOptimizationResult('/api/v1/routes/optimize');
+}
+
+export function requestRouteReorder(
+  payload: RouteReorderPayload,
+): Promise<OptimizationResult> {
+  return requestOptimizationResult('/api/v1/routes/reorder', payload);
 }

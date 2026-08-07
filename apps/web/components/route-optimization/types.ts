@@ -26,6 +26,7 @@ export type RouteCostMetrics = {
 
 export type OptimizationResult = {
   status: string;
+  route_batch_id: string | null;
   depot: {
     id: string;
     name: string;
@@ -60,6 +61,7 @@ export function isOptimizationResult(value: unknown): value is OptimizationResul
 
   return (
     typeof value.status === 'string' &&
+    (typeof value.route_batch_id === 'string' || value.route_batch_id === null) &&
     isNonNegativeFiniteNumber(value.total_distance_km) &&
     isNonNegativeFiniteNumber(value.total_duration_mins) &&
     typeof value.depot.id === 'string' &&
