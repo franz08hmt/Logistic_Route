@@ -26,6 +26,10 @@ from app.services.driver_availability import (
     reconcile_vehicle_availability,
 )
 from app.services.order_status import set_order_status
+from app.services.notification_service import (
+    notification_template_for_status,
+    send_order_notification,
+)
 from app.services.telemetry import (
     calculate_vehicle_deviation_status,
     find_next_active_stop,
@@ -319,6 +323,15 @@ def update_driver_order_status(
             else order.delivery_note
         ),
     )
+    template_code = notification_template_for_status(requested_status)
+    if old_status != requested_status.value and template_code is not None:
+        send_order_notification(
+            db,
+            order=order,
+            template_code=template_code,
+            vehicle=vehicle,
+            driver=current_user,
+        )
     reconcile_vehicle_availability(db, vehicle)
     # Order status and vehicle availability are committed atomically.
     db.commit()

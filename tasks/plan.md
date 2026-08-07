@@ -103,3 +103,30 @@ Create a clean monorepo foundation for LogiRoute VN with a Next.js App Router fr
 | Poll responses arrive out of order | Medium | Abort the previous request on teardown and keep one polling loop per mounted Dispatch Center. |
 | Missing GPS data crashes Leaflet | Medium | Validate API data and filter vehicles without finite coordinates before rendering. |
 | Existing local database lacks new columns | High | Add revision `009` and mirror it in the idempotent bootstrap script. |
+
+## Phase 9: Customer Notification Simulator
+
+### Architecture decisions
+
+- Store simulated Zalo ZNS and SMS messages as immutable order sub-resources with cascade deletion.
+- Generate templates in one service and call it inside the existing order transaction; no external network call can block dispatch or driver status updates.
+- Skip notification creation when an order has no customer phone number.
+- Use one configured public tracking base URL with the local default `http://localhost:3001`.
+- Protect notification history and resend endpoints with ADMIN/DISPATCHER RBAC because they expose customer phone numbers.
+
+### Task list
+
+- [x] Define notification enums, model, migration, schemas, and contract tests.
+- [x] Implement deterministic templates, automatic triggers, history, resend, and seed data.
+- [x] Add frontend response guards, notification history UI, phone preview, resend, and copy interactions.
+- [x] Add VI/EN translations and update task documentation.
+- [x] Run focused and full backend/frontend tests, typecheck, and production build.
+
+### Risks and mitigations
+
+| Risk | Impact | Mitigation |
+| --- | --- | --- |
+| Repeated status requests create duplicate messages | Medium | Emit automatic notifications only for real status transitions. |
+| Notification persistence breaks the delivery transaction | High | Keep the simulator DB-only, validate inputs, and commit it atomically with the originating action. |
+| Customer phone data leaks to unauthorized users | High | Require ADMIN/DISPATCHER roles and never expose notification history publicly. |
+| Existing databases lack the notification table | High | Add revision `010` and mirror it in the idempotent bootstrap script. |

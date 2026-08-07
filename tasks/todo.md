@@ -39,3 +39,12 @@
 - [x] Add frontend telemetry contracts, polling toggle, fleet counters, markers, and popups.
 - [x] Verify pytest, Vitest, typecheck, and production build.
 - [ ] Verify authenticated polling, map movement, and deviation alert behavior in a running browser.
+
+## Phase 9: Customer Notification Simulator
+
+- [x] Add the customer notification model, migration, schemas, and template service.
+- [x] Trigger notification logs for assignment, delivery progress, success, and failure.
+- [x] Add protected notification history and resend endpoints.
+- [x] Seed realistic Zalo/SMS notification history without duplicates.
+- [x] Add notification contracts, drawer history, phone preview, resend, and copy UI.
+- [x] Add VI/EN labels and verify pytest, Vitest, typecheck, and production build.

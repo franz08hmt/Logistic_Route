@@ -31,6 +31,9 @@ failure counts.
 Migration `009_vehicle_telemetry.sql` stores the latest GPS position, speed,
 ping timestamp, and route-deviation classification for each vehicle. It also
 indexes GPS freshness checks used by the dispatcher telemetry endpoint.
+Migration `010_customer_notifications.sql` stores simulated Zalo ZNS and SMS
+Brandname delivery messages. Notification records are deleted automatically
+when their parent order is deleted.
 The local container is
 published on host port `5433` so it does not collide with another PostgreSQL
 instance on host port `5432`.

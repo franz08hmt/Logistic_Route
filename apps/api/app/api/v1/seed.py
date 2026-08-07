@@ -8,7 +8,9 @@ from sqlalchemy.orm import Session
 
 from app.core.security import get_password_hash
 from app.db.models import (
+    CustomerNotification,
     Depot,
+    NotificationChannel,
     Order,
     OrderActivityLog,
     OrderStatus,
@@ -24,6 +26,10 @@ from app.schemas import DepotRead, SeedResponse, SeedUsersResponse, UserRead
 from app.services.cost_calculator import calculate_route_costs
 from app.services.activity_logger import log_order_activity
 from app.services.public_tracking import generate_tracking_token
+from app.services.notification_service import (
+    notification_template_for_status,
+    send_order_notification,
+)
 
 
 router = APIRouter(tags=["seed"])
@@ -282,6 +288,31 @@ def seed_data(db: Session = Depends(get_db)) -> SeedResponse:
             vehicle.route_deviation_status = "ON_ROUTE"
         if assigned_orders or active_vehicles:
             db.commit()
+
+    seeded_notifications_created = 0
+    for index, order in enumerate(seeded_orders):
+        template_code = notification_template_for_status(order.status)
+        already_seeded = db.scalar(
+            select(CustomerNotification.id)
+            .where(CustomerNotification.order_id == order.id)
+            .limit(1)
+        )
+        if template_code is None or already_seeded is not None:
+            continue
+        notification = send_order_notification(
+            db,
+            order=order,
+            template_code=template_code,
+            channel=(
+                NotificationChannel.ZALO_ZNS
+                if index % 2 == 0
+                else NotificationChannel.SMS_BRANDNAME
+            ),
+        )
+        if notification is not None:
+            seeded_notifications_created += 1
+    if seeded_notifications_created:
+        db.commit()
 
     db.refresh(depot)
     return SeedResponse(

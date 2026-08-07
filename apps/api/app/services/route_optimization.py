@@ -17,6 +17,7 @@ from app.services.cost_calculator import CostCalculation, calculate_route_costs
 from app.services.activity_logger import log_order_activity
 from app.services.driver_availability import vehicle_is_available_clause
 from app.services.order_status import set_order_status
+from app.services.notification_service import ORDER_ASSIGNED, send_order_notification
 from core_engine.solver import (
     Depot as SolverDepot,
     Order as SolverOrder,
@@ -142,6 +143,12 @@ def optimize_pending_routes(
             old_status=old_status,
             new_status=OrderStatus.ASSIGNED.value,
             detail="Batch optimization",
+        )
+        send_order_notification(
+            db,
+            order=order,
+            template_code=ORDER_ASSIGNED,
+            vehicle=vehicles_by_id.get(str(order.assigned_vehicle_id)),
         )
 
     db.add(

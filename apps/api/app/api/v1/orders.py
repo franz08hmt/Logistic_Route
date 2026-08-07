@@ -11,6 +11,7 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from app.db.models import (
+    CustomerNotification,
     Depot,
     Order,
     OrderActivityLog,
@@ -26,6 +27,7 @@ from app.core.security import get_current_user, require_roles
 from app.schemas import (
     BulkImportResponse,
     BulkImportRowError,
+    CustomerNotificationRead,
     DepotRead,
     OrderCreate,
     OrderActivityListResponse,
@@ -33,6 +35,7 @@ from app.schemas import (
     OrderDispatchRequest,
     OrderRead,
     OrderStatusUpdate,
+    NotificationResendRequest,
     PublicTrackingDriver,
     PublicTrackingOrder,
     PublicTrackingResponse,
@@ -43,6 +46,11 @@ from app.services.driver_availability import (
     vehicle_is_available_clause,
 )
 from app.services.order_status import set_order_status
+from app.services.notification_service import (
+    ORDER_ASSIGNED,
+    notification_template_for_status,
+    send_order_notification,
+)
 from app.services.public_tracking import (
     estimate_arrival_minutes,
     generate_tracking_token,
@@ -573,6 +581,13 @@ def dispatch_order(
             new_status=OrderStatus.ASSIGNED.value,
             detail=f"Gán cho xe {vehicle.license_plate} · {driver.full_name}",
         )
+        send_order_notification(
+            db,
+            order=order,
+            template_code=ORDER_ASSIGNED,
+            vehicle=vehicle,
+            driver=driver,
+        )
         db.commit()
     except Exception:
         db.rollback()
@@ -661,6 +676,89 @@ def get_order_activity(
     )
 
 
+@router.get(
+    "/{order_id}/notifications",
+    response_model=list[CustomerNotificationRead],
+)
+def get_order_notifications(
+    order_id: UUID,
+    db: Session = Depends(get_db),
+    _current_user: User = Depends(
+        require_roles(UserRole.ADMIN, UserRole.DISPATCHER)
+    ),
+) -> list[CustomerNotification]:
+    if db.scalar(select(Order.id).where(Order.id == order_id)) is None:
+        raise HTTPException(status_code=404, detail="Order not found")
+    return list(
+        db.scalars(
+            select(CustomerNotification)
+            .where(CustomerNotification.order_id == order_id)
+            .order_by(
+                CustomerNotification.sent_at.desc(),
+                CustomerNotification.id.desc(),
+            )
+        ).all()
+    )
+
+
+@router.post(
+    "/{order_id}/notifications/resend",
+    response_model=CustomerNotificationRead,
+    status_code=status.HTTP_201_CREATED,
+)
+def resend_order_notification(
+    order_id: UUID,
+    payload: NotificationResendRequest,
+    db: Session = Depends(get_db),
+    _current_user: User = Depends(
+        require_roles(UserRole.ADMIN, UserRole.DISPATCHER)
+    ),
+) -> CustomerNotification:
+    order = db.scalar(
+        select(Order).where(Order.id == order_id).with_for_update()
+    )
+    if order is None:
+        raise HTTPException(status_code=404, detail="Order not found")
+    if not (order.customer_phone or "").strip():
+        raise HTTPException(
+            status_code=409,
+            detail={
+                "code": "CUSTOMER_PHONE_MISSING",
+                "message": "This order has no customer phone number",
+            },
+        )
+
+    template_code = notification_template_for_status(order.status)
+    if template_code is None:
+        raise HTTPException(
+            status_code=409,
+            detail={
+                "code": "NOTIFICATION_NOT_AVAILABLE",
+                "message": "No notification template is available for this order status",
+            },
+        )
+
+    try:
+        notification = send_order_notification(
+            db,
+            order=order,
+            template_code=template_code,
+            channel=payload.channel,
+        )
+        if notification is None:
+            raise HTTPException(status_code=409, detail="Customer phone is missing")
+        db.commit()
+        db.refresh(notification)
+        return notification
+    except HTTPException:
+        db.rollback()
+        raise
+    except Exception:
+        db.rollback()
+        logger.exception("notification_resend_failed order_id=%s", order_id)
+        raise
+
+
 @router.patch("/{order_id}/status", response_model=OrderRead)
 def update_order_status(
     order_id: UUID,
@@ -715,6 +813,14 @@ def update_order_status(
         new_status=payload.status.value,
         detail=order.failure_reason,
     )
+    template_code = notification_template_for_status(payload.status)
+    if old_status != payload.status.value and template_code is not None:
+        send_order_notification(
+            db,
+            order=order,
+            template_code=template_code,
+            vehicle=vehicle,
+        )
     if vehicle is not None:
         # Dispatcher overrides share the same lifecycle rule as driver updates:
         # the locked vehicle returns to IDLE only when no active stop remains.

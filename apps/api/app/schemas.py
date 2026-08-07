@@ -5,7 +5,14 @@ from uuid import UUID
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
-from app.db.models import OrderStatus, UserRole, UserStatus, VehicleStatus
+from app.db.models import (
+    NotificationChannel,
+    NotificationStatus,
+    OrderStatus,
+    UserRole,
+    UserStatus,
+    VehicleStatus,
+)
 from core_engine.solver import Route as OptimizedRoute
 
 
@@ -226,6 +233,23 @@ class OrderActivityListResponse(BaseModel):
     order_id: UUID
     order_code: str
     activities: list[OrderActivityRead]
+
+
+class CustomerNotificationRead(OrmSchema):
+    id: UUID
+    order_id: UUID
+    recipient_phone: str
+    channel: NotificationChannel
+    template_code: str
+    title: str
+    message_content: str
+    tracking_url: str | None
+    status: NotificationStatus
+    sent_at: datetime
+
+
+class NotificationResendRequest(BaseModel):
+    channel: NotificationChannel = NotificationChannel.ZALO_ZNS
 
 
 class PublicTrackingOrder(BaseModel):

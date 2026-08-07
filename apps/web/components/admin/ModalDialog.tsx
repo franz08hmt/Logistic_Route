@@ -48,6 +48,13 @@ export function ModalDialog({
         event.preventDefault();
         onClose();
       }}
+      onKeyDown={(event) => {
+        if (event.key === 'Escape') {
+          event.preventDefault();
+          event.stopPropagation();
+          onClose();
+        }
+      }}
       onClick={(event) => {
         if (event.target === event.currentTarget) {
           onClose();

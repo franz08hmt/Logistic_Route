@@ -9,6 +9,7 @@ import {
 } from './activity-contracts';
 import { type Order, type Vehicle, requestApi } from './api-contracts';
 import { OrderActivityTimeline } from './OrderActivityTimeline';
+import { OrderNotificationSection } from './OrderNotificationSection';
 import { PodPreviewModal } from './PodPreviewModal';
 import { StatusBadge } from './StatusBadge';
 
@@ -96,6 +97,9 @@ export function OrderDetailDrawer({
 
     function handleKeyDown(event: KeyboardEvent) {
       if (event.key === 'Escape') {
+        if (panelRef.current?.querySelector('dialog[open]')) {
+          return;
+        }
         event.preventDefault();
         onClose();
         return;
@@ -213,6 +217,8 @@ export function OrderDetailDrawer({
               {activeOrder.failure_reason && <div className="mt-4 rounded-xl border border-rose-200 bg-rose-50 p-4 text-sm text-rose-800 dark:border-rose-900 dark:bg-rose-950/40 dark:text-rose-200"><strong>{t('orderDetail.failureReason')}</strong><p className="mt-1 leading-6">{activeOrder.failure_reason}</p></div>}
               {activeOrder.delivery_note && <div className="mt-4 rounded-xl border border-slate-200 p-4 text-sm dark:border-slate-800"><strong className="text-slate-950 dark:text-white">{t('orderDetail.deliveryNote')}</strong><p className="mt-1 leading-6 text-slate-600 dark:text-slate-300">{activeOrder.delivery_note}</p></div>}
               {activeOrder.pod_url && <button type="button" className="mt-4 w-full overflow-hidden rounded-xl border border-slate-200 text-left focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-teal-600 dark:border-slate-800" onClick={() => setIsPodOpen(true)}><img className="h-32 w-full bg-slate-100 object-cover dark:bg-slate-950" src={activeOrder.pod_url} alt={t('orderDetail.podAlt', { code: activeOrder.order_code })} /><span className="block px-4 py-3 text-sm font-semibold text-teal-700 dark:text-teal-300">{t('orderDetail.openPod')}</span></button>}
+
+              <OrderNotificationSection order={open ? activeOrder : null} />
 
               <section className="mt-7" aria-labelledby={`${titleId}-timeline`}>
                 <h3 id={`${titleId}-timeline`} className="mb-4 text-xs font-semibold uppercase tracking-[0.16em] text-slate-500">{t('activity.title')}</h3>

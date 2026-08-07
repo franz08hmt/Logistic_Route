@@ -25,6 +25,10 @@ POD_PUBLIC_BASE_URL = getenv(
     "POD_PUBLIC_BASE_URL",
     "http://localhost:8000",
 ).rstrip("/")
+PUBLIC_TRACKING_BASE_URL = getenv(
+    "PUBLIC_TRACKING_BASE_URL",
+    "http://localhost:3001",
+).rstrip("/")
 
 _default_web_origins = ",".join(
     (
