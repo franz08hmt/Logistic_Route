@@ -4,7 +4,7 @@ from uuid import UUID
 from zoneinfo import ZoneInfo
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
-from sqlalchemy import case, func, select
+from sqlalchemy import case, func, or_, select
 from sqlalchemy.orm import Session
 
 from app.core.security import require_roles
@@ -24,12 +24,58 @@ from app.schemas import (
     UserRead,
     UserStatusUpdate,
     VehicleAssignmentRequest,
+    VehicleTelemetryItem,
+    VehicleTelemetryResponse,
 )
 from app.services.driver_availability import vehicle_is_available_clause
+from app.services.telemetry import find_next_active_stops
 
 
 router = APIRouter(prefix="/admin", tags=["admin"])
 HCM_TIMEZONE = ZoneInfo("Asia/Ho_Chi_Minh")
+
+
+@router.get("/telemetry", response_model=VehicleTelemetryResponse)
+def list_vehicle_telemetry(
+    db: Session = Depends(get_db),
+    _current_user: User = Depends(
+        require_roles(UserRole.ADMIN, UserRole.DISPATCHER)
+    ),
+) -> VehicleTelemetryResponse:
+    generated_at = datetime.now(timezone.utc)
+    freshness_cutoff = generated_at - timedelta(hours=1)
+    vehicles = list(
+        db.scalars(
+            select(Vehicle)
+            .where(
+                or_(
+                    Vehicle.status == VehicleStatus.ON_ROUTE,
+                    Vehicle.last_gps_ping_at >= freshness_cutoff,
+                )
+            )
+            .order_by(Vehicle.license_plate)
+        ).all()
+    )
+    next_stops = find_next_active_stops(db, (vehicle.id for vehicle in vehicles))
+    items: list[VehicleTelemetryItem] = []
+    for vehicle in vehicles:
+        next_stop = next_stops.get(vehicle.id)
+        items.append(
+            VehicleTelemetryItem(
+                vehicle_id=vehicle.id,
+                license_plate=vehicle.license_plate,
+                driver_name=vehicle.driver_name,
+                status=vehicle.status,
+                current_latitude=vehicle.current_latitude,
+                current_longitude=vehicle.current_longitude,
+                speed_kmh=vehicle.current_speed_kmh,
+                last_gps_ping_at=vehicle.last_gps_ping_at,
+                route_deviation_status=vehicle.route_deviation_status,
+                next_stop_address=next_stop.address if next_stop else None,
+                next_stop_sequence=next_stop.stop_sequence if next_stop else None,
+            )
+        )
+    return VehicleTelemetryResponse(generated_at=generated_at, vehicles=items)
 
 
 @router.get("/users", response_model=list[UserRead])

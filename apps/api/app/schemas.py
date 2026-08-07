@@ -1,5 +1,6 @@
 from datetime import datetime
 from enum import Enum
+from typing import Literal
 from uuid import UUID
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
@@ -114,6 +115,34 @@ class VehicleRead(VehicleCreate, OrmSchema):
     driver_id: UUID | None = None
     service_area: str | None = None
     assignment_note: str | None = None
+
+
+class DriverTelemetryPing(BaseModel):
+    latitude: float = Field(ge=-90, le=90)
+    longitude: float = Field(ge=-180, le=180)
+    speed_kmh: float | None = Field(default=0.0, ge=0)
+
+
+RouteDeviationStatus = Literal["ON_ROUTE", "OFF_ROUTE_WARNING", "STOPPED"]
+
+
+class VehicleTelemetryItem(BaseModel):
+    vehicle_id: UUID
+    license_plate: str
+    driver_name: str | None
+    status: VehicleStatus
+    current_latitude: float | None = Field(default=None, ge=-90, le=90)
+    current_longitude: float | None = Field(default=None, ge=-180, le=180)
+    speed_kmh: float | None = Field(default=None, ge=0)
+    last_gps_ping_at: datetime | None
+    route_deviation_status: RouteDeviationStatus | None
+    next_stop_address: str | None
+    next_stop_sequence: int | None = Field(default=None, ge=1)
+
+
+class VehicleTelemetryResponse(BaseModel):
+    generated_at: datetime
+    vehicles: list[VehicleTelemetryItem]
 
 
 class VehicleAssignmentRequest(BaseModel):

@@ -32,6 +32,11 @@ import {
   type MultiStopDispatchResult,
 } from './dispatch-contracts';
 import { DispatchWorkspace } from './DispatchWorkspace';
+import {
+  requestVehicleTelemetry,
+  summarizeTelemetry,
+  type VehicleTelemetryItem,
+} from './telemetry-contracts';
 
 const RouteMap = dynamic(
   () => import('@/components/route-optimization/RouteMap').then(
@@ -49,6 +54,9 @@ export function DispatchCenter() {
   const [vehicles, setVehicles] = useState<Vehicle[]>([]);
   const [isOptimizingFleet, setIsOptimizingFleet] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
+  const [isTelemetryEnabled, setIsTelemetryEnabled] = useState(true);
+  const [telemetry, setTelemetry] = useState<VehicleTelemetryItem[]>([]);
+  const [hasTelemetryError, setHasTelemetryError] = useState(false);
   const [feedback, setFeedback] = useState<{ tone: 'error' | 'success'; message: string } | null>(null);
 
   const orderWeights = useMemo(
@@ -60,6 +68,10 @@ export function DispatchCenter() {
     [vehicles],
   );
   const hasChanges = hasRoutePlanChanged(persistedRouteResult, routeResult);
+  const telemetrySummary = useMemo(
+    () => summarizeTelemetry(telemetry),
+    [telemetry],
+  );
 
   async function refreshOperationalData() {
     const [ordersPayload, vehiclesPayload] = await Promise.all([
@@ -91,6 +103,40 @@ export function DispatchCenter() {
     const timeoutId = window.setTimeout(() => setFeedback(null), 5000);
     return () => window.clearTimeout(timeoutId);
   }, [feedback]);
+
+  useEffect(() => {
+    if (!isTelemetryEnabled) {
+      setHasTelemetryError(false);
+      return undefined;
+    }
+
+    let disposed = false;
+    let activeController: AbortController | null = null;
+    async function refreshTelemetry() {
+      activeController?.abort();
+      const controller = new AbortController();
+      activeController = controller;
+      try {
+        const response = await requestVehicleTelemetry(controller.signal);
+        if (!disposed) {
+          setTelemetry(response.vehicles);
+          setHasTelemetryError(false);
+        }
+      } catch (error) {
+        if (!disposed && !(error instanceof DOMException && error.name === 'AbortError')) {
+          setHasTelemetryError(true);
+        }
+      }
+    }
+
+    void refreshTelemetry();
+    const intervalId = window.setInterval(() => void refreshTelemetry(), 5_000);
+    return () => {
+      disposed = true;
+      activeController?.abort();
+      window.clearInterval(intervalId);
+    };
+  }, [isTelemetryEnabled]);
 
   function commitResult(result: OptimizationResult) {
     setRouteResult(result);
@@ -247,19 +293,65 @@ export function DispatchCenter() {
           ref={mapSectionRef}
           aria-labelledby="dispatch-map-title"
         >
-          <header className="border-b border-slate-200 px-4 py-3 dark:border-slate-800">
-            <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-teal-700 dark:text-teal-400">
-              {t('dispatch.mapEyebrow')}
-            </p>
-            <h2
-              className="mt-1 text-sm font-semibold text-slate-950 dark:text-white"
-              id="dispatch-map-title"
-            >
-              {t('dispatch.mapTitle')}
-            </h2>
+          <header className="flex flex-col gap-3 border-b border-slate-200 px-4 py-3 dark:border-slate-800 lg:flex-row lg:items-center lg:justify-between">
+            <div>
+              <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-teal-700 dark:text-teal-400">
+                {t('dispatch.mapEyebrow')}
+              </p>
+              <h2
+                className="mt-1 text-sm font-semibold text-slate-950 dark:text-white"
+                id="dispatch-map-title"
+              >
+                {t('dispatch.mapTitle')}
+              </h2>
+            </div>
+            <div className="flex flex-wrap items-center gap-2" aria-live="polite">
+              {isTelemetryEnabled && (
+                <>
+                  <span className="rounded-full bg-teal-50 px-2.5 py-1 text-[11px] font-semibold text-teal-800 dark:bg-teal-950/50 dark:text-teal-300">
+                    {t('telemetry.activeCount', { count: telemetrySummary.activeVehicles })}
+                  </span>
+                  <span className={`rounded-full px-2.5 py-1 text-[11px] font-semibold ${
+                    telemetrySummary.offRouteVehicles > 0
+                      ? 'bg-rose-50 text-rose-800 dark:bg-rose-950/50 dark:text-rose-300'
+                      : 'bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-300'
+                  }`}>
+                    {t('telemetry.offRouteCount', { count: telemetrySummary.offRouteVehicles })}
+                  </span>
+                </>
+              )}
+              <button
+                type="button"
+                role="switch"
+                aria-checked={isTelemetryEnabled}
+                onClick={() => setIsTelemetryEnabled((enabled) => !enabled)}
+                className={`inline-flex min-h-10 items-center gap-2 rounded-lg border px-3 text-xs font-semibold transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-teal-600 ${
+                  isTelemetryEnabled
+                    ? 'border-teal-200 bg-teal-50 text-teal-800 dark:border-teal-900 dark:bg-teal-950/50 dark:text-teal-300'
+                    : 'border-slate-300 bg-white text-slate-600 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-300'
+                }`}
+              >
+                <span
+                  className={`size-2.5 rounded-full ${
+                    isTelemetryEnabled ? 'animate-pulse bg-emerald-500' : 'bg-slate-400'
+                  }`}
+                  aria-hidden="true"
+                />
+                {isTelemetryEnabled ? t('telemetry.liveOn') : t('telemetry.liveOff')}
+              </button>
+            </div>
           </header>
+          {hasTelemetryError && isTelemetryEnabled && (
+            <p className="border-b border-amber-200 bg-amber-50 px-4 py-2 text-xs text-amber-800 dark:border-amber-900 dark:bg-amber-950/40 dark:text-amber-300" role="status">
+              {t('telemetry.refreshError')}
+            </p>
+          )}
           <div className="relative h-[28rem] min-h-[22rem] sm:h-[34rem]">
-            <RouteMap result={routeResult} orders={orders} />
+            <RouteMap
+              result={routeResult}
+              orders={orders}
+              telemetry={isTelemetryEnabled ? telemetry : []}
+            />
           </div>
           <RouteListPanel
             result={routeResult}

@@ -28,6 +28,9 @@ stored so dispatchers can audit successful and failed delivery evidence.
 Migration `008_order_status_updated_at.sql` records the latest status transition
 time used by the driver operations dashboard for reliable daily delivery and
 failure counts.
+Migration `009_vehicle_telemetry.sql` stores the latest GPS position, speed,
+ping timestamp, and route-deviation classification for each vehicle. It also
+indexes GPS freshness checks used by the dispatcher telemetry endpoint.
 The local container is
 published on host port `5433` so it does not collide with another PostgreSQL
 instance on host port `5432`.

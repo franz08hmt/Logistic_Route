@@ -9,6 +9,38 @@ import type { Order } from '../admin/api-contracts';
 
 export const HO_CHI_MINH_CITY: LatLngTuple = [10.7769, 106.7009];
 export const ROUTE_COLORS = ['#0d9488', '#f59e0b', '#0284c7', '#8b5cf6'];
+const HTML_ESCAPES: Record<string, string> = {
+  '&': '&amp;',
+  '<': '&lt;',
+  '>': '&gt;',
+  "'": '&#39;',
+  '"': '&quot;',
+};
+
+function escapeMapLabel(value: string) {
+  return value.replace(/[&<>'"]/g, (character) => (
+    HTML_ESCAPES[character] ?? character
+  ));
+}
+
+export function createVehicleIcon(
+  licensePlate: string,
+  status: 'IDLE' | 'ON_ROUTE',
+  isOffRoute: boolean,
+) {
+  const stateClass = isOffRoute
+    ? ' vehicle-map-marker--warning'
+    : status === 'IDLE'
+      ? ' vehicle-map-marker--idle'
+      : ' vehicle-map-marker--active';
+  return divIcon({
+    className: 'vehicle-marker-shell',
+    html: `<span class="vehicle-map-marker${stateClass}"><span class="vehicle-map-marker__truck" aria-hidden="true">🚛</span><span class="vehicle-map-marker__plate">${escapeMapLabel(licensePlate)}</span></span>`,
+    iconAnchor: [24, 24],
+    iconSize: [48, 48],
+    popupAnchor: [0, -28],
+  });
+}
 
 export function FitRouteBounds({ positions }: { positions: LatLngTuple[] }) {
   const map = useMap();

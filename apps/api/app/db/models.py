@@ -94,6 +94,25 @@ class Vehicle(Base):
     )
     service_area: Mapped[str | None] = mapped_column(String(150), nullable=True)
     assignment_note: Mapped[str | None] = mapped_column(Text, nullable=True)
+    current_latitude: Mapped[float | None] = mapped_column(Double, nullable=True)
+    current_longitude: Mapped[float | None] = mapped_column(Double, nullable=True)
+    current_speed_kmh: Mapped[float | None] = mapped_column(
+        Double,
+        nullable=True,
+        default=0.0,
+        server_default="0",
+    )
+    last_gps_ping_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True),
+        nullable=True,
+        index=True,
+    )
+    route_deviation_status: Mapped[str | None] = mapped_column(
+        String(30),
+        nullable=True,
+        default="ON_ROUTE",
+        server_default="ON_ROUTE",
+    )
 
 
 class Order(Base):

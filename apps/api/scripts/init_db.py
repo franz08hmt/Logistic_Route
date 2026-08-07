@@ -79,6 +79,30 @@ def main() -> None:
             "ALTER TABLE vehicles ADD COLUMN IF NOT EXISTS assignment_note TEXT"
         ))
         connection.execute(text(
+            "ALTER TABLE vehicles ADD COLUMN IF NOT EXISTS "
+            "current_latitude DOUBLE PRECISION"
+        ))
+        connection.execute(text(
+            "ALTER TABLE vehicles ADD COLUMN IF NOT EXISTS "
+            "current_longitude DOUBLE PRECISION"
+        ))
+        connection.execute(text(
+            "ALTER TABLE vehicles ADD COLUMN IF NOT EXISTS "
+            "current_speed_kmh DOUBLE PRECISION DEFAULT 0"
+        ))
+        connection.execute(text(
+            "ALTER TABLE vehicles ADD COLUMN IF NOT EXISTS "
+            "last_gps_ping_at TIMESTAMPTZ"
+        ))
+        connection.execute(text(
+            "ALTER TABLE vehicles ADD COLUMN IF NOT EXISTS "
+            "route_deviation_status VARCHAR(30) DEFAULT 'ON_ROUTE'"
+        ))
+        connection.execute(text(
+            "CREATE INDEX IF NOT EXISTS ix_vehicles_last_gps_ping_at "
+            "ON vehicles (last_gps_ping_at)"
+        ))
+        connection.execute(text(
             "ALTER TABLE orders ADD COLUMN IF NOT EXISTS customer_phone VARCHAR(30)"
         ))
         connection.execute(text(

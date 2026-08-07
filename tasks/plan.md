@@ -75,3 +75,31 @@ Create a clean monorepo foundation for LogiRoute VN with a Next.js App Router fr
 | External OSRM latency blocks saving | Medium | Use a short timeout and deterministic Haversine fallback. |
 | Cross-vehicle drag exceeds capacity | High | Check on both client and server before persistence. |
 | Frontend and backend route totals diverge | Medium | Treat client values as preview only and replace them with the server response after save. |
+
+## Phase 8: Live Fleet Telemetry & Route Deviation
+
+### Architecture decisions
+
+- Persist the latest GPS ping on `vehicles`; historical GPS storage is outside this phase.
+- Reuse one typed telemetry item contract for driver ping responses and dispatcher fleet reads.
+- Calculate deviation against the bounded previous-to-next-stop segment, with depot fallback for the first stop.
+- Poll every five seconds only while the dispatcher toggle is enabled; abort stale requests during teardown.
+- Keep marker updates independent from route geometry fetching so telemetry refreshes do not refetch OSRM paths.
+
+### Task list
+
+- [x] Add idempotent telemetry columns, schemas, geometry helpers, and focused tests.
+- [x] Add protected driver ping and admin fleet telemetry endpoints.
+- [x] Seed realistic telemetry for active demo vehicles.
+- [x] Add validated frontend contracts, polling controls, vehicle markers, and VI/EN labels.
+- [x] Run backend/frontend tests, typecheck, and production build.
+- [ ] Complete authenticated browser verification with the developer servers running.
+
+### Risks and mitigations
+
+| Risk | Impact | Mitigation |
+| --- | --- | --- |
+| GPS point is compared with an infinite line instead of the active segment | High | Clamp vector projection to the segment endpoints and test endpoint cases. |
+| Poll responses arrive out of order | Medium | Abort the previous request on teardown and keep one polling loop per mounted Dispatch Center. |
+| Missing GPS data crashes Leaflet | Medium | Validate API data and filter vehicles without finite coordinates before rendering. |
+| Existing local database lacks new columns | High | Add revision `009` and mirror it in the idempotent bootstrap script. |

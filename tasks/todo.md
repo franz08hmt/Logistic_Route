@@ -29,3 +29,13 @@
 - [x] Add accessible drag-and-drop route editing with capacity validation.
 - [x] Add save/cancel controls and synchronize map, orders, fleet, driver, overview, and analytics data.
 - [x] Verify backend tests, frontend tests, typecheck, production build, and browser behavior.
+
+## Phase 8: Live Fleet Telemetry & Route Deviation
+
+- [x] Add vehicle GPS/deviation columns and idempotent database migration.
+- [x] Add tested segment-distance and route-deviation service logic.
+- [x] Add driver telemetry ping and dispatcher telemetry list endpoints.
+- [x] Seed telemetry coordinates for active demo vehicles.
+- [x] Add frontend telemetry contracts, polling toggle, fleet counters, markers, and popups.
+- [x] Verify pytest, Vitest, typecheck, and production build.
+- [ ] Verify authenticated polling, map movement, and deviation alert behavior in a running browser.

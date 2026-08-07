@@ -259,7 +259,28 @@ def seed_data(db: Session = Depends(get_db)) -> SeedResponse:
         for sequence, order in enumerate(assigned_orders, start=1):
             order.assigned_vehicle_id = primary_vehicle.id
             order.stop_sequence = sequence
-        if assigned_orders:
+        active_vehicles = list(
+            db.scalars(
+                select(Vehicle)
+                .where(Vehicle.status == VehicleStatus.ON_ROUTE)
+                .order_by(Vehicle.license_plate)
+            ).all()
+        )
+        demo_positions = [
+            (10.8671, 106.6412, 27.0),
+            (10.8387, 106.6653, 18.0),
+        ]
+        gps_now = datetime.now(timezone.utc)
+        for index, vehicle in enumerate(active_vehicles):
+            latitude, longitude, speed_kmh = demo_positions[
+                index % len(demo_positions)
+            ]
+            vehicle.current_latitude = latitude
+            vehicle.current_longitude = longitude
+            vehicle.current_speed_kmh = speed_kmh
+            vehicle.last_gps_ping_at = gps_now
+            vehicle.route_deviation_status = "ON_ROUTE"
+        if assigned_orders or active_vehicles:
             db.commit()
 
     db.refresh(depot)

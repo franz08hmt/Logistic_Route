@@ -12,10 +12,15 @@ import {
 } from 'react-leaflet';
 
 import type { Order } from '../admin/api-contracts';
+import {
+  hasTelemetryCoordinates,
+  type VehicleTelemetryItem,
+} from '../dispatch/telemetry-contracts';
 import { useI18n } from '@/context/I18nContext';
 import { buildRoutePositions, fetchOsrmRouteGeometry } from './map-data';
 import {
   createStopIcon,
+  createVehicleIcon,
   depotIcon,
   FitRouteBounds,
   HO_CHI_MINH_CITY,
@@ -30,11 +35,13 @@ type RoutingState = 'idle' | 'loading' | 'ready' | 'fallback';
 export function RouteMap({
   result,
   orders,
+  telemetry = [],
 }: {
   result: OptimizationResult | null;
   orders: Order[];
+  telemetry?: VehicleTelemetryItem[];
 }) {
-  const { t } = useI18n();
+  const { locale, t } = useI18n();
   const [roadPositions, setRoadPositions] = useState<Record<string, LatLngTuple[]>>({});
   const [routingState, setRoutingState] = useState<RoutingState>('idle');
 
@@ -99,6 +106,10 @@ export function RouteMap({
     () => new Map(orders.map((order) => [order.id, order])),
     [orders],
   );
+  const visibleTelemetry = useMemo(
+    () => telemetry.filter(hasTelemetryCoordinates),
+    [telemetry],
+  );
   const visiblePositions = useMemo<LatLngTuple[]>(
     () =>
       result
@@ -108,6 +119,13 @@ export function RouteMap({
           ]
         : [],
     [result, routeLayers],
+  );
+  const dateFormatter = useMemo(
+    () => new Intl.DateTimeFormat(locale === 'vi' ? 'vi-VN' : 'en-US', {
+      dateStyle: 'short',
+      timeStyle: 'medium',
+    }),
+    [locale],
   );
 
   return (
@@ -147,6 +165,36 @@ export function RouteMap({
           </Polyline>
         ))}
 
+        {visibleTelemetry.map((vehicle) => {
+          const isOffRoute = vehicle.route_deviation_status === 'OFF_ROUTE_WARNING';
+          const deviationLabel = isOffRoute
+            ? t('telemetry.offRoute')
+            : vehicle.route_deviation_status === 'STOPPED'
+              ? t('telemetry.stopped')
+              : t('telemetry.onRoute');
+          const updatedAt = vehicle.last_gps_ping_at
+            ? dateFormatter.format(new Date(vehicle.last_gps_ping_at))
+            : t('telemetry.notAvailable');
+          return (
+            <Marker
+              key={`telemetry-${vehicle.vehicle_id}`}
+              position={[vehicle.current_latitude, vehicle.current_longitude]}
+              icon={createVehicleIcon(vehicle.license_plate, vehicle.status, isOffRoute)}
+              title={t('telemetry.vehicleTitle', { plate: vehicle.license_plate })}
+              zIndexOffset={800}
+            >
+              <Popup>
+                <strong>{vehicle.license_plate}</strong>
+                <br />{t('telemetry.driver')}: {vehicle.driver_name ?? t('telemetry.notAvailable')}
+                <br />{t('telemetry.speed')}: {vehicle.speed_kmh ?? 0} km/h
+                <br />{t('telemetry.routeStatus')}: {deviationLabel}
+                <br />{t('telemetry.nextStop')}: {vehicle.next_stop_address ?? t('telemetry.noNextStop')}
+                <br />{t('telemetry.lastUpdated')}: {updatedAt}
+              </Popup>
+            </Marker>
+          );
+        })}
+
         {routeLayers.flatMap(({ route, color }) =>
           route.stops.map((stop) => {
             const order = orderById.get(stop.order_id);
@@ -173,7 +221,10 @@ export function RouteMap({
         )}
       </MapContainer>
 
-      <MapStatusOverlays routingState={routingState} hasResult={result !== null} />
+      <MapStatusOverlays
+        routingState={routingState}
+        hasResult={result !== null || visibleTelemetry.length > 0}
+      />
       <RouteLegend
         routes={routeLayers.map(({ route, color }) => ({
           vehicleId: route.vehicle_id,

@@ -11,11 +11,13 @@ from app.db.models import Depot, Order, OrderStatus, User, UserRole, Vehicle
 from app.db.session import get_db
 from app.schemas import (
     DepotRead,
+    DriverTelemetryPing,
     DriverOrderStatusUpdate,
     DriverRouteRead,
     DriverStopRead,
     DriverVehicleRead,
     PodUploadRead,
+    VehicleTelemetryItem,
 )
 from app.services.pod_storage import MAX_POD_BYTES, store_pod_content
 from app.services.activity_logger import log_order_activity
@@ -24,6 +26,10 @@ from app.services.driver_availability import (
     reconcile_vehicle_availability,
 )
 from app.services.order_status import set_order_status
+from app.services.telemetry import (
+    calculate_vehicle_deviation_status,
+    find_next_active_stop,
+)
 
 
 router = APIRouter(prefix="/driver", tags=["driver"])
@@ -57,6 +63,49 @@ def _driver_vehicle(
     if for_update:
         statement = statement.with_for_update()
     return db.scalar(statement)
+
+
+@router.patch("/telemetry", response_model=VehicleTelemetryItem)
+def update_driver_telemetry(
+    payload: DriverTelemetryPing,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_roles(UserRole.DRIVER)),
+) -> VehicleTelemetryItem:
+    vehicle = _driver_vehicle(db, current_user, for_update=True)
+    if vehicle is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="No vehicle is assigned to this driver",
+        )
+
+    next_stop = find_next_active_stop(db, vehicle.id)
+    vehicle.current_latitude = payload.latitude
+    vehicle.current_longitude = payload.longitude
+    vehicle.current_speed_kmh = payload.speed_kmh or 0.0
+    vehicle.last_gps_ping_at = datetime.now(timezone.utc)
+    vehicle.route_deviation_status = calculate_vehicle_deviation_status(
+        db,
+        vehicle=vehicle,
+        latitude=payload.latitude,
+        longitude=payload.longitude,
+        next_stop=next_stop,
+    )
+    db.commit()
+    db.refresh(vehicle)
+
+    return VehicleTelemetryItem(
+        vehicle_id=vehicle.id,
+        license_plate=vehicle.license_plate,
+        driver_name=vehicle.driver_name or current_user.full_name,
+        status=vehicle.status,
+        current_latitude=vehicle.current_latitude,
+        current_longitude=vehicle.current_longitude,
+        speed_kmh=vehicle.current_speed_kmh,
+        last_gps_ping_at=vehicle.last_gps_ping_at,
+        route_deviation_status=vehicle.route_deviation_status,
+        next_stop_address=next_stop.address if next_stop else None,
+        next_stop_sequence=next_stop.stop_sequence if next_stop else None,
+    )
 
 
 @router.post(
