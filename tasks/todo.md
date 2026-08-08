@@ -48,3 +48,12 @@
 - [x] Seed realistic Zalo/SMS notification history without duplicates.
 - [x] Add notification contracts, drawer history, phone preview, resend, and copy UI.
 - [x] Add VI/EN labels and verify pytest, Vitest, typecheck, and production build.
+
+## Phase 10: Digital Signature & Printable Delivery Bill
+
+- [x] Add recipient signature columns and idempotent migration `011`.
+- [x] Add secure driver signature upload storage, API contract, audit log, and tests.
+- [x] Add signature fields to Order/Driver frontend contracts.
+- [x] Add the mobile Hi-DPI SignaturePad and delivered-order upload flow.
+- [x] Add the printable delivery bill preview, tracking QR, POD/signature evidence, and print CSS.
+- [x] Add VI/EN labels and verify pytest, Vitest, typecheck, and production build.

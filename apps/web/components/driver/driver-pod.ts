@@ -6,6 +6,8 @@ export const POD_CONTENT_TYPES = ['image/jpeg', 'image/png', 'image/webp'] as co
 export type PodValidationError = 'INVALID_TYPE' | 'TOO_LARGE';
 export type DriverUpdateValidationError =
   | 'PHOTO_REQUIRED'
+  | 'SIGNATURE_REQUIRED'
+  | 'RECIPIENT_NAME_REQUIRED'
   | 'FAILURE_REASON_REQUIRED';
 
 export type PodUpload = {
@@ -31,15 +33,27 @@ export function validateDriverUpdate({
   status,
   hasExistingPod,
   hasSelectedFile,
+  hasExistingSignature,
+  hasDrawnSignature,
+  recipientName,
   failureReason,
 }: {
   status: DriverOrderStatus;
   hasExistingPod: boolean;
   hasSelectedFile: boolean;
+  hasExistingSignature: boolean;
+  hasDrawnSignature: boolean;
+  recipientName: string;
   failureReason: string;
 }): DriverUpdateValidationError | null {
   if (status === 'DELIVERED' && !hasExistingPod && !hasSelectedFile) {
     return 'PHOTO_REQUIRED';
+  }
+  if (status === 'DELIVERED' && !recipientName.trim()) {
+    return 'RECIPIENT_NAME_REQUIRED';
+  }
+  if (status === 'DELIVERED' && !hasExistingSignature && !hasDrawnSignature) {
+    return 'SIGNATURE_REQUIRED';
   }
   if (status === 'FAILED' && !failureReason.trim()) {
     return 'FAILURE_REASON_REQUIRED';

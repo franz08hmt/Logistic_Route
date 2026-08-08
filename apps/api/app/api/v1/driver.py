@@ -1,12 +1,17 @@
 from datetime import datetime, timezone
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, HTTPException, Request, status
+from fastapi import APIRouter, Depends, File, Form, HTTPException, Request, UploadFile, status
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.core.security import require_roles
-from app.core.config import POD_PUBLIC_BASE_URL, POD_UPLOAD_DIR
+from app.core.config import (
+    POD_PUBLIC_BASE_URL,
+    POD_UPLOAD_DIR,
+    SIGNATURE_PUBLIC_BASE_URL,
+    SIGNATURE_UPLOAD_DIR,
+)
 from app.db.models import Depot, Order, OrderStatus, User, UserRole, Vehicle
 from app.db.session import get_db
 from app.schemas import (
@@ -17,9 +22,11 @@ from app.schemas import (
     DriverStopRead,
     DriverVehicleRead,
     PodUploadRead,
+    SignatureUploadRead,
     VehicleTelemetryItem,
 )
 from app.services.pod_storage import MAX_POD_BYTES, store_pod_content
+from app.services.signature_storage import MAX_SIGNATURE_BYTES, store_signature_content
 from app.services.activity_logger import log_order_activity
 from app.services.driver_availability import (
     ACTIVE_ROUTE_STATUSES,
@@ -181,6 +188,84 @@ async def upload_order_pod(
         pod_url=pod_url,
         content_type=content_type,
         size_bytes=size_bytes,
+    )
+
+
+@router.post(
+    "/orders/{order_id}/signature",
+    response_model=SignatureUploadRead,
+    status_code=status.HTTP_201_CREATED,
+)
+async def upload_order_signature(
+    order_id: UUID,
+    file: UploadFile = File(...),
+    recipient_name: str = Form(..., min_length=1, max_length=150),
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_roles(UserRole.DRIVER)),
+) -> SignatureUploadRead:
+    vehicle = _driver_vehicle(db, current_user)
+    if vehicle is None:
+        raise HTTPException(status_code=404, detail="No vehicle is assigned")
+    order = db.scalar(
+        select(Order).where(
+            Order.id == order_id,
+            Order.assigned_vehicle_id == vehicle.id,
+        )
+    )
+    if order is None:
+        raise HTTPException(
+            status_code=404,
+            detail="Order is not assigned to this driver",
+        )
+
+    normalized_recipient_name = recipient_name.strip()
+    if not normalized_recipient_name or len(normalized_recipient_name) > 150:
+        raise HTTPException(
+            status_code=422,
+            detail="Recipient name must contain 1 to 150 characters",
+        )
+
+    try:
+        content = await file.read(MAX_SIGNATURE_BYTES + 1)
+    finally:
+        await file.close()
+    if len(content) > MAX_SIGNATURE_BYTES:
+        raise HTTPException(
+            status_code=413,
+            detail="Signature PNG exceeds the 1 MB limit",
+        )
+
+    content_type = (file.content_type or "").split(";", 1)[0].lower()
+    try:
+        filename = store_signature_content(
+            content=content,
+            content_type=content_type,
+            order_id=order.id,
+            upload_dir=SIGNATURE_UPLOAD_DIR,
+        )
+    except ValueError as error:
+        raise HTTPException(status_code=422, detail=str(error)) from error
+
+    uploaded_at = datetime.now(timezone.utc)
+    signature_url = (
+        f"{SIGNATURE_PUBLIC_BASE_URL}/uploads/signatures/{filename}"
+    )
+    order.signature_url = signature_url
+    order.signature_uploaded_at = uploaded_at
+    order.recipient_name = normalized_recipient_name
+    db.flush()
+    log_order_activity(
+        db,
+        order_id=order.id,
+        action="SIGNATURE_UPLOADED",
+        actor=current_user,
+        detail=f"Recipient signature uploaded for {normalized_recipient_name}",
+    )
+    db.commit()
+
+    return SignatureUploadRead(
+        signature_url=signature_url,
+        uploaded_at=uploaded_at,
     )
 
 

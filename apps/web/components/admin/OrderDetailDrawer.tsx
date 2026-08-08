@@ -4,13 +4,19 @@ import { useEffect, useId, useRef, useState } from 'react';
 
 import { useI18n } from '@/context/I18nContext';
 import {
+  isPublicTrackingResponse,
+  type PublicTrackingResponse,
+} from '@/components/public/tracking-contracts';
+import {
   isOrderActivityList,
   type OrderActivity,
 } from './activity-contracts';
 import { type Order, type Vehicle, requestApi } from './api-contracts';
 import { OrderActivityTimeline } from './OrderActivityTimeline';
 import { OrderNotificationSection } from './OrderNotificationSection';
+import { shouldResetOrderDetailOverlays } from './order-detail-state';
 import { PodPreviewModal } from './PodPreviewModal';
+import { PrintableDeliveryBillPreview } from './PrintableDeliveryBill';
 import { StatusBadge } from './StatusBadge';
 
 const focusableSelector = [
@@ -38,19 +44,38 @@ export function OrderDetailDrawer({
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [isPodOpen, setIsPodOpen] = useState(false);
+  const [isBillOpen, setIsBillOpen] = useState(false);
+  const [billTracking, setBillTracking] = useState<PublicTrackingResponse | null>(null);
+  const [isBillLoading, setIsBillLoading] = useState(false);
+  const [billError, setBillError] = useState<string | null>(null);
   const [copyState, setCopyState] = useState<'idle' | 'copied' | 'error'>('idle');
   const panelRef = useRef<HTMLElement>(null);
   const closeRef = useRef<HTMLButtonElement>(null);
+  const previousOrderIdRef = useRef<string | null>(order?.id ?? null);
   const titleId = useId();
   const open = order !== null;
   const activeOrder = order ?? lastOrder;
   const activeVehicle = vehicle ?? lastVehicle;
 
   useEffect(() => {
-    if (order) {
-      setLastOrder(order);
-      setLastVehicle(vehicle);
+    const nextOrderId = order?.id ?? null;
+    const shouldReset = shouldResetOrderDetailOverlays(
+      previousOrderIdRef.current,
+      nextOrderId,
+    );
+    previousOrderIdRef.current = nextOrderId;
+
+    if (!order) {
+      return;
+    }
+
+    setLastOrder(order);
+    setLastVehicle(vehicle);
+    if (shouldReset) {
       setIsPodOpen(false);
+      setIsBillOpen(false);
+      setBillTracking(null);
+      setBillError(null);
       setCopyState('idle');
     }
   }, [order, vehicle]);
@@ -97,7 +122,10 @@ export function OrderDetailDrawer({
 
     function handleKeyDown(event: KeyboardEvent) {
       if (event.key === 'Escape') {
-        if (panelRef.current?.querySelector('dialog[open]')) {
+        if (
+          panelRef.current?.querySelector('dialog[open]')
+          || document.querySelector('.delivery-bill-print-root')
+        ) {
           return;
         }
         event.preventDefault();
@@ -165,6 +193,30 @@ export function OrderDetailDrawer({
     }
   }
 
+  async function openBillPreview() {
+    if (!activeOrder) {
+      return;
+    }
+    setIsBillOpen(true);
+    setIsBillLoading(true);
+    setBillError(null);
+    try {
+      const payload = await requestApi(
+        `/api/v1/public/track/${activeOrder.tracking_token}`,
+      );
+      if (!isPublicTrackingResponse(payload)) {
+        throw new Error(t('bill.invalidResponse'));
+      }
+      setBillTracking(payload);
+    } catch (requestError) {
+      setBillError(
+        requestError instanceof Error ? requestError.message : t('bill.loadError'),
+      );
+    } finally {
+      setIsBillLoading(false);
+    }
+  }
+
   return (
     <div className={`fixed inset-0 z-50 ${open ? 'pointer-events-auto' : 'pointer-events-none'}`} aria-hidden={!open}>
       <button
@@ -212,11 +264,26 @@ export function OrderDetailDrawer({
                 <p className={`mt-2 text-xs ${copyState === 'error' ? 'text-rose-600 dark:text-rose-300' : 'text-slate-500'}`} aria-live="polite">
                   {copyState === 'error' ? t('orderDetail.trackingLinkCopyError') : copyState === 'copied' ? t('orderDetail.trackingLinkCopiedHint') : ''}
                 </p>
+                <button
+                  type="button"
+                  className="mt-2 inline-flex w-full items-center justify-center gap-2 rounded-lg bg-slate-950 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-slate-800 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-teal-600 dark:bg-white dark:text-slate-950 dark:hover:bg-slate-200"
+                  onClick={() => void openBillPreview()}
+                >
+                  <span aria-hidden="true">🖨️</span>
+                  {t('bill.printAction')}
+                </button>
               </section>
 
               {activeOrder.failure_reason && <div className="mt-4 rounded-xl border border-rose-200 bg-rose-50 p-4 text-sm text-rose-800 dark:border-rose-900 dark:bg-rose-950/40 dark:text-rose-200"><strong>{t('orderDetail.failureReason')}</strong><p className="mt-1 leading-6">{activeOrder.failure_reason}</p></div>}
               {activeOrder.delivery_note && <div className="mt-4 rounded-xl border border-slate-200 p-4 text-sm dark:border-slate-800"><strong className="text-slate-950 dark:text-white">{t('orderDetail.deliveryNote')}</strong><p className="mt-1 leading-6 text-slate-600 dark:text-slate-300">{activeOrder.delivery_note}</p></div>}
               {activeOrder.pod_url && <button type="button" className="mt-4 w-full overflow-hidden rounded-xl border border-slate-200 text-left focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-teal-600 dark:border-slate-800" onClick={() => setIsPodOpen(true)}><img className="h-32 w-full bg-slate-100 object-cover dark:bg-slate-950" src={activeOrder.pod_url} alt={t('orderDetail.podAlt', { code: activeOrder.order_code })} /><span className="block px-4 py-3 text-sm font-semibold text-teal-700 dark:text-teal-300">{t('orderDetail.openPod')}</span></button>}
+              {activeOrder.signature_url && (
+                <section className="mt-4 rounded-xl border border-slate-200 p-4 dark:border-slate-800" aria-labelledby={`${titleId}-signature`}>
+                  <h3 id={`${titleId}-signature`} className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-500">{t('signature.title')}</h3>
+                  <img className="mt-3 h-24 w-full rounded-lg bg-white object-contain p-2" src={activeOrder.signature_url} alt={t('signature.existingAlt')} />
+                  <p className="mt-2 text-sm font-semibold text-slate-800 dark:text-slate-200">{activeOrder.recipient_name ?? t('orderDetail.notAvailable')}</p>
+                </section>
+              )}
 
               <OrderNotificationSection order={open ? activeOrder : null} />
 
@@ -226,6 +293,16 @@ export function OrderDetailDrawer({
               </section>
             </div>
             <PodPreviewModal order={isPodOpen ? activeOrder : null} onClose={() => setIsPodOpen(false)} />
+            <PrintableDeliveryBillPreview
+              open={isBillOpen}
+              order={activeOrder}
+              vehicle={activeVehicle}
+              depot={billTracking?.depot ?? null}
+              estimatedArrivalMinutes={billTracking?.estimated_arrival_minutes ?? null}
+              isLoading={isBillLoading}
+              error={billError}
+              onClose={() => setIsBillOpen(false)}
+            />
           </>
         )}
       </aside>

@@ -2,6 +2,7 @@
 
 import {
   useEffect,
+  useRef,
   useState,
   type ChangeEvent,
   type FormEvent,
@@ -24,6 +25,11 @@ import { DriverStatusDialog } from './DriverStatusDialog';
 import { DriverStopCard } from './DriverStopCard';
 import { DriverUnassignedEmptyState } from './DriverUnassignedEmptyState';
 import {
+  createSignatureFormData,
+  isSignatureUpload,
+  validateSignatureBlob,
+} from '@/components/admin/signature-contracts';
+import {
   isDriverRoute,
   isDriverStop,
   type DriverOrderStatus,
@@ -36,6 +42,7 @@ import {
   validatePodFile,
 } from './driver-pod';
 import { driverStatusTranslationKeys } from './driver-ui';
+import type { SignaturePadHandle } from './SignaturePad';
 
 type DriverToast = {
   code: string;
@@ -55,9 +62,12 @@ export function DriverWorkspace() {
   const [failureReason, setFailureReason] = useState('');
   const [podFile, setPodFile] = useState<File | null>(null);
   const [podPreviewUrl, setPodPreviewUrl] = useState('');
+  const [recipientName, setRecipientName] = useState('');
+  const [hasDrawnSignature, setHasDrawnSignature] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [toast, setToast] = useState<DriverToast | null>(null);
   const [refreshVersion, setRefreshVersion] = useState(0);
+  const signaturePadRef = useRef<SignaturePadHandle>(null);
 
   useEffect(() => {
     const controller = new AbortController();
@@ -115,6 +125,8 @@ export function DriverWorkspace() {
     setFailureReason(stop.failure_reason ?? '');
     setPodFile(null);
     setPodPreviewUrl(stop.pod_url ?? '');
+    setRecipientName(stop.recipient_name ?? stop.customer_name);
+    setHasDrawnSignature(false);
     setError(null);
   }
 
@@ -126,6 +138,8 @@ export function DriverWorkspace() {
       setSelectedStop(null);
       setPodFile(null);
       setPodPreviewUrl('');
+      setRecipientName('');
+      setHasDrawnSignature(false);
     }
   }
 
@@ -169,35 +183,72 @@ export function DriverWorkspace() {
       status: selectedStatus,
       hasExistingPod: Boolean(podUrl),
       hasSelectedFile: Boolean(podFile),
+      hasExistingSignature: Boolean(selectedStop.signature_url),
+      hasDrawnSignature,
+      recipientName,
       failureReason,
     });
     if (validationError) {
-      setError(t(
-        validationError === 'PHOTO_REQUIRED'
-          ? 'driver.photoRequired'
-          : 'driver.failureReasonRequired',
-      ));
+      const validationMessage = {
+        PHOTO_REQUIRED: 'driver.photoRequired',
+        SIGNATURE_REQUIRED: 'signature.required',
+        RECIPIENT_NAME_REQUIRED: 'signature.recipientRequired',
+        FAILURE_REASON_REQUIRED: 'driver.failureReasonRequired',
+      } as const;
+      setError(t(validationMessage[validationError]));
       return;
     }
 
     setIsSubmitting(true);
     setError(null);
     try {
-      let resolvedPodUrl = podUrl;
-      if (podFile) {
-        const upload = await requestApi(
+      const signatureBlob = selectedStatus === 'DELIVERED' && hasDrawnSignature
+        ? await signaturePadRef.current?.toBlob() ?? null
+        : null;
+      if (hasDrawnSignature && !signatureBlob) {
+        throw new Error(t('signature.exportError'));
+      }
+      if (signatureBlob) {
+        const signatureError = validateSignatureBlob(signatureBlob);
+        if (signatureError) {
+          throw new Error(t(
+            signatureError === 'TOO_LARGE'
+              ? 'signature.tooLarge'
+              : 'signature.invalid',
+          ));
+        }
+      }
+
+      const podUploadPromise = podFile
+        ? requestApi(
           `/api/v1/driver/orders/${selectedStop.id}/pod`,
           {
             method: 'POST',
             headers: { 'Content-Type': podFile.type },
             body: podFile,
           },
-        );
-        if (!isPodUpload(upload)) {
-          throw new Error(t('driver.photoInvalid'));
-        }
-        resolvedPodUrl = upload.pod_url;
+        )
+        : Promise.resolve(null);
+      const signatureUploadPromise = signatureBlob
+        ? requestApi(
+          `/api/v1/driver/orders/${selectedStop.id}/signature`,
+          {
+            method: 'POST',
+            body: createSignatureFormData(signatureBlob, recipientName),
+          },
+        )
+        : Promise.resolve(null);
+      const [podUpload, signatureUpload] = await Promise.all([
+        podUploadPromise,
+        signatureUploadPromise,
+      ]);
+      if (podUpload !== null && !isPodUpload(podUpload)) {
+        throw new Error(t('driver.photoInvalid'));
       }
+      if (signatureUpload !== null && !isSignatureUpload(signatureUpload)) {
+        throw new Error(t('signature.invalidResponse'));
+      }
+      const resolvedPodUrl = podUpload?.pod_url ?? podUrl;
 
       const payload = await requestApi(
         `/api/v1/driver/orders/${selectedStop.id}/status`,
@@ -241,6 +292,8 @@ export function DriverWorkspace() {
       setSelectedStop(null);
       setPodFile(null);
       setPodPreviewUrl('');
+      setRecipientName('');
+      setHasDrawnSignature(false);
     } catch (requestError) {
       setError(
         requestError instanceof Error
@@ -318,12 +371,17 @@ export function DriverWorkspace() {
         failureReason={failureReason}
         podPreviewUrl={podPreviewUrl}
         hasSelectedFile={podFile !== null}
+        recipientName={recipientName}
+        hasDrawnSignature={hasDrawnSignature}
+        signaturePadRef={signaturePadRef}
         error={error}
         isSubmitting={isSubmitting}
         onStatusChange={setSelectedStatus}
         onDeliveryNoteChange={setDeliveryNote}
         onFailureReasonChange={setFailureReason}
         onPodFileChange={handlePodFileChange}
+        onRecipientNameChange={setRecipientName}
+        onSignaturePresenceChange={setHasDrawnSignature}
         onClose={closeStatusDialog}
         onSubmit={handleStatusSubmit}
       />

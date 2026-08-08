@@ -3,6 +3,7 @@ export const ORDER_ACTIVITY_ACTIONS = [
   'STATUS_CHANGED',
   'ASSIGNED',
   'POD_UPLOADED',
+  'SIGNATURE_UPLOADED',
   'IMPORTED',
 ] as const;
 

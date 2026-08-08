@@ -1,4 +1,4 @@
-import type { ChangeEventHandler, FormEventHandler } from 'react';
+import type { ChangeEventHandler, FormEventHandler, Ref } from 'react';
 
 import { useI18n } from '@/context/I18nContext';
 import {
@@ -11,6 +11,7 @@ import {
 import { ModalDialog } from '../admin/ModalDialog';
 import type { DriverOrderStatus, DriverStop } from './driver-contracts';
 import { driverStatusTranslationKeys, updateDriverStatuses } from './driver-ui';
+import { SignaturePad, type SignaturePadHandle } from './SignaturePad';
 
 const failureReasons = [
   ['CUSTOMER_UNAVAILABLE', 'driver.failureCustomerUnavailable'],
@@ -26,12 +27,17 @@ export function DriverStatusDialog({
   failureReason,
   podPreviewUrl,
   hasSelectedFile,
+  recipientName,
+  hasDrawnSignature,
+  signaturePadRef,
   error,
   isSubmitting,
   onStatusChange,
   onDeliveryNoteChange,
   onFailureReasonChange,
   onPodFileChange,
+  onRecipientNameChange,
+  onSignaturePresenceChange,
   onClose,
   onSubmit,
 }: {
@@ -41,12 +47,17 @@ export function DriverStatusDialog({
   failureReason: string;
   podPreviewUrl: string;
   hasSelectedFile: boolean;
+  recipientName: string;
+  hasDrawnSignature: boolean;
+  signaturePadRef: Ref<SignaturePadHandle>;
   error: string | null;
   isSubmitting: boolean;
   onStatusChange: (status: DriverOrderStatus) => void;
   onDeliveryNoteChange: (note: string) => void;
   onFailureReasonChange: (reason: string) => void;
   onPodFileChange: ChangeEventHandler<HTMLInputElement>;
+  onRecipientNameChange: (name: string) => void;
+  onSignaturePresenceChange: (present: boolean) => void;
   onClose: () => void;
   onSubmit: FormEventHandler<HTMLFormElement>;
 }) {
@@ -105,6 +116,49 @@ export function DriverStatusDialog({
           </label>
           <p className="mt-2 text-xs text-slate-500">{t('driver.photoHint')}</p>
         </section>
+
+        {delivered && (
+          <section className="rounded-xl border border-slate-200 p-4 dark:border-slate-700" aria-labelledby="recipient-signature-title">
+            <div className="flex items-start justify-between gap-3">
+              <div>
+                <h3 id="recipient-signature-title" className="text-sm font-semibold text-slate-900 dark:text-white">{t('signature.title')}</h3>
+                <p className="mt-1 text-xs text-slate-500">{t('signature.requiredHint')}</p>
+              </div>
+              {(hasDrawnSignature || stop?.signature_url) && (
+                <span className="rounded-full bg-emerald-50 px-2 py-1 text-[10px] font-bold text-emerald-700 dark:bg-emerald-950 dark:text-emerald-300">{t('signature.ready')}</span>
+              )}
+            </div>
+
+            <label className={`${fieldLabelClass} mt-4`}>
+              {t('signature.recipientName')} <span className="text-rose-600" aria-hidden="true">*</span>
+              <input
+                className={fieldInputClass}
+                value={recipientName}
+                onChange={(event) => onRecipientNameChange(event.target.value)}
+                maxLength={150}
+                placeholder={t('signature.recipientPlaceholder')}
+                required
+                disabled={isSubmitting}
+              />
+            </label>
+
+            {stop?.signature_url && !hasDrawnSignature && (
+              <img
+                className="mt-3 h-24 w-full rounded-lg border border-slate-200 bg-white object-contain p-2 dark:border-slate-700"
+                src={stop.signature_url}
+                alt={t('signature.existingAlt')}
+              />
+            )}
+            <div className="mt-3">
+              <SignaturePad
+                key={stop?.id ?? 'empty-signature'}
+                ref={signaturePadRef}
+                disabled={isSubmitting}
+                onEmptyChange={(empty) => onSignaturePresenceChange(!empty)}
+              />
+            </div>
+          </section>
+        )}
 
         {error && <p className="rounded-lg bg-rose-50 px-3 py-2 text-sm text-rose-700 dark:bg-rose-950/50 dark:text-rose-300" role="alert">{error}</p>}
         <footer className="sticky bottom-0 flex justify-end gap-2 border-t border-slate-200 bg-white pt-4 dark:border-slate-800 dark:bg-slate-900">

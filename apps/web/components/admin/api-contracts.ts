@@ -30,6 +30,9 @@ export type Order = {
   failure_reason: string | null;
   pod_url: string | null;
   pod_uploaded_at: string | null;
+  signature_url: string | null;
+  signature_uploaded_at: string | null;
+  recipient_name: string | null;
   delivery_region: string | null;
 };
 
@@ -93,6 +96,16 @@ function isNullableIsoDate(value: unknown): value is string | null {
     || (typeof value === 'string' && !Number.isNaN(Date.parse(value)));
 }
 
+function isNullableSignatureUrl(value: unknown): value is string | null {
+  return value === null || (
+    typeof value === 'string' && (
+      value.startsWith('https://')
+      || value.startsWith('http://')
+      || value.startsWith('/uploads/signatures/')
+    )
+  );
+}
+
 function isOrder(value: unknown): value is Order {
   if (!isRecord(value)) {
     return false;
@@ -118,6 +131,9 @@ function isOrder(value: unknown): value is Order {
     (typeof value.failure_reason === 'string' || value.failure_reason === null) &&
     (typeof value.pod_url === 'string' || value.pod_url === null) &&
     isNullableIsoDate(value.pod_uploaded_at) &&
+    isNullableSignatureUrl(value.signature_url) &&
+    isNullableIsoDate(value.signature_uploaded_at) &&
+    (typeof value.recipient_name === 'string' || value.recipient_name === null) &&
     (typeof value.delivery_region === 'string' || value.delivery_region === null)
   );
 }

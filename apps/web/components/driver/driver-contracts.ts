@@ -22,6 +22,9 @@ export type DriverStop = {
   failure_reason: string | null;
   pod_url: string | null;
   pod_uploaded_at: string | null;
+  signature_url: string | null;
+  signature_uploaded_at: string | null;
+  recipient_name: string | null;
 };
 
 export type DriverRoute = {
@@ -73,7 +76,10 @@ export function isDriverStop(value: unknown): value is DriverStop {
     (typeof value.delivery_note === 'string' || value.delivery_note === null) &&
     (typeof value.failure_reason === 'string' || value.failure_reason === null) &&
     (typeof value.pod_url === 'string' || value.pod_url === null) &&
-    (typeof value.pod_uploaded_at === 'string' || value.pod_uploaded_at === null)
+    (typeof value.pod_uploaded_at === 'string' || value.pod_uploaded_at === null) &&
+    (typeof value.signature_url === 'string' || value.signature_url === null) &&
+    (typeof value.signature_uploaded_at === 'string' || value.signature_uploaded_at === null) &&
+    (typeof value.recipient_name === 'string' || value.recipient_name === null)
   );
 }
 

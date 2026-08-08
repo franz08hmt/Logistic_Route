@@ -233,6 +233,15 @@ button:disabled {
 }
 
 @media print {
+  @page {
+    size: A4 portrait;
+    margin: 10mm;
+  }
+
+  body * {
+    visibility: hidden !important;
+  }
+
   nav,
   aside,
   button {
@@ -242,5 +251,31 @@ button:disabled {
   main {
     margin: 0 !important;
     padding: 0 !important;
+  }
+
+  .delivery-bill-print-root,
+  .delivery-bill-print-root * {
+    visibility: visible !important;
+  }
+
+  .delivery-bill-print-root {
+    position: absolute !important;
+    inset: 0 !important;
+    overflow: visible !important;
+    background: #fff !important;
+    padding: 0 !important;
+  }
+
+  .delivery-bill-print-controls {
+    display: none !important;
+  }
+
+  .delivery-bill-paper {
+    width: 100% !important;
+    max-width: none !important;
+    break-inside: avoid !important;
+    box-shadow: none !important;
+    print-color-adjust: exact;
+    -webkit-print-color-adjust: exact;
   }
 }

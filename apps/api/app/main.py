@@ -4,7 +4,13 @@ from fastapi.staticfiles import StaticFiles
 
 from app.api.v1.router import router as v1_router
 from app.api.routes import router
-from app.core.config import API_TITLE, API_VERSION, POD_UPLOAD_DIR, WEB_ORIGINS
+from app.core.config import (
+    API_TITLE,
+    API_VERSION,
+    POD_UPLOAD_DIR,
+    SIGNATURE_UPLOAD_DIR,
+    WEB_ORIGINS,
+)
 
 app = FastAPI(title=API_TITLE, version=API_VERSION)
 
@@ -18,6 +24,11 @@ app.add_middleware(
 
 app.include_router(router, prefix="/api")
 app.include_router(v1_router, prefix="/api/v1")
+app.mount(
+    "/uploads/signatures",
+    StaticFiles(directory=str(SIGNATURE_UPLOAD_DIR), check_dir=False),
+    name="signature-uploads",
+)
 app.mount(
     "/uploads",
     StaticFiles(directory=str(POD_UPLOAD_DIR.parent), check_dir=False),

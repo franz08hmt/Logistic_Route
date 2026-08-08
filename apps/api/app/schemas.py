@@ -202,6 +202,9 @@ class OrderRead(OrderBase, OrmSchema):
     failure_reason: str | None = None
     pod_url: str | None = None
     pod_uploaded_at: datetime | None = None
+    signature_url: str | None = None
+    signature_uploaded_at: datetime | None = None
+    recipient_name: str | None = None
     delivery_region: str | None = None
 
 
@@ -501,6 +504,11 @@ class PodUploadRead(BaseModel):
     size_bytes: int = Field(gt=0)
 
 
+class SignatureUploadRead(BaseModel):
+    signature_url: str
+    uploaded_at: datetime
+
+
 class DriverVehicleRead(OrmSchema):
     id: UUID
     license_plate: str
@@ -524,6 +532,9 @@ class DriverStopRead(OrmSchema):
     failure_reason: str | None
     pod_url: str | None
     pod_uploaded_at: datetime | None
+    signature_url: str | None
+    signature_uploaded_at: datetime | None
+    recipient_name: str | None
 
 
 class DriverRouteRead(BaseModel):

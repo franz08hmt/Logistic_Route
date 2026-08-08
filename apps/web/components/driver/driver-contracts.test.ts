@@ -36,12 +36,23 @@ describe('driver API contracts', () => {
         failure_reason: null,
         pod_url: null,
         pod_uploaded_at: null,
+        signature_url: null,
+        signature_uploaded_at: null,
+        recipient_name: null,
       },
     ],
   };
 
   it('accepts a valid driver route payload', () => {
     expect(isDriverRoute(validRoute)).toBe(true);
+  });
+
+  it('requires the signature metadata fields on every stop', () => {
+    const { signature_url: _signatureUrl, ...withoutSignatureUrl } = validRoute.stops[0];
+    expect(isDriverRoute({
+      ...validRoute,
+      stops: [withoutSignatureUrl],
+    })).toBe(false);
   });
 
   it('rejects a route with an invalid stop status', () => {

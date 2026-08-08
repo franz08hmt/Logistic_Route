@@ -130,3 +130,31 @@ Create a clean monorepo foundation for LogiRoute VN with a Next.js App Router fr
 | Notification persistence breaks the delivery transaction | High | Keep the simulator DB-only, validate inputs, and commit it atomically with the originating action. |
 | Customer phone data leaks to unauthorized users | High | Require ADMIN/DISPATCHER roles and never expose notification history publicly. |
 | Existing databases lack the notification table | High | Add revision `010` and mirror it in the idempotent bootstrap script. |
+
+## Phase 10: Digital Signature & Printable Delivery Bill
+
+### Architecture decisions
+
+- Accept recipient signatures as authenticated `multipart/form-data` uploads containing one PNG file and a normalized recipient name.
+- Validate content type, upload size, and PNG magic bytes before writing a random server-generated filename under `uploads/signatures`.
+- Keep POD and signature uploads independent but submit them concurrently before the final `DELIVERED` status transaction.
+- Add signature fields to the shared Order/Driver contracts so the driver workspace and dispatcher drawer use one source of truth.
+- Render the delivery bill as an accessible client-side preview with a scannable tracking QR code and print-only CSS that isolates the bill from application chrome.
+
+### Task list
+
+- [x] Add signature database fields, migration, schemas, secure storage, endpoint, and backend tests.
+- [x] Add typed frontend contracts and a Hi-DPI pointer-enabled signature canvas with tests for upload validation.
+- [x] Integrate recipient name and parallel POD/signature uploads into the delivered-order workflow.
+- [x] Add the printable A4/A5 delivery bill, QR tracking link, signature/POD evidence, and drawer controls.
+- [x] Add VI/EN translations and run pytest, Vitest, typecheck, and production build.
+
+### Risks and mitigations
+
+| Risk | Impact | Mitigation |
+| --- | --- | --- |
+| A disguised or oversized upload reaches storage | High | Require PNG, cap bytes while streaming, verify magic bytes, and generate server-side filenames. |
+| A driver uploads a signature for another route | High | Resolve the assigned vehicle and scope the order query to that vehicle before writing. |
+| POD succeeds but signature fails | Medium | Upload both concurrently, keep the status unchanged on any failure, and allow a safe retry. |
+| Print output includes application navigation | Medium | Isolate the bill with a dedicated print root and print-only visibility rules. |
+| Existing databases lack signature columns | High | Add revision `011` and mirror it in the idempotent bootstrap script. |

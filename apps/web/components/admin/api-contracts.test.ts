@@ -26,6 +26,9 @@ describe('admin API contracts', () => {
       failure_reason: null,
       pod_url: null,
       pod_uploaded_at: null,
+      signature_url: null,
+      signature_uploaded_at: null,
+      recipient_name: null,
       delivery_region: null,
     };
 
@@ -33,6 +36,9 @@ describe('admin API contracts', () => {
     expect(isOrderList([{ ...order, latitude: '10.7769' }])).toBe(false);
     expect(isOrderList([{ ...order, pod_uploaded_at: 123 }])).toBe(false);
     expect(isOrderList([{ ...order, pod_uploaded_at: 'not-a-date' }])).toBe(false);
+    expect(isOrderList([{ ...order, signature_uploaded_at: 123 }])).toBe(false);
+    const { signature_url: _signatureUrl, ...missingSignatureUrl } = order;
+    expect(isOrderList([missingSignatureUrl])).toBe(false);
   });
 
   it('accepts vehicle status values defined by the backend contract', () => {

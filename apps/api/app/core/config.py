@@ -25,6 +25,16 @@ POD_PUBLIC_BASE_URL = getenv(
     "POD_PUBLIC_BASE_URL",
     "http://localhost:8000",
 ).rstrip("/")
+SIGNATURE_UPLOAD_DIR = Path(
+    getenv(
+        "SIGNATURE_UPLOAD_DIR",
+        str(Path(__file__).resolve().parents[2] / "uploads" / "signatures"),
+    )
+)
+SIGNATURE_PUBLIC_BASE_URL = getenv(
+    "SIGNATURE_PUBLIC_BASE_URL",
+    POD_PUBLIC_BASE_URL,
+).rstrip("/")
 PUBLIC_TRACKING_BASE_URL = getenv(
     "PUBLIC_TRACKING_BASE_URL",
     "http://localhost:3001",

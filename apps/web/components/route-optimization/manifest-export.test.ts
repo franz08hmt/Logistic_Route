@@ -71,6 +71,9 @@ const orders: Order[] = [
     failure_reason: null,
     pod_url: null,
     pod_uploaded_at: null,
+    signature_url: null,
+    signature_uploaded_at: null,
+    recipient_name: null,
     delivery_region: null,
   },
   {
@@ -91,6 +94,9 @@ const orders: Order[] = [
     failure_reason: null,
     pod_url: null,
     pod_uploaded_at: null,
+    signature_url: null,
+    signature_uploaded_at: null,
+    recipient_name: null,
     delivery_region: null,
   },
 ];

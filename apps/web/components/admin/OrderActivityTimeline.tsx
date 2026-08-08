@@ -13,6 +13,7 @@ const actionLabelKeys: Record<OrderActivityAction, TranslationKey> = {
   STATUS_CHANGED: 'activity.STATUS_CHANGED',
   ASSIGNED: 'activity.ASSIGNED',
   POD_UPLOADED: 'activity.POD_UPLOADED',
+  SIGNATURE_UPLOADED: 'activity.SIGNATURE_UPLOADED',
   IMPORTED: 'activity.IMPORTED',
 };
 
@@ -21,6 +22,7 @@ const dotStyles: Record<OrderActivityAction, string> = {
   ASSIGNED: 'border-sky-200 bg-sky-500 dark:border-sky-900',
   STATUS_CHANGED: 'border-amber-200 bg-amber-500 dark:border-amber-900',
   POD_UPLOADED: 'border-violet-200 bg-violet-500 dark:border-violet-900',
+  SIGNATURE_UPLOADED: 'border-fuchsia-200 bg-fuchsia-500 dark:border-fuchsia-900',
   IMPORTED: 'border-slate-300 bg-slate-500 dark:border-slate-700',
 };
 

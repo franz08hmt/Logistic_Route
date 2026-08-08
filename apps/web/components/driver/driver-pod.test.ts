@@ -12,6 +12,9 @@ describe('driver POD validation', () => {
       status: 'DELIVERED',
       hasExistingPod: false,
       hasSelectedFile: false,
+      hasExistingSignature: false,
+      hasDrawnSignature: false,
+      recipientName: '',
       failureReason: '',
     })).toBe('PHOTO_REQUIRED');
   });
@@ -21,14 +24,41 @@ describe('driver POD validation', () => {
       status: 'FAILED',
       hasExistingPod: false,
       hasSelectedFile: false,
+      hasExistingSignature: false,
+      hasDrawnSignature: false,
+      recipientName: '',
       failureReason: '',
     })).toBe('FAILURE_REASON_REQUIRED');
     expect(validateDriverUpdate({
       status: 'FAILED',
       hasExistingPod: false,
       hasSelectedFile: false,
+      hasExistingSignature: false,
+      hasDrawnSignature: false,
+      recipientName: '',
       failureReason: 'CUSTOMER_UNAVAILABLE',
     })).toBeNull();
+  });
+
+  it('requires recipient identity and signature for delivered orders', () => {
+    expect(validateDriverUpdate({
+      status: 'DELIVERED',
+      hasExistingPod: true,
+      hasSelectedFile: false,
+      hasExistingSignature: false,
+      hasDrawnSignature: false,
+      recipientName: 'Nguyen Van A',
+      failureReason: '',
+    })).toBe('SIGNATURE_REQUIRED');
+    expect(validateDriverUpdate({
+      status: 'DELIVERED',
+      hasExistingPod: true,
+      hasSelectedFile: false,
+      hasExistingSignature: false,
+      hasDrawnSignature: true,
+      recipientName: '   ',
+      failureReason: '',
+    })).toBe('RECIPIENT_NAME_REQUIRED');
   });
 
   it('rejects oversized or unsupported files', () => {

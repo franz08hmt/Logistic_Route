@@ -175,6 +175,12 @@ class Order(Base):
         DateTime(timezone=True),
         nullable=True,
     )
+    signature_url: Mapped[str | None] = mapped_column(Text, nullable=True)
+    signature_uploaded_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True),
+        nullable=True,
+    )
+    recipient_name: Mapped[str | None] = mapped_column(String(150), nullable=True)
     delivery_region: Mapped[str | None] = mapped_column(String(150), nullable=True)
 
 

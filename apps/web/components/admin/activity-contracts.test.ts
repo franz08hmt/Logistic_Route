@@ -48,4 +48,17 @@ describe('order activity response contract', () => {
       }],
     })).toBe(true);
   });
+
+  it('accepts recipient signature upload audit events', () => {
+    expect(isOrderActivityList({
+      ...response,
+      activities: [{
+        ...response.activities[0],
+        action: 'SIGNATURE_UPLOADED',
+        old_status: null,
+        new_status: null,
+        detail: 'Recipient signature uploaded for Nguyen Van A',
+      }],
+    })).toBe(true);
+  });
 });

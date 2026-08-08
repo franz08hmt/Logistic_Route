@@ -126,6 +126,17 @@ def main() -> None:
             "ALTER TABLE orders ADD COLUMN IF NOT EXISTS pod_uploaded_at TIMESTAMPTZ"
         ))
         connection.execute(text(
+            "ALTER TABLE orders ADD COLUMN IF NOT EXISTS signature_url TEXT"
+        ))
+        connection.execute(text(
+            "ALTER TABLE orders ADD COLUMN IF NOT EXISTS "
+            "signature_uploaded_at TIMESTAMPTZ"
+        ))
+        connection.execute(text(
+            "ALTER TABLE orders ADD COLUMN IF NOT EXISTS "
+            "recipient_name VARCHAR(150)"
+        ))
+        connection.execute(text(
             "ALTER TABLE orders ADD COLUMN IF NOT EXISTS "
             "status_updated_at TIMESTAMPTZ"
         ))

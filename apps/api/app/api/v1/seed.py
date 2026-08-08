@@ -1,4 +1,5 @@
 import random
+from base64 import b64decode
 from datetime import datetime, timedelta, timezone
 
 from fastapi import APIRouter, Depends, HTTPException, status
@@ -7,6 +8,7 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from app.core.security import get_password_hash
+from app.core.config import SIGNATURE_PUBLIC_BASE_URL, SIGNATURE_UPLOAD_DIR
 from app.db.models import (
     CustomerNotification,
     Depot,
@@ -33,6 +35,11 @@ from app.services.notification_service import (
 
 
 router = APIRouter(tags=["seed"])
+
+SEED_SIGNATURE_FILENAME = "seed-recipient-signature.png"
+SEED_SIGNATURE_PNG = b64decode(
+    "iVBORw0KGgoAAAANSUhEUgAAAUAAAABkCAYAAAD32uk+AAADuklEQVR42u3dTXLUOhSA0eyAIXtg//sLI0YEquPW/dU5VR6+59iRvpbVTvHxAQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAB7/Pj569NdAK6M35/D3QCujJ8IAgIIcGP8RBAQQIAb43dDAEUeBPDKCFrpgvhdGUCP+yCAX0bghjgIIIjflwHYHgdf+rx//9wFBFAArx437gZrHwG3xuH2b71tG2AgvzCQKwZ71jlE8Nx9c2cQwEGPVgJo2wAD+aUBnDXYK89jQts2QACvDWDV474AQuP4ZYUhc2IJoFWz363B/K2BGz3YsybVza/9CODf1+I3ayB/Rv53pyZX1vVPj6AVc49tFhYOgKjBkxXArq/9dF/ZbAmg/ctn90sAA+OQObk2B7DqQ2PS/RLAy+/Puxd2QwCtbHZ+YFTvX06+L2sieOKiTt6YzC8kOr72I4D9JnrGuacET/wKA5h9ro2PdVm/56jVevTYr3y9a0L0PP4W/38qf+YJAyFyYlcGMHPbo/KLveq/dLrmxfbKx8kO+3ECGLvXW7VS7xrAitgI3qAAZq8uNgYwcmJX3a+qx/jogP/vg+nkHBK9xP2ZKSuM6he/M19MrgxZxoTu/hj/6s/99DoFr0kAsydK1buLpye1AOY9ymc/xlfETPQuCWC3iRkxITpM7Ir3RCMe5aePMcFrHr8pj7JVL35HDtCo+1Cx1xq1kt2wchQ9AWy7MX9qUHdadXffc8v6QiNjxSx4C+LXZZM5+vpPTNQTAzlyYme/xhL5YZYxzir3+5StUQC7DczqAJ6eOFn3b0IAo/YLT3xYPPmmVwQXxC/z8aoiuBHnPPX6w6nrmPbicdaftX03SFFxEz8BLD1fxDnfmQAZEzvqXk0KefQq7skWiLI1i1/2/lL2o1D0+V6ZFNkTO2o8ZIc88zo8wgpgmwBWvPeY+R5Y9MTOCseE6zgVQVW6NIAV/7ZHdgCj/wa2yytM3VZnlVsEoid+5ZO4QwAnPtb963xZ4yF67FnlCWDbAE4ObtY1Zk+w6f/I/ZPrsMoTv5IIbo9u1Hk2jMmO80PwBDBtkG1fdU5anWWPyanBEz3xax2ITtE1CnvOA8ETwNU/S4cAGoFzg+f3J37jf57K6BqBVnkIYGkgqqJr9FnlTbn+1R8CHS+s8t8+lQ3hq4jKtGPdgDFp3INNqxSHCCIqDof4ISgOh/iJisMhVAiVwyEqiJ9DUED8RAUQQUEBYiPozgIAAAAAAAAAAAAAAAAAAAAAAAAAAAAAANDQb+y3GpHXeJMKAAAAAElFTkSuQmCC"
+)
 
 SEED_DEPOT = {
     "name": "LogiRoute Depot Quan 12",
@@ -212,6 +219,23 @@ def seed_data(db: Session = Depends(get_db)) -> SeedResponse:
             if exists.customer_phone is None:
                 exists.customer_phone = order_data["customer_phone"]
             seeded_orders.append(exists)
+
+    delivered_orders = [
+        order for order in seeded_orders if order.status is OrderStatus.DELIVERED
+    ]
+    if delivered_orders:
+        SIGNATURE_UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
+        signature_path = SIGNATURE_UPLOAD_DIR / SEED_SIGNATURE_FILENAME
+        if not signature_path.exists():
+            signature_path.write_bytes(SEED_SIGNATURE_PNG)
+        for delivered_order in delivered_orders:
+            if not delivered_order.signature_url:
+                delivered_order.signature_url = (
+                    f"{SIGNATURE_PUBLIC_BASE_URL}/uploads/signatures/"
+                    f"{SEED_SIGNATURE_FILENAME}"
+                )
+                delivered_order.signature_uploaded_at = datetime.now(timezone.utc)
+                delivered_order.recipient_name = delivered_order.customer_name
 
     existing_analytics = int(db.scalar(
         select(func.count()).select_from(RouteAnalyticsSnapshot)
