@@ -158,3 +158,61 @@ Create a clean monorepo foundation for LogiRoute VN with a Next.js App Router fr
 | POD succeeds but signature fails | Medium | Upload both concurrently, keep the status unchanged on any failure, and allow a safe retry. |
 | Print output includes application navigation | Medium | Isolate the bill with a dedicated print root and print-only visibility rules. |
 | Existing databases lack signature columns | High | Add revision `011` and mirror it in the idempotent bootstrap script. |
+
+## Phase 11: National Multi-Depot Hubs & Operations Benchmark
+
+### Architecture decisions
+
+- Treat the depot selected by `depot_id` as an explicit tenant-like operational scope; when omitted, resolve the unique default depot and fall back to the first depot for legacy databases.
+- Backfill every existing order and vehicle to `HUB-SGN` before scoped queries are enabled, while keeping the foreign keys nullable for safe imports and staged migration.
+- Keep depot aggregate fields read-only: vehicle count, active order count, and total fleet payload are calculated by the API instead of duplicating mutable counters in the depot table.
+- Store the selected depot in a small React context and local storage; every scoped fetch carries the selected `depot_id` and publishes the existing invalidation events when the selection changes.
+- Make the benchmark deterministic with fixed random seeds, bounded solver time, machine-readable JSON, and a Markdown report generated from the same result objects.
+
+### Task list
+
+- [x] Add depot schema fields, foreign keys, idempotent migration `012`, and database contract tests.
+- [x] Add depot CRUD plus reusable default/scope resolution and endpoint tests.
+- [x] Scope overview, orders, vehicles, optimization, available drivers, and telemetry by depot without breaking legacy calls.
+- [x] Seed four national hubs and attach existing demo data to `HUB-SGN` idempotently.
+- [x] Add typed depot contracts, `DepotContext`, accessible switcher, and admin depot management page.
+- [x] Connect the Dispatch Center data, telemetry, optimization, and Leaflet fly-to behavior to the selected depot.
+- [x] Add deterministic 10/25/50/100-order CVRP benchmark output in Markdown and JSON.
+- [x] Add VI/EN translations and run pytest, Vitest, typecheck, build, and benchmark verification.
+
+### Risks and mitigations
+
+| Risk | Impact | Mitigation |
+| --- | --- | --- |
+| Legacy rows disappear after scoped queries | High | Migration backfills `depot_id` to the default hub and tests omitted/explicit scope behavior. |
+| Multiple depots become default | High | Enforce one default inside create/update transactions and use a deterministic fallback query. |
+| Cross-depot route assignment mixes operational data | High | Filter depot, orders, and vehicles together and reject mismatched explicit IDs. |
+| Depot changes cause stale frontend requests | Medium | Abort polling requests, key effects by depot ID, and clear the previous route result before refetch. |
+| 100-order benchmark takes too long | Medium | Use deterministic data and a bounded per-case solver time while recording elapsed wall time. |
+
+## Phase 12: Driver Performance Leaderboard & Eco Scorecard
+
+### Architecture decisions
+
+- Calculate ranking metrics on the backend and expose one validated response contract; the frontend only renders and exports the returned values.
+- Count only terminal orders (`DELIVERED` and `FAILED`) whose `status_updated_at` falls inside the requested 7/14/30-day period.
+- Reconstruct each driver's optimized distance from depot-to-stop sequences with Haversine distance and a road-shape factor, then reuse the existing cost calculator for CO2 savings.
+- Use the vehicle's latest route-deviation signal for adherence because historical GPS pings are not persisted yet: `ON_ROUTE` maps to 98%, missing/stopped data to 95%, and an active off-route warning to 90%.
+- Rank deterministically by overall score, then CO2 savings, normalized driver name, and driver ID.
+- Treat an omitted `depot_id` as a nationwide report; the frontend sends the selected depot explicitly for branch-scoped views.
+
+### Task list
+
+- [x] Add tested performance schemas, calculation service, and protected admin endpoint.
+- [x] Add idempotent multi-driver historical seed data with varied delivery outcomes.
+- [x] Add strict frontend contracts, CSV export, responsive podium, ranking table, period filters, and directory/leaderboard tabs.
+- [x] Add matching VI/EN translations and complete backend/frontend verification.
+
+### Risks and mitigations
+
+| Risk | Impact | Mitigation |
+| --- | --- | --- |
+| Current telemetry is mistaken for full adherence history | High | Document the fallback and isolate it behind a helper that can later consume ping history without changing the API. |
+| The same route distance is counted more than once | High | Group terminal stops by vehicle and route batch before reconstructing each route once. |
+| Sparse demo data makes the podium meaningless | Medium | Seed three assigned drivers and deterministic terminal-order history across the 30-day period. |
+| Equal scores reorder between requests | Medium | Apply stable CO2, name, and UUID tie-breakers after score sorting. |

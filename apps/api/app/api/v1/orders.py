@@ -6,7 +6,7 @@ from uuid import UUID, uuid4
 
 from fastapi import APIRouter, Depends, File, HTTPException, Path, Response, UploadFile, status
 from pydantic import ValidationError
-from sqlalchemy import func, select
+from sqlalchemy import func, or_, select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
@@ -45,6 +45,7 @@ from app.services.driver_availability import (
     reconcile_vehicle_availability,
     vehicle_is_available_clause,
 )
+from app.services.depot_scope import resolve_depot
 from app.services.order_status import set_order_status
 from app.services.notification_service import (
     ORDER_ASSIGNED,
@@ -166,8 +167,17 @@ def _build_import_template() -> bytes:
 def list_orders(
     db: Session = Depends(get_db),
     _current_user: User = Depends(get_current_user),
+    depot_id: UUID | None = None,
 ) -> list[Order]:
-    return list(db.scalars(select(Order).order_by(Order.order_code)).all())
+    depot = resolve_depot(db, depot_id)
+    statement = select(Order).order_by(Order.order_code)
+    if depot is not None:
+        statement = statement.where(
+            or_(Order.depot_id == depot.id, Order.depot_id.is_(None))
+            if depot_id is None
+            else Order.depot_id == depot.id
+        )
+    return list(db.scalars(statement).all())
 
 
 @router.post("", response_model=OrderRead, status_code=status.HTTP_201_CREATED)
@@ -182,8 +192,10 @@ def create_order(
 
     # Creation is deliberately side-effect free for dispatch state. Assignment
     # only happens through POST /orders/{id}/dispatch.
+    depot = resolve_depot(db, payload.depot_id)
     order = Order(
-        **payload.model_dump(exclude={"status"}),
+        **payload.model_dump(exclude={"status", "depot_id"}),
+        depot_id=depot.id if depot is not None else None,
         tracking_token=generate_tracking_token(),
         status=OrderStatus.PENDING,
         assigned_vehicle_id=None,
@@ -234,11 +246,13 @@ def download_order_import_template(
 )
 async def import_orders(
     file: Annotated[UploadFile, File(description="UTF-8 CSV file, maximum 2 MB")],
+    depot_id: UUID | None = None,
     db: Session = Depends(get_db),
     _current_user: User = Depends(
         require_roles(UserRole.ADMIN, UserRole.DISPATCHER)
     ),
 ) -> BulkImportResponse:
+    depot = resolve_depot(db, depot_id)
     filename = (file.filename or "").strip()
     if not filename.lower().endswith(".csv"):
         raise HTTPException(status_code=400, detail="file must use the .csv extension")
@@ -342,7 +356,8 @@ async def import_orders(
             continue
 
         order = Order(
-            **payload.model_dump(exclude={"status"}),
+            **payload.model_dump(exclude={"status", "depot_id"}),
+            depot_id=depot.id if depot is not None else None,
             tracking_token=generate_tracking_token(),
             status=OrderStatus.PENDING,
             assigned_vehicle_id=None,
@@ -405,7 +420,7 @@ def get_public_tracking(
     if order is None:
         raise HTTPException(status_code=404, detail="Tracking information not found")
 
-    depot = db.scalar(select(Depot).order_by(Depot.id).limit(1))
+    depot = resolve_depot(db, order.depot_id)
     if depot is None:
         raise HTTPException(
             status_code=503,

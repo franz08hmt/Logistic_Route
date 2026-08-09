@@ -20,3 +20,13 @@ Run the standalone demo:
 cd D:\Individual_Project
 apps\api\.venv\Scripts\python.exe core_engine\solver.py
 ```
+
+Run the deterministic 10/25/50/100-order benchmark suite:
+
+```powershell
+cd D:\Individual_Project
+apps\api\.venv\Scripts\python.exe core_engine\benchmark_suite.py --time-limit 2
+```
+
+The suite writes `core_engine/benchmark_results.json` and
+`core_engine/benchmark_results.md` for reporting and repeatable comparisons.

@@ -3,8 +3,10 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 
 import { useI18n } from '@/context/I18nContext';
+import { useDepot } from '@/context/DepotContext';
 import { requestApi } from './api-contracts';
 import { DriverCard } from './DriverCard';
+import { DriverLeaderboard } from './DriverLeaderboard';
 import {
   DRIVER_ACCOUNT_STATUSES,
   isDriverDetailList,
@@ -15,8 +17,9 @@ import { subscribeToDataInvalidated } from './orders-sync';
 
 type VehicleFilter = '' | 'true' | 'false';
 
-export function DriversManager() {
+function DriverDirectory() {
   const { t } = useI18n();
+  const { selectedDepot } = useDepot();
   const [drivers, setDrivers] = useState<DriverDetail[]>([]);
   const [search, setSearch] = useState('');
   const [debouncedSearch, setDebouncedSearch] = useState('');
@@ -44,6 +47,9 @@ export function DriversManager() {
     }
     if (vehicleFilter) {
       searchParams.set('has_vehicle', vehicleFilter);
+    }
+    if (selectedDepot?.id) {
+      searchParams.set('depot_id', selectedDepot.id);
     }
 
     try {
@@ -73,7 +79,7 @@ export function DriversManager() {
         setIsLoading(false);
       }
     }
-  }, [debouncedSearch, statusFilter, t, vehicleFilter]);
+  }, [debouncedSearch, selectedDepot?.id, statusFilter, t, vehicleFilter]);
 
   useEffect(() => {
     setIsLoading(true);
@@ -189,6 +195,67 @@ export function DriversManager() {
             ))}
           </div>
         )}
+      </div>
+    </section>
+  );
+}
+
+export function DriversManager() {
+  const { t } = useI18n();
+  const [activeTab, setActiveTab] = useState<'directory' | 'leaderboard'>('directory');
+
+  return (
+    <section className="space-y-5">
+      <div className="inline-flex w-full rounded-xl border border-slate-200 bg-white p-1 shadow-sm dark:border-slate-800 dark:bg-slate-900 sm:w-auto" role="tablist" aria-label={t('drivers.viewSelector')}>
+        <button
+          className={`flex min-h-11 flex-1 items-center justify-center gap-2 rounded-lg px-4 text-sm font-semibold transition sm:flex-none ${
+            activeTab === 'directory'
+              ? 'bg-teal-600 text-white shadow-sm'
+              : 'text-slate-600 hover:bg-slate-100 hover:text-slate-950 dark:text-slate-300 dark:hover:bg-slate-800 dark:hover:text-white'
+          }`}
+          id="drivers-directory-tab"
+          aria-controls="drivers-directory-panel"
+          aria-selected={activeTab === 'directory'}
+          role="tab"
+          type="button"
+          onClick={() => setActiveTab('directory')}
+        >
+          <span aria-hidden="true">📋</span>
+          {t('drivers.tabDirectory')}
+        </button>
+        <button
+          className={`flex min-h-11 flex-1 items-center justify-center gap-2 rounded-lg px-4 text-sm font-semibold transition sm:flex-none ${
+            activeTab === 'leaderboard'
+              ? 'bg-teal-600 text-white shadow-sm'
+              : 'text-slate-600 hover:bg-slate-100 hover:text-slate-950 dark:text-slate-300 dark:hover:bg-slate-800 dark:hover:text-white'
+          }`}
+          id="drivers-leaderboard-tab"
+          aria-controls="drivers-leaderboard-panel"
+          aria-selected={activeTab === 'leaderboard'}
+          role="tab"
+          type="button"
+          onClick={() => setActiveTab('leaderboard')}
+        >
+          <span aria-hidden="true">🏆</span>
+          {t('drivers.tabLeaderboard')}
+        </button>
+      </div>
+
+      <div
+        id="drivers-directory-panel"
+        aria-labelledby="drivers-directory-tab"
+        hidden={activeTab !== 'directory'}
+        role="tabpanel"
+      >
+        {activeTab === 'directory' && <DriverDirectory />}
+      </div>
+      <div
+        id="drivers-leaderboard-panel"
+        aria-labelledby="drivers-leaderboard-tab"
+        hidden={activeTab !== 'leaderboard'}
+        role="tabpanel"
+      >
+        {activeTab === 'leaderboard' && <DriverLeaderboard />}
       </div>
     </section>
   );

@@ -190,6 +190,24 @@ def reorder_routes(
     )
     if not batch_orders:
         _abort(db, 404, "Route batch was not found")
+    batch_depot_ids = {order.depot_id for order in batch_orders if order.depot_id}
+    if len(batch_depot_ids) > 1:
+        _abort(db, 409, "A route batch cannot span multiple depots")
+    if batch_depot_ids:
+        depot = db.get(Depot, next(iter(batch_depot_ids)))
+        if depot is None:
+            _abort(db, 404, "Route depot was not found")
+    if any(
+        vehicle.depot_id is not None and vehicle.depot_id != depot.id
+        for vehicle in vehicles
+    ):
+        _abort(db, 409, "All route vehicles must belong to the route depot")
+    for vehicle in vehicles:
+        if vehicle.depot_id is None:
+            vehicle.depot_id = depot.id
+    for order in batch_orders:
+        if order.depot_id is None:
+            order.depot_id = depot.id
     if any(order.status != OrderStatus.ASSIGNED for order in batch_orders):
         _abort(
             db,
@@ -349,6 +367,7 @@ def reorder_routes(
     )
     db.add(
         RouteAnalyticsSnapshot(
+            depot_id=depot.id,
             total_distance_km=total_distance_km,
             total_duration_mins=total_duration_mins,
             fuel_cost_vnd=cost_metrics.fuel_cost_vnd,

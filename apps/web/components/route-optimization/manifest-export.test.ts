@@ -55,6 +55,7 @@ const result: OptimizationResult = {
 const orders: Order[] = [
   {
     id: 'order-1',
+    depot_id: null,
     order_code: 'LR-001',
     tracking_token: 'a'.repeat(43),
     customer_name: '=Injected formula',
@@ -78,6 +79,7 @@ const orders: Order[] = [
   },
   {
     id: 'order-2',
+    depot_id: null,
     order_code: 'LR-002',
     tracking_token: 'b'.repeat(43),
     customer_name: 'Customer Two',

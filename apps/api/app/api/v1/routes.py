@@ -87,10 +87,11 @@ def dispatch_multi_stop_route(
 def optimize_routes(
     db: Session = Depends(get_db),
     current_user: User = Depends(require_roles(UserRole.ADMIN, UserRole.DISPATCHER)),
+    depot_id: UUID | None = None,
 ) -> RouteOptimizationResponse:
     """Optimize all pending and failed orders using the configured depot and fleet."""
     try:
-        run = optimize_pending_routes(db, actor=current_user)
+        run = optimize_pending_routes(db, depot_id=depot_id, actor=current_user)
     except RouteOptimizationError as exc:
         raise HTTPException(status_code=exc.status_code, detail=exc.detail) from exc
 

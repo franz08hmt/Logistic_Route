@@ -21,6 +21,7 @@ from app.db.models import (
 from app.services.cost_calculator import CostCalculation, calculate_route_costs
 from app.services.activity_logger import log_order_activity
 from app.services.driver_availability import vehicle_is_available_clause
+from app.services.depot_scope import resolve_depot
 from app.services.order_status import set_order_status
 from app.services.notification_service import ORDER_ASSIGNED, send_order_notification
 from app.services.region_matcher import regions_match
@@ -73,14 +74,6 @@ def dispatch_optimized_route(
     actor: User | None = None,
 ) -> MultiStopDispatchRun:
     """Optimize selected pending stops and persist one atomic dispatch batch."""
-    depot = db.scalar(
-        select(DatabaseDepot)
-        .order_by(DatabaseDepot.name, DatabaseDepot.id)
-        .limit(1)
-    )
-    if depot is None:
-        _abort(db, 404, "No depot is configured")
-
     # Lock the vehicle before orders, matching the global optimizer's lock
     # order so both dispatch paths cannot deadlock each other.
     row = db.execute(
@@ -105,6 +98,11 @@ def dispatch_optimized_route(
             },
         )
     driver, vehicle = row
+    depot = resolve_depot(db, vehicle.depot_id)
+    if depot is None:
+        _abort(db, 404, "No depot is configured")
+    if vehicle.depot_id is None:
+        vehicle.depot_id = depot.id
 
     orders = list(
         db.scalars(
@@ -116,6 +114,24 @@ def dispatch_optimized_route(
     )
     if len(orders) != len(order_ids):
         _abort(db, 404, "One or more selected orders were not found")
+    cross_depot = [
+        order.order_code
+        for order in orders
+        if order.depot_id is not None and order.depot_id != depot.id
+    ]
+    if cross_depot:
+        _abort(
+            db,
+            409,
+            {
+                "code": "DEPOT_MISMATCH",
+                "message": "Selected orders and vehicle must belong to the same depot",
+                "order_codes": cross_depot,
+            },
+        )
+    for order in orders:
+        if order.depot_id is None:
+            order.depot_id = depot.id
     non_pending = [
         order.order_code
         for order in orders
@@ -262,6 +278,7 @@ def dispatch_optimized_route(
     )
     db.add(
         RouteAnalyticsSnapshot(
+            depot_id=depot.id,
             total_distance_km=result.total_distance_km,
             total_duration_mins=result.total_duration_mins,
             fuel_cost_vnd=cost_metrics.fuel_cost_vnd,

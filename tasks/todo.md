@@ -57,3 +57,22 @@
 - [x] Add the mobile Hi-DPI SignaturePad and delivered-order upload flow.
 - [x] Add the printable delivery bill preview, tracking QR, POD/signature evidence, and print CSS.
 - [x] Add VI/EN labels and verify pytest, Vitest, typecheck, and production build.
+
+## Phase 11: National Multi-Depot Hubs & Operations Benchmark
+
+- [x] Add multi-depot database fields, migration `012`, and safe legacy backfill.
+- [x] Add protected depot CRUD and depot-scoped operational API queries.
+- [x] Seed HUB-SGN, HUB-HAN, HUB-DAD, and HUB-VCA idempotently.
+- [x] Add frontend depot contracts, context persistence, and accessible switcher.
+- [x] Add the admin depot page with operational aggregate cards and create form.
+- [x] Fly the Dispatch map to the selected hub and refetch scoped route/telemetry data.
+- [x] Add deterministic CVRP benchmark reporting for 10/25/50/100 orders.
+- [x] Verify backend/frontend tests, typecheck, production build, and benchmark execution.
+
+## Phase 12: Driver Performance Leaderboard & Eco Scorecard
+
+- [x] Add performance API schemas, deterministic scoring, depot filtering, and RBAC tests.
+- [x] Seed three drivers with varied 30-day delivery histories.
+- [x] Add validated frontend contracts and Excel-compatible CSV export.
+- [x] Add directory/leaderboard tabs, Top 3 podium, responsive ranking table, and 7/14/30-day filters.
+- [x] Add VI/EN translations and verify pytest, Vitest, typecheck, and production build.

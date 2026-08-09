@@ -1,7 +1,8 @@
 from dataclasses import dataclass
 from uuid import UUID, uuid4
 
-from sqlalchemy import select
+from fastapi import HTTPException
+from sqlalchemy import or_, select
 from sqlalchemy.orm import Session
 
 from app.db.models import (
@@ -16,6 +17,7 @@ from app.db.models import (
 from app.services.cost_calculator import CostCalculation, calculate_route_costs
 from app.services.activity_logger import log_order_activity
 from app.services.driver_availability import vehicle_is_available_clause
+from app.services.depot_scope import resolve_depot
 from app.services.order_status import set_order_status
 from app.services.notification_service import ORDER_ASSIGNED, send_order_notification
 from core_engine.solver import (
@@ -46,19 +48,29 @@ class RouteOptimizationError(Exception):
 def optimize_pending_routes(
     db: Session,
     *,
+    depot_id: UUID | None = None,
     actor: User | None = None,
 ) -> OptimizationRun:
     """Solve pending and failed orders and persist only returned assignments."""
-    depot = db.scalar(
-        select(DatabaseDepot).order_by(DatabaseDepot.name, DatabaseDepot.id).limit(1)
-    )
+    try:
+        depot = resolve_depot(db, depot_id)
+    except HTTPException as exc:
+        raise RouteOptimizationError(exc.status_code, str(exc.detail)) from exc
     if depot is None:
         raise RouteOptimizationError(404, "No depot is configured")
 
     vehicles = list(
         db.scalars(
             select(DatabaseVehicle)
-            .where(vehicle_is_available_clause())
+            .where(
+                vehicle_is_available_clause(),
+                or_(
+                    DatabaseVehicle.depot_id == depot.id,
+                    DatabaseVehicle.depot_id.is_(None),
+                )
+                if depot_id is None
+                else DatabaseVehicle.depot_id == depot.id,
+            )
             .order_by(DatabaseVehicle.license_plate)
             .with_for_update()
         ).all()
@@ -69,7 +81,15 @@ def optimize_pending_routes(
     pending_orders = list(
         db.scalars(
             select(DatabaseOrder)
-            .where(DatabaseOrder.status.in_([OrderStatus.PENDING, OrderStatus.FAILED]))
+            .where(
+                or_(
+                    DatabaseOrder.depot_id == depot.id,
+                    DatabaseOrder.depot_id.is_(None),
+                )
+                if depot_id is None
+                else DatabaseOrder.depot_id == depot.id,
+                DatabaseOrder.status.in_([OrderStatus.PENDING, OrderStatus.FAILED]),
+            )
             .order_by(DatabaseOrder.order_code)
             .with_for_update(skip_locked=True)
         ).all()
@@ -153,6 +173,7 @@ def optimize_pending_routes(
 
     db.add(
         RouteAnalyticsSnapshot(
+            depot_id=depot.id,
             total_distance_km=result.total_distance_km,
             total_duration_mins=result.total_duration_mins,
             fuel_cost_vnd=cost_metrics.fuel_cost_vnd,

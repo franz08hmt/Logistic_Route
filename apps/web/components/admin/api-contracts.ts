@@ -14,6 +14,7 @@ export type VehicleStatus = (typeof VEHICLE_STATUSES)[number];
 
 export type Order = {
   id: string;
+  depot_id: string | null;
   order_code: string;
   tracking_token: string;
   customer_name: string;
@@ -37,6 +38,7 @@ export type Order = {
 };
 
 export type CreateOrderInput = {
+  depot_id?: string | null;
   order_code: string;
   customer_name: string;
   customer_phone?: string | null;
@@ -54,6 +56,7 @@ export type DispatchOrderInput = {
 
 export type Vehicle = {
   id: string;
+  depot_id: string | null;
   license_plate: string;
   capacity_kg: number;
   vehicle_type: string;
@@ -65,6 +68,7 @@ export type Vehicle = {
 };
 
 export type CreateVehicleInput = {
+  depot_id?: string | null;
   license_plate: string;
   capacity_kg: number;
   vehicle_type: string;
@@ -113,6 +117,7 @@ function isOrder(value: unknown): value is Order {
 
   return (
     typeof value.id === 'string' &&
+    (typeof value.depot_id === 'string' || value.depot_id === null) &&
     typeof value.order_code === 'string' &&
     typeof value.tracking_token === 'string' &&
     value.tracking_token.length >= 32 &&
@@ -145,6 +150,7 @@ function isVehicle(value: unknown): value is Vehicle {
 
   return (
     typeof value.id === 'string' &&
+    (typeof value.depot_id === 'string' || value.depot_id === null) &&
     typeof value.license_plate === 'string' &&
     isFiniteNumber(value.capacity_kg) &&
     typeof value.vehicle_type === 'string' &&

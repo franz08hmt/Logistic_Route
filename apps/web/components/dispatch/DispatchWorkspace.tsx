@@ -16,6 +16,8 @@ import {
   subscribeToDataInvalidated,
 } from '@/components/admin/orders-sync';
 import { useI18n } from '@/context/I18nContext';
+import { useDepot } from '@/context/DepotContext';
+import { withDepotQuery } from '@/components/depot-contracts';
 import {
   DispatchApiError,
   requestMultiStopDispatch,
@@ -31,6 +33,7 @@ export function DispatchWorkspace({
   ) => void;
 }) {
   const { locale, t } = useI18n();
+  const { selectedDepot } = useDepot();
   const [orders, setOrders] = useState<Order[]>([]);
   const [drivers, setDrivers] = useState<AvailableDriver[]>([]);
   const [selectedOrderIds, setSelectedOrderIds] = useState<Set<string>>(new Set());
@@ -44,8 +47,8 @@ export function DispatchWorkspace({
   const loadData = useCallback(async () => {
     try {
       const [ordersPayload, driversPayload] = await Promise.all([
-        requestApi('/api/v1/orders'),
-        requestApi('/api/v1/admin/drivers/available'),
+        requestApi(withDepotQuery('/api/v1/orders', selectedDepot?.id ?? null)),
+        requestApi(withDepotQuery('/api/v1/admin/drivers/available', selectedDepot?.id ?? null)),
       ]);
       if (!isOrderList(ordersPayload) || !isAvailableDriverList(driversPayload)) {
         throw new Error(t('dispatch.invalidData'));
@@ -69,7 +72,7 @@ export function DispatchWorkspace({
     } finally {
       setIsLoading(false);
     }
-  }, [t]);
+  }, [selectedDepot?.id, t]);
 
   useEffect(() => {
     void loadData();

@@ -1,0 +1,47 @@
+{
+  "suite": "LogiRoute VN CVRP",
+  "seed": 2026,
+  "time_limit_seconds_per_case": 2,
+  "results": [
+    {
+      "orders": 10,
+      "vehicles": 1,
+      "solver_status": "OPTIMAL",
+      "solve_time_ms": 2049.45,
+      "total_distance_km": 79.97,
+      "capacity_utilization_percent": 70.64,
+      "assigned_orders": 10,
+      "unassigned_orders": 0
+    },
+    {
+      "orders": 25,
+      "vehicles": 3,
+      "solver_status": "OPTIMAL",
+      "solve_time_ms": 2004.46,
+      "total_distance_km": 113.13,
+      "capacity_utilization_percent": 90.33,
+      "assigned_orders": 25,
+      "unassigned_orders": 0
+    },
+    {
+      "orders": 50,
+      "vehicles": 5,
+      "solver_status": "OPTIMAL",
+      "solve_time_ms": 2006.91,
+      "total_distance_km": 192.11,
+      "capacity_utilization_percent": 88.13,
+      "assigned_orders": 50,
+      "unassigned_orders": 0
+    },
+    {
+      "orders": 100,
+      "vehicles": 9,
+      "solver_status": "OPTIMAL",
+      "solve_time_ms": 2022.38,
+      "total_distance_km": 305.23,
+      "capacity_utilization_percent": 93.45,
+      "assigned_orders": 100,
+      "unassigned_orders": 0
+    }
+  ]
+}

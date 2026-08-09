@@ -28,6 +28,7 @@ from app.schemas import (
 from app.services.pod_storage import MAX_POD_BYTES, store_pod_content
 from app.services.signature_storage import MAX_SIGNATURE_BYTES, store_signature_content
 from app.services.activity_logger import log_order_activity
+from app.services.depot_scope import resolve_depot
 from app.services.driver_availability import (
     ACTIVE_ROUTE_STATUSES,
     reconcile_vehicle_availability,
@@ -275,7 +276,7 @@ def get_driver_route(
     current_user: User = Depends(require_roles(UserRole.DRIVER)),
 ) -> DriverRouteRead:
     vehicle = _driver_vehicle(db, current_user)
-    depot = db.scalar(select(Depot).order_by(Depot.name, Depot.id).limit(1))
+    depot = resolve_depot(db, vehicle.depot_id if vehicle is not None else None)
     if vehicle is None:
         return DriverRouteRead(
             vehicle=None,

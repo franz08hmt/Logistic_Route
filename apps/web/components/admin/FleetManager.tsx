@@ -2,6 +2,8 @@
 
 import { useEffect, useState } from 'react';
 import { useI18n } from '@/context/I18nContext';
+import { useDepot } from '@/context/DepotContext';
+import { withDepotQuery } from '@/components/depot-contracts';
 
 import {
   isVehicleList,
@@ -15,6 +17,7 @@ import { subscribeToDataInvalidated } from './orders-sync';
 
 export function FleetManager() {
   const { locale, t } = useI18n();
+  const { selectedDepot } = useDepot();
   const [vehicles, setVehicles] = useState<Vehicle[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isCreateOpen, setIsCreateOpen] = useState(false);
@@ -25,7 +28,7 @@ export function FleetManager() {
 
     async function loadVehicles() {
       try {
-        const payload = await requestApi('/api/v1/vehicles');
+        const payload = await requestApi(withDepotQuery('/api/v1/vehicles', selectedDepot?.id ?? null));
         if (!isVehicleList(payload)) {
           throw new Error(t('fleet.invalidList'));
         }
@@ -58,13 +61,13 @@ export function FleetManager() {
       window.clearInterval(refreshInterval);
       unsubscribe();
     };
-  }, [t]);
+  }, [selectedDepot?.id, t]);
 
   async function createVehicle(input: CreateVehicleInput) {
     const payload = await requestApi('/api/v1/vehicles', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(input),
+      body: JSON.stringify({ ...input, depot_id: selectedDepot?.id ?? null }),
     });
     const createdVehicles = [payload];
     if (!isVehicleList(createdVehicles)) {

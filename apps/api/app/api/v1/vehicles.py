@@ -1,7 +1,7 @@
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, Response, status
-from sqlalchemy import select
+from sqlalchemy import or_, select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
@@ -10,6 +10,7 @@ from app.db.models import User, UserRole
 from app.core.security import get_current_user, require_roles
 from app.db.session import get_db
 from app.schemas import VehicleCreate, VehicleRead
+from app.services.depot_scope import resolve_depot
 
 
 router = APIRouter(prefix="/vehicles", tags=["vehicles"])
@@ -19,8 +20,17 @@ router = APIRouter(prefix="/vehicles", tags=["vehicles"])
 def list_vehicles(
     db: Session = Depends(get_db),
     _current_user: User = Depends(get_current_user),
+    depot_id: UUID | None = None,
 ) -> list[Vehicle]:
-    return list(db.scalars(select(Vehicle).order_by(Vehicle.license_plate)).all())
+    depot = resolve_depot(db, depot_id)
+    statement = select(Vehicle).order_by(Vehicle.license_plate)
+    if depot is not None:
+        statement = statement.where(
+            or_(Vehicle.depot_id == depot.id, Vehicle.depot_id.is_(None))
+            if depot_id is None
+            else Vehicle.depot_id == depot.id
+        )
+    return list(db.scalars(statement).all())
 
 
 @router.post("", response_model=VehicleRead, status_code=status.HTTP_201_CREATED)
@@ -35,7 +45,11 @@ def create_vehicle(
     if existing:
         raise HTTPException(status_code=409, detail="license_plate already exists")
 
-    vehicle = Vehicle(**payload.model_dump())
+    depot = resolve_depot(db, payload.depot_id)
+    vehicle = Vehicle(
+        **payload.model_dump(exclude={"depot_id"}),
+        depot_id=depot.id if depot is not None else None,
+    )
     db.add(vehicle)
     try:
         db.commit()

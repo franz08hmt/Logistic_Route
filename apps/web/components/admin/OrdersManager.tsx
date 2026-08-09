@@ -3,6 +3,8 @@
 import { useCallback, useEffect, useState } from 'react';
 
 import { useI18n } from '@/context/I18nContext';
+import { useDepot } from '@/context/DepotContext';
+import { withDepotQuery } from '@/components/depot-contracts';
 import {
   isAvailableDriverList,
   isOrderList,
@@ -28,6 +30,7 @@ import {
 
 export function OrdersManager() {
   const { t } = useI18n();
+  const { selectedDepot } = useDepot();
   const [orders, setOrders] = useState<Order[]>([]);
   const [availableDrivers, setAvailableDrivers] = useState<AvailableDriver[]>([]);
   const [vehicles, setVehicles] = useState<Vehicle[]>([]);
@@ -43,9 +46,9 @@ export function OrdersManager() {
   const loadData = useCallback(async () => {
     try {
       const [ordersPayload, driversPayload, vehiclesPayload] = await Promise.all([
-        requestApi('/api/v1/orders'),
-        requestApi('/api/v1/admin/drivers/available'),
-        requestApi('/api/v1/vehicles'),
+        requestApi(withDepotQuery('/api/v1/orders', selectedDepot?.id ?? null)),
+        requestApi(withDepotQuery('/api/v1/admin/drivers/available', selectedDepot?.id ?? null)),
+        requestApi(withDepotQuery('/api/v1/vehicles', selectedDepot?.id ?? null)),
       ]);
       if (
         !isOrderList(ordersPayload)
@@ -74,7 +77,7 @@ export function OrdersManager() {
     } finally {
       setIsLoading(false);
     }
-  }, [t]);
+  }, [selectedDepot?.id, t]);
 
   useEffect(() => {
     let active = true;
@@ -86,12 +89,10 @@ export function OrdersManager() {
 
     refresh();
     const refreshInterval = window.setInterval(refresh, 10000);
-    const unsubscribeOrders = subscribeToOrdersUpdated((updatedOrders) => {
-      if (active) {
-        setOrders(updatedOrders);
-        setError(null);
-        setIsLoading(false);
-      }
+    // A BroadcastChannel may originate from a tab viewing another depot.
+    // Re-fetch the selected depot instead of trusting the cross-tab payload.
+    const unsubscribeOrders = subscribeToOrdersUpdated(() => {
+      if (active) void loadData();
     });
     const unsubscribeInvalidation = subscribeToDataInvalidated(
       ['orders'],
@@ -110,7 +111,7 @@ export function OrdersManager() {
     const payload = await requestApi('/api/v1/orders', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(input),
+      body: JSON.stringify({ ...input, depot_id: selectedDepot?.id ?? null }),
     });
     if (!isOrderList([payload])) {
       throw new Error(t('orders.invalidItem'));
@@ -251,6 +252,7 @@ export function OrdersManager() {
       {isImportOpen && (
         <CsvImportDialog
           open
+          depotId={selectedDepot?.id ?? null}
           onClose={() => setIsImportOpen(false)}
           onImported={refreshAfterImport}
         />

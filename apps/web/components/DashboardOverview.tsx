@@ -3,7 +3,9 @@
 import { useEffect, useState } from 'react';
 
 import { useI18n } from '@/context/I18nContext';
+import { useDepot } from '@/context/DepotContext';
 import { apiFetch } from '@/lib/api-client';
+import { withDepotQuery } from './depot-contracts';
 import type { TranslationKey } from '@/lib/i18n/i18n';
 import {
   subscribeToDataInvalidated,
@@ -57,6 +59,7 @@ function DashboardSkeleton({ label }: { label: string }) {
 
 export function DashboardOverview() {
   const { locale, t } = useI18n();
+  const { selectedDepot } = useDepot();
   const [overview, setOverview] = useState<Overview | null>(null);
   const [hasError, setHasError] = useState(false);
   const numberLocale = locale === 'vi' ? 'vi-VN' : 'en-US';
@@ -74,7 +77,7 @@ export function DashboardOverview() {
 
     async function loadOverview() {
       try {
-        const response = await apiFetch('/api/v1/overview', {
+        const response = await apiFetch(withDepotQuery('/api/v1/overview', selectedDepot?.id ?? null), {
           cache: 'no-store',
           signal: controller.signal,
         });
@@ -109,7 +112,7 @@ export function DashboardOverview() {
       unsubscribeOrders();
       unsubscribeInvalidation();
     };
-  }, []);
+  }, [selectedDepot?.id]);
 
   if (!overview && !hasError) {
     return <DashboardSkeleton label={t('dashboard.loading')} />;

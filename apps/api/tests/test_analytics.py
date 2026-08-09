@@ -11,11 +11,14 @@ from app.api.v1.seed import SEED_ORDERS, build_seed_analytics_snapshots, seed_da
 from app.core.security import get_password_hash, require_roles
 from app.db.base import Base
 from app.db.models import (
+    Depot,
+    Order,
     OrderActivityLog,
     RouteAnalyticsSnapshot,
     User,
     UserRole,
     UserStatus,
+    Vehicle,
 )
 from app.services.analytics_history import build_analytics_history
 
@@ -168,11 +171,23 @@ def test_seed_creates_analytics_history_once() -> None:
         activity_count = db.scalar(
             select(func.count()).select_from(OrderActivityLog)
         )
+        depot_codes = set(db.scalars(select(Depot.code)).all())
+        default_depot = db.scalar(select(Depot).where(Depot.is_default.is_(True)))
+        unscoped_orders = db.scalar(
+            select(func.count()).select_from(Order).where(Order.depot_id.is_(None))
+        )
+        unscoped_vehicles = db.scalar(
+            select(func.count()).select_from(Vehicle).where(Vehicle.depot_id.is_(None))
+        )
 
     assert first.analytics_snapshots_created == 25
     assert second.analytics_snapshots_created == 0
     assert snapshot_count == 25
     assert activity_count == len(SEED_ORDERS)
+    assert depot_codes == {"HUB-SGN", "HUB-HAN", "HUB-DAD", "HUB-VCA"}
+    assert default_depot is not None and default_depot.code == "HUB-SGN"
+    assert unscoped_orders == 0
+    assert unscoped_vehicles == 0
 
 
 def test_analytics_history_endpoint_queries_persisted_snapshots() -> None:

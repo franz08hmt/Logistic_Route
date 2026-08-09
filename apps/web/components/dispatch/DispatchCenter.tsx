@@ -16,6 +16,8 @@ import {
   subscribeToDataInvalidated,
 } from '@/components/admin/orders-sync';
 import { useI18n } from '@/context/I18nContext';
+import { useDepot } from '@/context/DepotContext';
+import { withDepotQuery } from '@/components/depot-contracts';
 import { downloadManifestCsv } from '@/components/route-optimization/manifest-export';
 import {
   buildRouteReorderPayload,
@@ -47,6 +49,7 @@ const RouteMap = dynamic(
 
 export function DispatchCenter() {
   const { t } = useI18n();
+  const { selectedDepot } = useDepot();
   const mapSectionRef = useRef<HTMLElement>(null);
   const [routeResult, setRouteResult] = useState<OptimizationResult | null>(null);
   const [persistedRouteResult, setPersistedRouteResult] = useState<OptimizationResult | null>(null);
@@ -75,8 +78,8 @@ export function DispatchCenter() {
 
   async function refreshOperationalData() {
     const [ordersPayload, vehiclesPayload] = await Promise.all([
-      requestApi('/api/v1/orders'),
-      requestApi('/api/v1/vehicles'),
+      requestApi(withDepotQuery('/api/v1/orders', selectedDepot?.id ?? null)),
+      requestApi(withDepotQuery('/api/v1/vehicles', selectedDepot?.id ?? null)),
     ]);
     if (!isOrderList(ordersPayload) || !isVehicleList(vehiclesPayload)) {
       throw new Error(t('routeEditor.invalidOperationalData'));
@@ -96,7 +99,14 @@ export function DispatchCenter() {
     );
     // Translation changes do not need to refetch operational data.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [selectedDepot?.id]);
+
+  useEffect(() => {
+    setRouteResult(null);
+    setPersistedRouteResult(null);
+    setTelemetry([]);
+    setFeedback(null);
+  }, [selectedDepot?.id]);
 
   useEffect(() => {
     if (!feedback) return;
@@ -117,7 +127,10 @@ export function DispatchCenter() {
       const controller = new AbortController();
       activeController = controller;
       try {
-        const response = await requestVehicleTelemetry(controller.signal);
+        const response = await requestVehicleTelemetry(
+          controller.signal,
+          selectedDepot?.id ?? null,
+        );
         if (!disposed) {
           setTelemetry(response.vehicles);
           setHasTelemetryError(false);
@@ -136,7 +149,7 @@ export function DispatchCenter() {
       activeController?.abort();
       window.clearInterval(intervalId);
     };
-  }, [isTelemetryEnabled]);
+  }, [isTelemetryEnabled, selectedDepot?.id]);
 
   function commitResult(result: OptimizationResult) {
     setRouteResult(result);
@@ -167,7 +180,7 @@ export function DispatchCenter() {
     setIsOptimizingFleet(true);
     setFeedback(null);
     try {
-      const result = await requestFleetOptimization();
+      const result = await requestFleetOptimization(selectedDepot?.id ?? null);
       commitResult(result);
       const refreshedOrders = await refreshOperationalData();
       publishOrdersUpdated(refreshedOrders);
@@ -351,6 +364,7 @@ export function DispatchCenter() {
               result={routeResult}
               orders={orders}
               telemetry={isTelemetryEnabled ? telemetry : []}
+              activeDepot={selectedDepot}
             />
           </div>
           <RouteListPanel

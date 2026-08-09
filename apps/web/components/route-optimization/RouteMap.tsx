@@ -29,6 +29,7 @@ import {
   RouteLegend,
 } from './RouteMapUi';
 import type { OptimizationResult } from './types';
+import type { Depot } from '../depot-contracts';
 
 type RoutingState = 'idle' | 'loading' | 'ready' | 'fallback';
 
@@ -36,10 +37,12 @@ export function RouteMap({
   result,
   orders,
   telemetry = [],
+  activeDepot = null,
 }: {
   result: OptimizationResult | null;
   orders: Order[];
   telemetry?: VehicleTelemetryItem[];
+  activeDepot?: Depot | null;
 }) {
   const { locale, t } = useI18n();
   const [roadPositions, setRoadPositions] = useState<Record<string, LatLngTuple[]>>({});
@@ -120,6 +123,13 @@ export function RouteMap({
         : [],
     [result, routeLayers],
   );
+  const selectedDepot = result?.depot ?? activeDepot;
+  const emptyCenter = useMemo<LatLngTuple>(
+    () => selectedDepot
+      ? [selectedDepot.latitude, selectedDepot.longitude]
+      : HO_CHI_MINH_CITY,
+    [selectedDepot],
+  );
   const dateFormatter = useMemo(
     () => new Intl.DateTimeFormat(locale === 'vi' ? 'vi-VN' : 'en-US', {
       dateStyle: 'short',
@@ -143,15 +153,15 @@ export function RouteMap({
           maxZoom={19}
         />
         <ZoomControl position="bottomright" />
-        <FitRouteBounds positions={visiblePositions} />
+        <FitRouteBounds positions={visiblePositions} emptyCenter={emptyCenter} />
 
-        {result && (
+        {selectedDepot && (
           <Marker
-            position={[result.depot.latitude, result.depot.longitude]}
+            position={[selectedDepot.latitude, selectedDepot.longitude]}
             icon={depotIcon}
-            title={`${t('map.depot')}: ${result.depot.name}`}
+            title={`${t('map.depot')}: ${selectedDepot.name}`}
           >
-            <Popup><strong>{result.depot.name}</strong><br />{result.depot.address}</Popup>
+            <Popup><strong>{selectedDepot.name}</strong><br />{selectedDepot.address}</Popup>
           </Marker>
         )}
 

@@ -6,6 +6,7 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.db.models import Depot, Order, OrderStatus, Vehicle
+from app.services.depot_scope import resolve_depot
 
 
 EARTH_RADIUS_KM = 6_371.0088
@@ -122,7 +123,7 @@ def _find_segment_start(
     if previous_stop is not None:
         return previous_stop.latitude, previous_stop.longitude
 
-    depot = db.scalar(select(Depot).order_by(Depot.name, Depot.id).limit(1))
+    depot = resolve_depot(db, next_stop.depot_id)
     if depot is None:
         return None
     return depot.latitude, depot.longitude

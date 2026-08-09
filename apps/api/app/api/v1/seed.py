@@ -1,9 +1,10 @@
 import random
 from base64 import b64decode
 from datetime import datetime, timedelta, timezone
+from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, status
-from sqlalchemy import func, select
+from sqlalchemy import func, select, update
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
@@ -41,25 +42,69 @@ SEED_SIGNATURE_PNG = b64decode(
     "iVBORw0KGgoAAAANSUhEUgAAAUAAAABkCAYAAAD32uk+AAADuklEQVR42u3dTXLUOhSA0eyAIXtg//sLI0YEquPW/dU5VR6+59iRvpbVTvHxAQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAB7/Pj569NdAK6M35/D3QCujJ8IAgIIcGP8RBAQQIAb43dDAEUeBPDKCFrpgvhdGUCP+yCAX0bghjgIIIjflwHYHgdf+rx//9wFBFAArx437gZrHwG3xuH2b71tG2AgvzCQKwZ71jlE8Nx9c2cQwEGPVgJo2wAD+aUBnDXYK89jQts2QACvDWDV474AQuP4ZYUhc2IJoFWz363B/K2BGz3YsybVza/9CODf1+I3ayB/Rv53pyZX1vVPj6AVc49tFhYOgKjBkxXArq/9dF/ZbAmg/ctn90sAA+OQObk2B7DqQ2PS/RLAy+/Puxd2QwCtbHZ+YFTvX06+L2sieOKiTt6YzC8kOr72I4D9JnrGuacET/wKA5h9ro2PdVm/56jVevTYr3y9a0L0PP4W/38qf+YJAyFyYlcGMHPbo/KLveq/dLrmxfbKx8kO+3ECGLvXW7VS7xrAitgI3qAAZq8uNgYwcmJX3a+qx/jogP/vg+nkHBK9xP2ZKSuM6he/M19MrgxZxoTu/hj/6s/99DoFr0kAsydK1buLpye1AOY9ymc/xlfETPQuCWC3iRkxITpM7Ir3RCMe5aePMcFrHr8pj7JVL35HDtCo+1Cx1xq1kt2wchQ9AWy7MX9qUHdadXffc8v6QiNjxSx4C+LXZZM5+vpPTNQTAzlyYme/xhL5YZYxzir3+5StUQC7DczqAJ6eOFn3b0IAo/YLT3xYPPmmVwQXxC/z8aoiuBHnPPX6w6nrmPbicdaftX03SFFxEz8BLD1fxDnfmQAZEzvqXk0KefQq7skWiLI1i1/2/lL2o1D0+V6ZFNkTO2o8ZIc88zo8wgpgmwBWvPeY+R5Y9MTOCseE6zgVQVW6NIAV/7ZHdgCj/wa2yytM3VZnlVsEoid+5ZO4QwAnPtb963xZ4yF67FnlCWDbAE4ObtY1Zk+w6f/I/ZPrsMoTv5IIbo9u1Hk2jMmO80PwBDBtkG1fdU5anWWPyanBEz3xax2ITtE1CnvOA8ETwNU/S4cAGoFzg+f3J37jf57K6BqBVnkIYGkgqqJr9FnlTbn+1R8CHS+s8t8+lQ3hq4jKtGPdgDFp3INNqxSHCCIqDof4ISgOh/iJisMhVAiVwyEqiJ9DUED8RAUQQUEBYiPozgIAAAAAAAAAAAAAAAAAAAAAAAAAAAAAANDQb+y3GpHXeJMKAAAAAElFTkSuQmCC"
 )
 
-SEED_DEPOT = {
-    "name": "LogiRoute Depot Quan 12",
-    "address": "12 Quoc Lo 1A, Quan 12, Ho Chi Minh City",
-    "latitude": 10.8632,
-    "longitude": 106.6535,
-}
+SEED_DEPOTS = [
+    {
+        "code": "HUB-SGN",
+        "name": "Hub Miền Nam - Kho Quận 12",
+        "city": "TP. Hồ Chí Minh",
+        "address": "12 Quốc Lộ 1A, Quận 12, TP. Hồ Chí Minh",
+        "latitude": 10.8671,
+        "longitude": 106.6412,
+        "is_default": True,
+    },
+    {
+        "code": "HUB-HAN",
+        "name": "Hub Miền Bắc - Kho Long Biên",
+        "city": "Hà Nội",
+        "address": "Khu công nghiệp Đài Tư, Quận Long Biên, Hà Nội",
+        "latitude": 21.0362,
+        "longitude": 105.9015,
+        "is_default": False,
+    },
+    {
+        "code": "HUB-DAD",
+        "name": "Hub Miền Trung - Kho Hòa Cầm",
+        "city": "Đà Nẵng",
+        "address": "Khu công nghiệp Hòa Cầm, Quận Cẩm Lệ, Đà Nẵng",
+        "latitude": 16.0125,
+        "longitude": 108.1822,
+        "is_default": False,
+    },
+    {
+        "code": "HUB-VCA",
+        "name": "Hub Tây Nam Bộ - Kho Cái Răng",
+        "city": "Cần Thơ",
+        "address": "Khu công nghiệp Hưng Phú 1, Quận Cái Răng, Cần Thơ",
+        "latitude": 10.0072,
+        "longitude": 105.8011,
+        "is_default": False,
+    },
+]
 
 SEED_VEHICLES = [
     {
         "license_plate": "51D-12001",
         "capacity_kg": 1200,
+        "vehicle_type": "TRUCK",
         "driver_name": "Nguyen Van Minh",
         "status": VehicleStatus.ON_ROUTE,
+        "service_area": "TP. Ho Chi Minh",
     },
     {
         "license_plate": "51D-12002",
         "capacity_kg": 800,
+        "vehicle_type": "VAN",
         "driver_name": "Tran Thi Lan",
         "status": VehicleStatus.IDLE,
+        "service_area": "TP. Ho Chi Minh",
+    },
+    {
+        "license_plate": "51D-12003",
+        "capacity_kg": 1000,
+        "vehicle_type": "TRUCK",
+        "driver_name": "Huynh Tai",
+        "status": VehicleStatus.IDLE,
+        "service_area": "Tay Bac TP.HCM",
     },
 ]
 
@@ -121,27 +166,153 @@ SEED_USERS = [
         "email": "admin@logiroute.vn",
         "password": "123456",
         "full_name": "LogiRoute Admin",
+        "phone_number": "1900636099",
         "role": UserRole.ADMIN,
     },
     {
         "email": "dispatcher@logiroute.vn",
         "password": "123456",
         "full_name": "LogiRoute Dispatcher",
+        "phone_number": "0909000001",
         "role": UserRole.DISPATCHER,
     },
     {
         "email": "driver1@logiroute.vn",
         "password": "123456",
-        "full_name": "LogiRoute Driver 1",
+        "full_name": "Nguyen Van Minh",
+        "phone_number": "0909000101",
+        "role": UserRole.DRIVER,
+    },
+    {
+        "email": "driver2@logiroute.vn",
+        "password": "123456",
+        "full_name": "Tran Thi Lan",
+        "phone_number": "0909000102",
+        "role": UserRole.DRIVER,
+    },
+    {
+        "email": "driver3@logiroute.vn",
+        "password": "123456",
+        "full_name": "Huynh Tai",
+        "phone_number": "0909000103",
         "role": UserRole.DRIVER,
     },
 ]
+
+SEED_DRIVER_PERFORMANCE = [
+    {
+        "email": "driver1@logiroute.vn",
+        "license_plate": "51D-12001",
+        "delivered": 12,
+        "failed": 1,
+        "latitude_delta": 0.34,
+        "longitude_delta": 0.08,
+        "deviation_status": "ON_ROUTE",
+    },
+    {
+        "email": "driver2@logiroute.vn",
+        "license_plate": "51D-12002",
+        "delivered": 9,
+        "failed": 3,
+        "latitude_delta": 0.22,
+        "longitude_delta": 0.06,
+        "deviation_status": "STOPPED",
+    },
+    {
+        "email": "driver3@logiroute.vn",
+        "license_plate": "51D-12003",
+        "delivered": 5,
+        "failed": 5,
+        "latitude_delta": 0.12,
+        "longitude_delta": 0.04,
+        "deviation_status": "OFF_ROUTE_WARNING",
+    },
+]
+
+
+def ensure_seed_users(db: Session) -> tuple[dict[str, User], int]:
+    created_count = 0
+    users_by_email: dict[str, User] = {}
+    for user_data in SEED_USERS:
+        user = db.scalar(select(User).where(User.email == user_data["email"]))
+        if user is None:
+            user = User(
+                email=user_data["email"],
+                hashed_password=get_password_hash(user_data["password"]),
+                full_name=user_data["full_name"],
+                phone_number=user_data["phone_number"],
+                role=user_data["role"],
+                status=UserStatus.ACTIVE,
+            )
+            db.add(user)
+            created_count += 1
+        users_by_email[user_data["email"]] = user
+    db.flush()
+    return users_by_email, created_count
+
+
+def seed_driver_performance_history(
+    db: Session,
+    *,
+    depot: Depot,
+    users_by_email: dict[str, User],
+    vehicles_by_plate: dict[str, Vehicle],
+    now: datetime | None = None,
+) -> int:
+    """Create deterministic terminal-order history without changing live orders."""
+    reference = now or datetime.now(timezone.utc)
+    created_count = 0
+    for driver_index, profile in enumerate(SEED_DRIVER_PERFORMANCE, start=1):
+        driver = users_by_email[profile["email"]]
+        vehicle = vehicles_by_plate[profile["license_plate"]]
+        if vehicle.driver_id in {None, driver.id}:
+            vehicle.driver_id = driver.id
+            vehicle.driver_name = driver.full_name
+        vehicle.route_deviation_status = profile["deviation_status"]
+
+        delivered = int(profile["delivered"])
+        failed = int(profile["failed"])
+        for index in range(delivered + failed):
+            order_code = f"LR-PERF-{driver_index}-{index + 1:02d}"
+            if db.scalar(select(Order.id).where(Order.order_code == order_code)):
+                continue
+            day_offset = (index * 2 + driver_index) % 29
+            latitude = depot.latitude + float(profile["latitude_delta"]) + index * 0.003
+            longitude = depot.longitude + float(profile["longitude_delta"]) - index * 0.002
+            db.add(
+                Order(
+                    depot_id=depot.id,
+                    order_code=order_code,
+                    tracking_token=generate_tracking_token(),
+                    customer_name=f"Performance Customer {driver_index}-{index + 1}",
+                    customer_phone=f"0908{driver_index:02d}{index:04d}",
+                    address=f"Demo delivery point {driver_index}-{index + 1}",
+                    latitude=latitude,
+                    longitude=longitude,
+                    weight_kg=20 + index * 3,
+                    status=(
+                        OrderStatus.DELIVERED
+                        if index < delivered
+                        else OrderStatus.FAILED
+                    ),
+                    status_updated_at=(
+                        reference
+                        - timedelta(days=day_offset, hours=(index * 3) % 20)
+                    ),
+                    assigned_vehicle_id=vehicle.id,
+                    stop_sequence=1,
+                    delivery_region=vehicle.service_area,
+                )
+            )
+            created_count += 1
+    return created_count
 
 
 def build_seed_analytics_snapshots(
     *,
     now: datetime | None = None,
     count: int = 25,
+    depot_id: UUID | None = None,
 ) -> list[RouteAnalyticsSnapshot]:
     """Build deterministic, realistic demo history without touching the database."""
     reference = now or datetime.now(timezone.utc)
@@ -164,6 +335,7 @@ def build_seed_analytics_snapshots(
         )
         snapshots.append(
             RouteAnalyticsSnapshot(
+                depot_id=depot_id,
                 total_distance_km=distance,
                 total_duration_mins=duration,
                 fuel_cost_vnd=costs.fuel_cost_vnd,
@@ -189,11 +361,24 @@ def build_seed_analytics_snapshots(
 @router.post("/seed", response_model=SeedResponse, status_code=status.HTTP_201_CREATED)
 def seed_data(db: Session = Depends(get_db)) -> SeedResponse:
     """Insert the local demo dataset once; repeated calls remain idempotent."""
-    depot = db.scalar(select(Depot).where(Depot.name == SEED_DEPOT["name"]))
-    depot_created = depot is None
-    if depot is None:
-        depot = Depot(**SEED_DEPOT)
-        db.add(depot)
+    # Keep the database-level single-default invariant deterministic for demos.
+    db.execute(update(Depot).values(is_default=False))
+    depots_created = 0
+    depots_by_code: dict[str, Depot] = {}
+    for depot_data in SEED_DEPOTS:
+        depot = db.scalar(select(Depot).where(Depot.code == depot_data["code"]))
+        if depot is None:
+            depot = Depot(**depot_data)
+            db.add(depot)
+            depots_created += 1
+        else:
+            for field, value in depot_data.items():
+                setattr(depot, field, value)
+        depots_by_code[depot_data["code"]] = depot
+    db.flush()
+    depot = depots_by_code["HUB-SGN"]
+    depot_created = depots_created > 0
+    users_by_email, _users_created = ensure_seed_users(db)
 
     vehicles_created = 0
     for vehicle_data in SEED_VEHICLES:
@@ -201,19 +386,43 @@ def seed_data(db: Session = Depends(get_db)) -> SeedResponse:
             select(Vehicle).where(Vehicle.license_plate == vehicle_data["license_plate"])
         )
         if exists is None:
-            db.add(Vehicle(**vehicle_data))
+            db.add(Vehicle(**vehicle_data, depot_id=depot.id))
             vehicles_created += 1
+        elif exists.depot_id is None:
+            exists.depot_id = depot.id
+    db.flush()
+    vehicles_by_plate = {
+        vehicle.license_plate: vehicle
+        for vehicle in db.scalars(
+            select(Vehicle).where(
+                Vehicle.license_plate.in_(
+                    [vehicle["license_plate"] for vehicle in SEED_VEHICLES]
+                )
+            )
+        ).all()
+    }
 
-    orders_created = 0
+    orders_created = seed_driver_performance_history(
+        db,
+        depot=depot,
+        users_by_email=users_by_email,
+        vehicles_by_plate=vehicles_by_plate,
+    )
     seeded_orders: list[Order] = []
     for order_data in SEED_ORDERS:
         exists = db.scalar(select(Order).where(Order.order_code == order_data["order_code"]))
         if exists is None:
-            order = Order(**order_data, tracking_token=generate_tracking_token())
+            order = Order(
+                **order_data,
+                tracking_token=generate_tracking_token(),
+                depot_id=depot.id,
+            )
             db.add(order)
             seeded_orders.append(order)
             orders_created += 1
         else:
+            if exists.depot_id is None:
+                exists.depot_id = depot.id
             if not exists.tracking_token:
                 exists.tracking_token = generate_tracking_token()
             if exists.customer_phone is None:
@@ -243,7 +452,8 @@ def seed_data(db: Session = Depends(get_db)) -> SeedResponse:
     analytics_snapshots_created = max(0, 25 - existing_analytics)
     if analytics_snapshots_created:
         snapshots = build_seed_analytics_snapshots(
-            count=analytics_snapshots_created
+            count=analytics_snapshots_created,
+            depot_id=depot.id,
         )
         db.add_all(snapshots)
 
@@ -280,6 +490,7 @@ def seed_data(db: Session = Depends(get_db)) -> SeedResponse:
             db.scalars(
                 select(Order)
                 .where(
+                    Order.depot_id == depot.id,
                     Order.status == OrderStatus.ASSIGNED,
                     Order.assigned_vehicle_id.is_(None),
                 )
@@ -292,7 +503,10 @@ def seed_data(db: Session = Depends(get_db)) -> SeedResponse:
         active_vehicles = list(
             db.scalars(
                 select(Vehicle)
-                .where(Vehicle.status == VehicleStatus.ON_ROUTE)
+                .where(
+                    Vehicle.depot_id == depot.id,
+                    Vehicle.status == VehicleStatus.ON_ROUTE,
+                )
                 .order_by(Vehicle.license_plate)
             ).all()
         )
@@ -341,6 +555,7 @@ def seed_data(db: Session = Depends(get_db)) -> SeedResponse:
     db.refresh(depot)
     return SeedResponse(
         depot_created=depot_created,
+        depots_created=depots_created,
         vehicles_created=vehicles_created,
         orders_created=orders_created,
         analytics_snapshots_created=analytics_snapshots_created,
@@ -351,20 +566,7 @@ def seed_data(db: Session = Depends(get_db)) -> SeedResponse:
 @router.post("/seed/users", response_model=SeedUsersResponse, status_code=status.HTTP_201_CREATED)
 def seed_users(db: Session = Depends(get_db)) -> SeedUsersResponse:
     """Create local demo users once; repeated calls do not overwrite accounts."""
-    created_count = 0
-    for user_data in SEED_USERS:
-        exists = db.scalar(select(User).where(User.email == user_data["email"]))
-        if exists is None:
-            db.add(
-                User(
-                    email=user_data["email"],
-                    hashed_password=get_password_hash(user_data["password"]),
-                    full_name=user_data["full_name"],
-                    role=user_data["role"],
-                    status=UserStatus.ACTIVE,
-                )
-            )
-            created_count += 1
+    _users_by_email, created_count = ensure_seed_users(db)
 
     try:
         db.commit()

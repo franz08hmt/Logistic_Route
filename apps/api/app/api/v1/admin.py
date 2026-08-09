@@ -1,9 +1,10 @@
 from datetime import datetime, timedelta, timezone
-from typing import Annotated
+from typing import Annotated, Literal
 from uuid import UUID
 from zoneinfo import ZoneInfo
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
+from pydantic import BeforeValidator
 from sqlalchemy import case, func, or_, select
 from sqlalchemy.orm import Session
 
@@ -21,6 +22,7 @@ from app.db.session import get_db
 from app.schemas import (
     AvailableDriverRead,
     DriverDetailRead,
+    DriverPerformanceResponse,
     UserRead,
     UserStatusUpdate,
     VehicleAssignmentRequest,
@@ -28,6 +30,8 @@ from app.schemas import (
     VehicleTelemetryResponse,
 )
 from app.services.driver_availability import vehicle_is_available_clause
+from app.services.driver_performance import build_driver_performance_report
+from app.services.depot_scope import resolve_depot
 from app.services.telemetry import find_next_active_stops
 
 
@@ -41,19 +45,26 @@ def list_vehicle_telemetry(
     _current_user: User = Depends(
         require_roles(UserRole.ADMIN, UserRole.DISPATCHER)
     ),
+    depot_id: UUID | None = None,
 ) -> VehicleTelemetryResponse:
+    depot = resolve_depot(db, depot_id)
     generated_at = datetime.now(timezone.utc)
     freshness_cutoff = generated_at - timedelta(hours=1)
+    statement = select(Vehicle).where(
+        or_(
+            Vehicle.status == VehicleStatus.ON_ROUTE,
+            Vehicle.last_gps_ping_at >= freshness_cutoff,
+        )
+    )
+    if depot is not None:
+        statement = statement.where(
+            or_(Vehicle.depot_id == depot.id, Vehicle.depot_id.is_(None))
+            if depot_id is None
+            else Vehicle.depot_id == depot.id
+        )
     vehicles = list(
         db.scalars(
-            select(Vehicle)
-            .where(
-                or_(
-                    Vehicle.status == VehicleStatus.ON_ROUTE,
-                    Vehicle.last_gps_ping_at >= freshness_cutoff,
-                )
-            )
-            .order_by(Vehicle.license_plate)
+            statement.order_by(Vehicle.license_plate)
         ).all()
     )
     next_stops = find_next_active_stops(db, (vehicle.id for vehicle in vehicles))
@@ -94,8 +105,10 @@ def list_available_drivers(
     _current_user: User = Depends(
         require_roles(UserRole.ADMIN, UserRole.DISPATCHER)
     ),
+    depot_id: UUID | None = None,
 ) -> list[AvailableDriverRead]:
-    rows = db.execute(
+    depot = resolve_depot(db, depot_id)
+    statement = (
         select(User, Vehicle)
         .join(Vehicle, Vehicle.driver_id == User.id)
         .where(
@@ -104,7 +117,14 @@ def list_available_drivers(
             vehicle_is_available_clause(),
         )
         .order_by(User.full_name, Vehicle.license_plate)
-    ).all()
+    )
+    if depot is not None:
+        statement = statement.where(
+            or_(Vehicle.depot_id == depot.id, Vehicle.depot_id.is_(None))
+            if depot_id is None
+            else Vehicle.depot_id == depot.id
+        )
+    rows = db.execute(statement).all()
     return [
         AvailableDriverRead(
             driver_id=driver.id,
@@ -128,6 +148,7 @@ def list_drivers(
         Query(alias="status"),
     ] = None,
     has_vehicle: bool | None = None,
+    depot_id: UUID | None = None,
     db: Session = Depends(get_db),
     _current_user: User = Depends(
         require_roles(UserRole.ADMIN, UserRole.DISPATCHER)
@@ -217,6 +238,9 @@ def list_drivers(
         statement = statement.where(Vehicle.id.is_not(None))
     elif has_vehicle is False:
         statement = statement.where(Vehicle.id.is_(None))
+    if depot_id is not None:
+        resolve_depot(db, depot_id)
+        statement = statement.where(Vehicle.depot_id == depot_id)
 
     return [
         DriverDetailRead(
@@ -244,6 +268,29 @@ def list_drivers(
             failed_count,
         ) in db.execute(statement).all()
     ]
+
+
+@router.get("/drivers/performance", response_model=DriverPerformanceResponse)
+def get_driver_performance(
+    days: Annotated[
+        Literal[7, 14, 30],
+        BeforeValidator(int),
+        Query(),
+    ] = 30,
+    depot_id: UUID | None = None,
+    db: Session = Depends(get_db),
+    _current_user: User = Depends(
+        require_roles(UserRole.ADMIN, UserRole.DISPATCHER)
+    ),
+) -> DriverPerformanceResponse:
+    """Return deterministic driver rankings for a branch or the full network."""
+    if depot_id is not None:
+        resolve_depot(db, depot_id)
+    return build_driver_performance_report(
+        db,
+        days=days,
+        depot_id=depot_id,
+    )
 
 
 @router.patch("/users/{user_id}/status", response_model=UserRead)

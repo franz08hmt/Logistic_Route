@@ -5,6 +5,7 @@ import type {
 } from '../route-optimization/types';
 import { isOptimizationResult } from '../route-optimization/types';
 import type { RouteReorderPayload } from '../route-optimization/manual-route-editor';
+import { withDepotQuery } from '../depot-contracts';
 
 export type MultiStopDispatchInput = {
   order_ids: string[];
@@ -228,8 +229,8 @@ async function requestOptimizationResult(
   return payload;
 }
 
-export function requestFleetOptimization(): Promise<OptimizationResult> {
-  return requestOptimizationResult('/api/v1/routes/optimize');
+export function requestFleetOptimization(depotId?: string | null): Promise<OptimizationResult> {
+  return requestOptimizationResult(withDepotQuery('/api/v1/routes/optimize', depotId ?? null));
 }
 
 export function requestRouteReorder(

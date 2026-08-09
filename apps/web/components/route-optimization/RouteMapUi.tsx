@@ -42,12 +42,18 @@ export function createVehicleIcon(
   });
 }
 
-export function FitRouteBounds({ positions }: { positions: LatLngTuple[] }) {
+export function FitRouteBounds({
+  positions,
+  emptyCenter = HO_CHI_MINH_CITY,
+}: {
+  positions: LatLngTuple[];
+  emptyCenter?: LatLngTuple;
+}) {
   const map = useMap();
 
   useEffect(() => {
     if (positions.length === 0) {
-      map.setView(HO_CHI_MINH_CITY, 12);
+      map.flyTo(emptyCenter, 12, { duration: 1.5 });
     } else if (positions.length > 1) {
       const isDesktop = map.getSize().x >= 768;
       map.fitBounds(latLngBounds(positions), {
@@ -58,7 +64,7 @@ export function FitRouteBounds({ positions }: { positions: LatLngTuple[] }) {
     } else {
       map.setView(positions[0], 14);
     }
-  }, [map, positions]);
+  }, [emptyCenter, map, positions]);
 
   return null;
 }

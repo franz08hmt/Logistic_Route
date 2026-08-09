@@ -7,10 +7,11 @@ import { useAuth } from '@/context/AuthContext';
 import { useI18n } from '@/context/I18nContext';
 import type { TranslationKey } from '@/lib/i18n/i18n';
 import { LanguageSwitcher } from './LanguageSwitcher';
+import { DepotSwitcher } from './DepotSwitcher';
 import { ThemeToggle } from './ThemeToggle';
 import { UserProfileMenu } from './UserProfileMenu';
 
-type NavIconName = 'dashboard' | 'orders' | 'fleet' | 'dispatch' | 'driver' | 'users' | 'analytics';
+type NavIconName = 'dashboard' | 'orders' | 'fleet' | 'dispatch' | 'driver' | 'users' | 'analytics' | 'depots';
 
 const adminLinks = [
   { labelKey: 'navigation.dashboard', href: '/dashboard', icon: 'dashboard' },
@@ -29,6 +30,12 @@ const userManagementLink = {
   labelKey: 'navigation.users',
   href: '/admin/users',
   icon: 'users',
+} satisfies { labelKey: TranslationKey; href: string; icon: NavIconName };
+
+const depotManagementLink = {
+  labelKey: 'navigation.depots',
+  href: '/admin/depots',
+  icon: 'depots',
 } satisfies { labelKey: TranslationKey; href: string; icon: NavIconName };
 
 function NavIcon({ name }: { name: NavIconName }) {
@@ -58,6 +65,9 @@ function NavIcon({ name }: { name: NavIconName }) {
   }
   if (name === 'analytics') {
     return <svg {...common}><path d="M4 19V9M10 19V5M16 19v-7M22 19H2" /><path d="m4 7 6-4 6 6 5-5" /></svg>;
+  }
+  if (name === 'depots') {
+    return <svg {...common}><path d="M3 21h18M5 21V8l7-5 7 5v13M9 21v-6h6v6M8 10h.01M12 10h.01M16 10h.01" /></svg>;
   }
   return <svg {...common}><path d="M5 19h14M7 17v-6l5-7 5 7v6M9 12h6" /><circle cx="12" cy="9" r="1.5" /></svg>;
 }
@@ -90,7 +100,7 @@ export function Navigation() {
     user?.role === 'DRIVER'
       ? driverLinks
       : user?.role === 'ADMIN'
-        ? [...adminLinks, userManagementLink]
+        ? [...adminLinks, userManagementLink, depotManagementLink]
         : user?.role === 'DISPATCHER'
           ? adminLinks
         : adminLinks;
@@ -99,22 +109,26 @@ export function Navigation() {
     5: 'grid-cols-5',
     6: 'grid-cols-6',
     7: 'grid-cols-7',
+    8: 'grid-cols-8',
   }[links.length] ?? 'grid-cols-4';
 
   return (
     <>
-      <header className="sticky top-0 z-[1000] flex h-16 items-center justify-between border-b border-slate-200 bg-white/90 px-4 backdrop-blur-xl dark:border-slate-800 dark:bg-slate-950/90 lg:hidden">
-        <Logo />
-        <div className="flex items-center gap-2">
-          {user?.role === 'DRIVER' ? (
-            <UserProfileMenu />
-          ) : (
-            <>
-              <LanguageSwitcher />
-              <ThemeToggle />
-            </>
-          )}
+      <header className="sticky top-0 z-[1000] flex min-h-16 flex-wrap items-center justify-between gap-2 border-b border-slate-200 bg-white/90 px-4 py-2 backdrop-blur-xl dark:border-slate-800 dark:bg-slate-950/90 lg:hidden">
+        <div className="flex w-full items-center justify-between gap-2">
+          <Logo />
+          <div className="flex items-center gap-2">
+            {user?.role === 'DRIVER' ? (
+              <UserProfileMenu />
+            ) : (
+              <>
+                <LanguageSwitcher />
+                <ThemeToggle />
+              </>
+            )}
+          </div>
         </div>
+        {user && user.role !== 'DRIVER' && <DepotSwitcher compact />}
       </header>
 
       <aside className="fixed inset-y-0 left-0 z-50 hidden w-64 flex-col border-r border-slate-200 bg-white px-4 py-5 dark:border-slate-800 dark:bg-slate-950 lg:flex">
@@ -123,6 +137,9 @@ export function Navigation() {
           <LanguageSwitcher />
           <ThemeToggle />
         </div>
+        {user && user.role !== 'DRIVER' && (
+          <div className="mt-4 px-2"><DepotSwitcher /></div>
+        )}
 
         <nav className="mt-6 space-y-1" aria-label={t('navigation.main')}>
           {links.map((link) => {

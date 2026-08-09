@@ -1,4 +1,5 @@
 import { apiFetch } from '../../lib/api-client';
+import { withDepotQuery } from '../depot-contracts';
 
 export type VehicleStatus = 'IDLE' | 'ON_ROUTE';
 export type RouteDeviationStatus = 'ON_ROUTE' | 'OFF_ROUTE_WARNING' | 'STOPPED';
@@ -103,8 +104,12 @@ export function summarizeTelemetry(vehicles: VehicleTelemetryItem[]) {
 
 export async function requestVehicleTelemetry(
   signal?: AbortSignal,
+  depotId?: string | null,
 ): Promise<VehicleTelemetryResponse> {
-  const response = await apiFetch('/api/v1/admin/telemetry', { signal });
+  const response = await apiFetch(
+    withDepotQuery('/api/v1/admin/telemetry', depotId ?? null),
+    { signal },
+  );
   const payload: unknown = await response.json().catch(() => null);
   if (!response.ok) {
     const detail = isRecord(payload) && typeof payload.detail === 'string'

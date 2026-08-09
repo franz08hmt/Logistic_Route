@@ -8,6 +8,7 @@ import {
 } from 'react';
 
 import { useI18n } from '@/context/I18nContext';
+import { withDepotQuery } from '@/components/depot-contracts';
 import { apiFetch } from '@/lib/api-client';
 import { ModalDialog } from './ModalDialog';
 import { requestApi } from './api-contracts';
@@ -23,6 +24,7 @@ type CsvImportDialogProps = {
   open: boolean;
   onClose: () => void;
   onImported: () => Promise<void> | void;
+  depotId?: string | null;
 };
 
 type Step = 'upload' | 'preview' | 'result';
@@ -59,6 +61,7 @@ export function CsvImportDialog({
   open,
   onClose,
   onImported,
+  depotId = null,
 }: CsvImportDialogProps) {
   const { t } = useI18n();
   const inputRef = useRef<HTMLInputElement>(null);
@@ -158,7 +161,7 @@ export function CsvImportDialog({
     try {
       const formData = new FormData();
       formData.append('file', file);
-      const payload = await requestApi('/api/v1/orders/import', {
+      const payload = await requestApi(withDepotQuery('/api/v1/orders/import', depotId), {
         method: 'POST',
         body: formData,
       });

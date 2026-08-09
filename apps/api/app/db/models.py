@@ -2,7 +2,7 @@ import uuid
 from datetime import datetime, timezone
 from enum import Enum
 
-from sqlalchemy import DateTime, Double, Enum as SqlEnum, ForeignKey, String, Text, func
+from sqlalchemy import Boolean, DateTime, Double, Enum as SqlEnum, ForeignKey, String, Text, func
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import Mapped, mapped_column
 
@@ -76,16 +76,42 @@ class Depot(Base):
     __tablename__ = "depots"
 
     id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    code: Mapped[str] = mapped_column(
+        String(20),
+        unique=True,
+        index=True,
+        nullable=False,
+        default=lambda: f"HUB-{uuid.uuid4().hex[:8].upper()}",
+    )
     name: Mapped[str] = mapped_column(String(150), nullable=False)
+    city: Mapped[str] = mapped_column(
+        String(100),
+        nullable=False,
+        default="Chưa phân vùng",
+        server_default="Chưa phân vùng",
+    )
     address: Mapped[str] = mapped_column(Text, nullable=False)
     latitude: Mapped[float] = mapped_column(Double, nullable=False)
     longitude: Mapped[float] = mapped_column(Double, nullable=False)
+    is_default: Mapped[bool] = mapped_column(
+        Boolean,
+        nullable=False,
+        default=False,
+        server_default="false",
+        index=True,
+    )
 
 
 class Vehicle(Base):
     __tablename__ = "vehicles"
 
     id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    depot_id: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True),
+        ForeignKey("depots.id", ondelete="SET NULL"),
+        nullable=True,
+        index=True,
+    )
     license_plate: Mapped[str] = mapped_column(String(30), unique=True, index=True, nullable=False)
     capacity_kg: Mapped[float] = mapped_column(Double, nullable=False)
     vehicle_type: Mapped[str] = mapped_column(
@@ -130,6 +156,12 @@ class Order(Base):
     __tablename__ = "orders"
 
     id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    depot_id: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True),
+        ForeignKey("depots.id", ondelete="SET NULL"),
+        nullable=True,
+        index=True,
+    )
     order_code: Mapped[str] = mapped_column(String(50), unique=True, index=True, nullable=False)
     tracking_token: Mapped[str] = mapped_column(
         String(64),
@@ -261,6 +293,12 @@ class RouteAnalyticsSnapshot(Base):
         UUID(as_uuid=True),
         primary_key=True,
         default=uuid.uuid4,
+    )
+    depot_id: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True),
+        ForeignKey("depots.id", ondelete="SET NULL"),
+        nullable=True,
+        index=True,
     )
     total_distance_km: Mapped[float] = mapped_column(Double, nullable=False)
     total_duration_mins: Mapped[float] = mapped_column(Double, nullable=False)

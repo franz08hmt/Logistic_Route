@@ -101,15 +101,65 @@ class SeedUsersResponse(BaseModel):
     users: list[UserRead]
 
 
-class DepotRead(OrmSchema):
-    id: UUID
-    name: str
-    address: str
+class DepotBase(BaseModel):
+    code: str = Field(min_length=3, max_length=20, pattern=r"^[A-Z0-9-]+$")
+    name: str = Field(min_length=2, max_length=150)
+    city: str = Field(min_length=2, max_length=100)
+    address: str = Field(min_length=3, max_length=1000)
     latitude: float = Field(ge=-90, le=90)
     longitude: float = Field(ge=-180, le=180)
+    is_default: bool = False
+
+    @field_validator("code", mode="before")
+    @classmethod
+    def normalize_depot_code(cls, value: object) -> object:
+        return value.strip().upper() if isinstance(value, str) else value
+
+    @field_validator("name", "city", "address")
+    @classmethod
+    def normalize_depot_text(cls, value: str) -> str:
+        return value.strip()
+
+
+class DepotCreate(DepotBase):
+    pass
+
+
+class DepotUpdate(BaseModel):
+    code: str | None = Field(default=None, min_length=3, max_length=20, pattern=r"^[A-Z0-9-]+$")
+    name: str | None = Field(default=None, min_length=2, max_length=150)
+    city: str | None = Field(default=None, min_length=2, max_length=100)
+    address: str | None = Field(default=None, min_length=3, max_length=1000)
+    latitude: float | None = Field(default=None, ge=-90, le=90)
+    longitude: float | None = Field(default=None, ge=-180, le=180)
+    is_default: bool | None = None
+
+    @field_validator("code", mode="before")
+    @classmethod
+    def normalize_depot_code(cls, value: object) -> object:
+        return value.strip().upper() if isinstance(value, str) else value
+
+    @field_validator("name", "city", "address")
+    @classmethod
+    def normalize_optional_depot_text(cls, value: str | None) -> str | None:
+        return value.strip() if value is not None else None
+
+    @model_validator(mode="after")
+    def require_at_least_one_change(self) -> "DepotUpdate":
+        if not self.model_fields_set:
+            raise ValueError("at least one depot field must be provided")
+        return self
+
+
+class DepotRead(DepotBase, OrmSchema):
+    id: UUID
+    vehicle_count: int = Field(default=0, ge=0)
+    active_orders_count: int = Field(default=0, ge=0)
+    total_vehicle_capacity_kg: float = Field(default=0, ge=0)
 
 
 class VehicleCreate(BaseModel):
+    depot_id: UUID | None = None
     license_plate: str = Field(min_length=2, max_length=30)
     capacity_kg: float = Field(gt=0)
     vehicle_type: str = Field(default="TRUCK", min_length=2, max_length=50)
@@ -165,6 +215,7 @@ class VehicleAssignmentRequest(BaseModel):
 
 
 class OrderBase(BaseModel):
+    depot_id: UUID | None = None
     order_code: str = Field(min_length=2, max_length=50)
     customer_name: str = Field(min_length=1, max_length=150)
     customer_phone: str | None = Field(default=None, max_length=30)
@@ -314,6 +365,32 @@ class DriverDetailRead(BaseModel):
     failed_today_count: int = Field(ge=0)
 
 
+class DriverPerformanceItem(BaseModel):
+    driver_id: UUID
+    driver_name: str
+    email: str
+    phone_number: str | None
+    license_plate: str | None
+    vehicle_type: str | None
+    total_orders_handled: int = Field(ge=0)
+    delivered_count: int = Field(ge=0)
+    failed_count: int = Field(ge=0)
+    success_rate: float = Field(ge=0, le=100)
+    route_adherence_score: float = Field(ge=0, le=100)
+    total_distance_km: float = Field(ge=0)
+    estimated_co2_saved_kg: float = Field(ge=0)
+    overall_score: float = Field(ge=0, le=100)
+    tier_badge: Literal["GOLD", "SILVER", "BRONZE"]
+    is_eco_driver: bool
+    rank: int = Field(ge=1)
+
+
+class DriverPerformanceResponse(BaseModel):
+    period_days: Literal[7, 14, 30]
+    total_co2_saved_all_kg: float = Field(ge=0)
+    drivers: list[DriverPerformanceItem]
+
+
 class OrderStatusUpdate(BaseModel):
     status: OrderStatus
     failure_reason: str | None = Field(default=None, max_length=2000)
@@ -335,6 +412,7 @@ class OverviewRead(BaseModel):
 
 class SeedResponse(BaseModel):
     depot_created: bool
+    depots_created: int = Field(default=0, ge=0)
     vehicles_created: int
     orders_created: int
     analytics_snapshots_created: int = Field(default=0, ge=0)

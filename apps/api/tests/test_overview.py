@@ -5,6 +5,7 @@ from app.db.models import RouteAnalyticsSnapshot
 class _FakeOverviewSession:
     def __init__(self, snapshot: RouteAnalyticsSnapshot | None) -> None:
         self._values: list[object] = [
+            None,
             4,
             3,
             2,
@@ -33,7 +34,7 @@ def test_overview_returns_latest_route_cost_analytics() -> None:
     )
     session = _FakeOverviewSession(snapshot)
 
-    overview = get_overview(session)  # type: ignore[arg-type]
+    overview = get_overview(db=session)  # type: ignore[arg-type]
 
     assert overview.estimated_operating_cost_vnd == 433_440
     assert overview.estimated_savings_vnd == 78_019.2

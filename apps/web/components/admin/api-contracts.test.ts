@@ -10,6 +10,7 @@ describe('admin API contracts', () => {
   it('accepts a valid order list and rejects malformed coordinates', () => {
     const order = {
       id: 'order-1',
+      depot_id: null,
       order_code: 'LR-001',
       tracking_token: 'a'.repeat(43),
       customer_name: 'Nguyen Van A',
@@ -44,6 +45,7 @@ describe('admin API contracts', () => {
   it('accepts vehicle status values defined by the backend contract', () => {
     const vehicle = {
       id: 'vehicle-1',
+      depot_id: null,
       license_plate: '51D-12002',
       capacity_kg: 750,
       driver_name: 'Tran Minh Khoa',
@@ -61,6 +63,7 @@ describe('admin API contracts', () => {
   it('distinguishes available vehicles from assigned vehicles', () => {
     const vehicle = {
       id: 'vehicle-1',
+      depot_id: null,
       license_plate: '51D-12002',
       capacity_kg: 750,
       driver_name: null,
