@@ -243,3 +243,31 @@ Create a clean monorepo foundation for LogiRoute VN with a Next.js App Router fr
 | Diagnostics accidentally alter production data | High | Use synthetic solver inputs, read-only SQL, and uniquely named temporary files deleted in `finally`. |
 | Health details expose secrets or sensitive records | High | Return allowlisted aggregate metadata only; never include URLs with credentials, tokens, request payloads, or PII. |
 | A non-critical simulator outage marks the whole API unavailable | Medium | Apply explicit critical-service aggregation and report optional failures as `DEGRADED`. |
+
+## Phase 14: Guided Demo Tour & Scenario Simulator
+
+### Architecture decisions
+
+- Keep scenario loading behind ADMIN authorization because it replaces operational demo records; preserve users, credentials, depots, and the current login session.
+- Run the operational reset and scenario insert in one database transaction, deleting dependent notification/activity rows before orders and vehicles so a failed load rolls back cleanly.
+- Model supported scenario names as a validated enum and keep scenario data deterministic so repeated loads always produce the same 3 vehicles, 12 orders, 2 live telemetry vehicles, and 14 analytics snapshots.
+- Expose a strict frontend response contract; after loading, refetch the canonical order list and publish existing cross-page invalidation events rather than maintaining a second demo-data cache.
+- Show the tour to ADMIN and DISPATCHER users everywhere inside `AppShell`, while disabling the destructive loader for DISPATCHER and keeping all guided navigation available.
+
+### Task list
+
+- [x] Add RED tests for scenario authorization, deterministic counts, operational replacement, and user preservation.
+- [x] Add the transactional scenario loader service, validated API schema, and ADMIN-only endpoint.
+- [x] Add typed frontend scenario contracts and tests.
+- [x] Add the accessible floating demo assistant, guided five-step modal, architecture tab, loading/success/error states, and role-aware controls.
+- [x] Add matching VI/EN translations and run pytest, Vitest, typecheck, production build, browser smoke test, and final review.
+
+### Risks and mitigations
+
+| Risk | Impact | Mitigation |
+| --- | --- | --- |
+| Scenario load destroys real operational data | High | Restrict to ADMIN, label the action clearly, preserve identities/depots, and keep all writes in one rollback-safe transaction. |
+| Partial inserts leave inconsistent demo state | High | Delete and recreate dependent operational rows within one transaction and commit only after all assets and records are ready. |
+| Guided links are inaccessible for the current role | Medium | Keep role-aware descriptions and disable/annotate actions that require a driver or ADMIN session. |
+| Other pages retain stale data after loading | High | Refetch orders and publish invalidation for orders, fleet, driver, overview, and analytics immediately after success. |
+| Repeated scenario loads create duplicates | Medium | Use a replace-style deterministic loader and verify exact counts across repeated calls. |

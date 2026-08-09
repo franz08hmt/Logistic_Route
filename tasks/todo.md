@@ -85,3 +85,11 @@
 - [x] Add the ADMIN-only infrastructure dashboard, subsystem cards, and self-test console.
 - [x] Add navigation, VI/EN translations, loading/error/degraded states, and accessibility behavior.
 - [x] Verify pytest, Vitest, typecheck, production build, and final diff quality.
+
+## Phase 14: Guided Demo Tour & Scenario Simulator
+
+- [x] Add scenario API contracts, ADMIN authorization, and transactional deterministic data loading.
+- [x] Seed 3 vehicles, 12 mixed-status orders, POD/signatures/notifications, 2 telemetry vehicles, and 14 analytics snapshots.
+- [x] Add strict frontend scenario contracts and data synchronization after loading.
+- [x] Add the role-aware floating demo button, five-step guided workflow, and architecture tab.
+- [x] Add VI/EN translations and verify backend/frontend tests, typecheck, build, browser behavior, and final diff quality.

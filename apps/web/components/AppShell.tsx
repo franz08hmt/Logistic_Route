@@ -1,6 +1,7 @@
 import type { ReactNode } from 'react';
 
 import { Navigation } from './Navigation';
+import { FloatingDemoButton } from './demo/FloatingDemoButton';
 
 export function AppShell({
   children,
@@ -21,6 +22,7 @@ export function AppShell({
       >
         {children}
       </main>
+      <FloatingDemoButton />
     </div>
   );
 }

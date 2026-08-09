@@ -27,7 +27,7 @@ type DepotContextValue = {
   isLoading: boolean;
   error: string | null;
   selectDepot: (depotId: string) => void;
-  refreshDepots: () => Promise<void>;
+  refreshDepots: (preferredCode?: string) => Promise<void>;
 };
 
 const DepotContext = createContext<DepotContextValue | null>(null);
@@ -39,7 +39,7 @@ export function DepotProvider({ children }: { children: ReactNode }) {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const refreshDepots = useCallback(async () => {
+  const refreshDepots = useCallback(async (preferredCode?: string) => {
     if (!isAuthenticated) return;
     setIsLoading(true);
     setError(null);
@@ -47,7 +47,8 @@ export function DepotProvider({ children }: { children: ReactNode }) {
       const payload = await requestApi('/api/v1/depots');
       if (!isDepotList(payload)) throw new Error('Invalid depot response');
       const storedId = window.localStorage.getItem(STORAGE_KEY);
-      const nextSelected = selectInitialDepot(payload, storedId);
+      const nextSelected = payload.find((depot) => depot.code === preferredCode)
+        ?? selectInitialDepot(payload, storedId);
       setDepots(payload);
       setSelectedDepot(nextSelected);
       if (nextSelected) window.localStorage.setItem(STORAGE_KEY, nextSelected.id);

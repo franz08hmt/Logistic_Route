@@ -1,14 +1,15 @@
+import logging
 import random
 from base64 import b64decode
 from datetime import datetime, timedelta, timezone
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy import func, select, update
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
-from app.core.security import get_password_hash
+from app.core.security import get_password_hash, require_roles
 from app.core.config import SIGNATURE_PUBLIC_BASE_URL, SIGNATURE_UPLOAD_DIR
 from app.db.models import (
     CustomerNotification,
@@ -25,7 +26,14 @@ from app.db.models import (
     VehicleStatus,
 )
 from app.db.session import get_db
-from app.schemas import DepotRead, SeedResponse, SeedUsersResponse, UserRead
+from app.schemas import (
+    DepotRead,
+    ScenarioLoadResponse,
+    ScenarioType,
+    SeedResponse,
+    SeedUsersResponse,
+    UserRead,
+)
 from app.services.cost_calculator import calculate_route_costs
 from app.services.activity_logger import log_order_activity
 from app.services.public_tracking import generate_tracking_token
@@ -33,9 +41,11 @@ from app.services.notification_service import (
     notification_template_for_status,
     send_order_notification,
 )
+from app.services.scenario_loader import load_demo_scenario
 
 
 router = APIRouter(tags=["seed"])
+logger = logging.getLogger(__name__)
 
 SEED_SIGNATURE_FILENAME = "seed-recipient-signature.png"
 SEED_SIGNATURE_PNG = b64decode(
@@ -593,3 +603,42 @@ def seed_users(db: Session = Depends(get_db)) -> SeedUsersResponse:
         created_count=created_count,
         users=[UserRead.model_validate(user) for user in users],
     )
+
+
+@router.post(
+    "/seed/scenario",
+    response_model=ScenarioLoadResponse,
+    status_code=status.HTTP_201_CREATED,
+)
+def seed_scenario(
+    scenario_type: ScenarioType = Query(default=ScenarioType.HCMC_PEAK_DAY),
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_roles(UserRole.ADMIN)),
+) -> ScenarioLoadResponse:
+    """Replace operational demo data with a deterministic guided-tour scenario."""
+    try:
+        response = load_demo_scenario(db, scenario_type)
+    except OSError as exc:
+        logger.exception(
+            "Scenario asset preparation failed",
+            extra={"scenario_type": scenario_type.value, "actor": current_user.email},
+        )
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Unable to prepare demo scenario assets",
+        ) from exc
+    except IntegrityError as exc:
+        logger.exception(
+            "Scenario database load conflicted",
+            extra={"scenario_type": scenario_type.value, "actor": current_user.email},
+        )
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="Demo scenario conflicts with existing records",
+        ) from exc
+
+    logger.info(
+        "Demo scenario loaded",
+        extra={"scenario_type": scenario_type.value, "actor": current_user.email},
+    )
+    return response

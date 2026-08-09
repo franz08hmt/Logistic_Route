@@ -466,6 +466,22 @@ class SeedResponse(BaseModel):
     depot: DepotRead
 
 
+class ScenarioType(str, Enum):
+    HCMC_PEAK_DAY = "HCMC_PEAK_DAY"
+    HANOI_EXPRESS = "HANOI_EXPRESS"
+    MULTI_REGION = "MULTI_REGION"
+
+
+class ScenarioLoadResponse(BaseModel):
+    scenario_name: ScenarioType
+    depot_name: str
+    vehicles_loaded: int = Field(ge=0)
+    orders_loaded: int = Field(ge=0)
+    delivered_orders: int = Field(ge=0)
+    active_telemetry_vehicles: int = Field(ge=0)
+    message: str
+
+
 class AnalyticsDataPoint(BaseModel):
     date: str
     total_distance_km: float = Field(ge=0)
