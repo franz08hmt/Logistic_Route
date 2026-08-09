@@ -1,6 +1,6 @@
 from datetime import datetime
 from enum import Enum
-from typing import Literal
+from typing import Any, Literal
 from uuid import UUID
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
@@ -389,6 +389,53 @@ class DriverPerformanceResponse(BaseModel):
     period_days: Literal[7, 14, 30]
     total_co2_saved_all_kg: float = Field(ge=0)
     drivers: list[DriverPerformanceItem]
+
+
+class ServiceHealthItem(BaseModel):
+    service_key: Literal[
+        "database",
+        "core_engine",
+        "osrm_routing",
+        "telemetry",
+        "notifications",
+        "storage",
+    ]
+    name: str
+    status: Literal["HEALTHY", "DEGRADED", "DOWN"]
+    latency_ms: float | None = Field(default=None, ge=0)
+    details: dict[str, Any]
+    last_checked_at: datetime
+
+
+class SystemHealthResponse(BaseModel):
+    overall_status: Literal["HEALTHY", "DEGRADED", "DOWN"]
+    uptime_seconds: int = Field(ge=0)
+    server_time: datetime
+    services: list[ServiceHealthItem] = Field(min_length=6, max_length=6)
+
+
+class DiagnosticTestResult(BaseModel):
+    test_key: Literal[
+        "database_spatial",
+        "core_engine_solve",
+        "routing_polyline",
+        "tracking_token",
+        "storage_permissions",
+    ]
+    name: str
+    status: Literal["PASS", "FAIL"]
+    duration_ms: float = Field(ge=0)
+    detail: str
+
+
+class SystemDiagnosticsResponse(BaseModel):
+    overall_status: Literal["PASS", "FAIL"]
+    started_at: datetime
+    completed_at: datetime
+    total_duration_ms: float = Field(ge=0)
+    passed_count: int = Field(ge=0)
+    failed_count: int = Field(ge=0)
+    tests: list[DiagnosticTestResult] = Field(min_length=5, max_length=5)
 
 
 class OrderStatusUpdate(BaseModel):

@@ -11,7 +11,7 @@ import { DepotSwitcher } from './DepotSwitcher';
 import { ThemeToggle } from './ThemeToggle';
 import { UserProfileMenu } from './UserProfileMenu';
 
-type NavIconName = 'dashboard' | 'orders' | 'fleet' | 'dispatch' | 'driver' | 'users' | 'analytics' | 'depots';
+type NavIconName = 'dashboard' | 'orders' | 'fleet' | 'dispatch' | 'driver' | 'users' | 'analytics' | 'depots' | 'system';
 
 const adminLinks = [
   { labelKey: 'navigation.dashboard', href: '/dashboard', icon: 'dashboard' },
@@ -36,6 +36,12 @@ const depotManagementLink = {
   labelKey: 'navigation.depots',
   href: '/admin/depots',
   icon: 'depots',
+} satisfies { labelKey: TranslationKey; href: string; icon: NavIconName };
+
+const systemManagementLink = {
+  labelKey: 'navigation.system',
+  href: '/admin/system',
+  icon: 'system',
 } satisfies { labelKey: TranslationKey; href: string; icon: NavIconName };
 
 function NavIcon({ name }: { name: NavIconName }) {
@@ -69,6 +75,9 @@ function NavIcon({ name }: { name: NavIconName }) {
   if (name === 'depots') {
     return <svg {...common}><path d="M3 21h18M5 21V8l7-5 7 5v13M9 21v-6h6v6M8 10h.01M12 10h.01M16 10h.01" /></svg>;
   }
+  if (name === 'system') {
+    return <svg {...common}><rect x="3" y="4" width="18" height="6" rx="2" /><rect x="3" y="14" width="18" height="6" rx="2" /><path d="M7 7h.01M7 17h.01M11 7h6M11 17h6" /></svg>;
+  }
   return <svg {...common}><path d="M5 19h14M7 17v-6l5-7 5 7v6M9 12h6" /><circle cx="12" cy="9" r="1.5" /></svg>;
 }
 
@@ -100,7 +109,7 @@ export function Navigation() {
     user?.role === 'DRIVER'
       ? driverLinks
       : user?.role === 'ADMIN'
-        ? [...adminLinks, userManagementLink, depotManagementLink]
+        ? [...adminLinks, userManagementLink, depotManagementLink, systemManagementLink]
         : user?.role === 'DISPATCHER'
           ? adminLinks
         : adminLinks;
@@ -110,6 +119,7 @@ export function Navigation() {
     6: 'grid-cols-6',
     7: 'grid-cols-7',
     8: 'grid-cols-8',
+    9: 'grid-cols-9',
   }[links.length] ?? 'grid-cols-4';
 
   return (

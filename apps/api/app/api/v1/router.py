@@ -10,6 +10,7 @@ from app.api.v1 import (
     overview,
     routes,
     seed,
+    system,
     vehicles,
 )
 
@@ -26,3 +27,4 @@ router.include_router(vehicles.router)
 router.include_router(seed.router)
 router.include_router(routes.router)
 router.include_router(driver.router)
+router.include_router(system.router)

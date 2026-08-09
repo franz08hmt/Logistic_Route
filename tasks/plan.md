@@ -216,3 +216,30 @@ Create a clean monorepo foundation for LogiRoute VN with a Next.js App Router fr
 | The same route distance is counted more than once | High | Group terminal stops by vehicle and route batch before reconstructing each route once. |
 | Sparse demo data makes the podium meaningless | Medium | Seed three assigned drivers and deterministic terminal-order history across the 30-day period. |
 | Equal scores reorder between requests | Medium | Apply stable CO2, name, and UUID tie-breakers after score sorting. |
+
+## Phase 13: System Health & Diagnostic Center
+
+### Architecture decisions
+
+- Keep `GET /system/health` read-only and fast by using bounded database queries, local subsystem checks, and a short cached OSRM probe.
+- Run deeper checks only through the explicit ADMIN-only diagnostics action; every test uses synthetic inputs or temporary files and never mutates operational records.
+- Treat the database and optimization engine as critical services: either being down makes the overall system down, while optional dependency failures degrade the system.
+- Return structured, stable service/test contracts so the frontend renders server-calculated status instead of inferring health client-side.
+- Export the currently displayed health and diagnostic snapshot as a UTF-8 JSON audit report without exposing secrets, credentials, or customer data.
+
+### Task list
+
+- [x] Add tested system health and diagnostics schemas, service checks, and ADMIN-only API endpoints.
+- [x] Add strict frontend contracts and report export helpers.
+- [x] Add the ADMIN-only system page, overall status hero, six subsystem cards, and diagnostic console.
+- [x] Add the sidebar entry, responsive states, accessibility behavior, and VI/EN translations.
+- [x] Run backend/frontend tests, typecheck, production build, and review the final diff.
+
+### Risks and mitigations
+
+| Risk | Impact | Mitigation |
+| --- | --- | --- |
+| A slow external OSRM call violates the health endpoint latency target | High | Use a very short timeout and cache the bounded probe result; run the full fallback test only on demand. |
+| Diagnostics accidentally alter production data | High | Use synthetic solver inputs, read-only SQL, and uniquely named temporary files deleted in `finally`. |
+| Health details expose secrets or sensitive records | High | Return allowlisted aggregate metadata only; never include URLs with credentials, tokens, request payloads, or PII. |
+| A non-critical simulator outage marks the whole API unavailable | Medium | Apply explicit critical-service aggregation and report optional failures as `DEGRADED`. |

@@ -76,3 +76,12 @@
 - [x] Add validated frontend contracts and Excel-compatible CSV export.
 - [x] Add directory/leaderboard tabs, Top 3 podium, responsive ranking table, and 7/14/30-day filters.
 - [x] Add VI/EN translations and verify pytest, Vitest, typecheck, and production build.
+
+## Phase 13: System Health & Diagnostic Center
+
+- [x] Add six-service health contracts and the ADMIN-only `/system/health` endpoint.
+- [x] Add five safe, non-destructive system diagnostics and the `/system/diagnostics` endpoint.
+- [x] Add strict frontend contracts, system audit report export, and tests.
+- [x] Add the ADMIN-only infrastructure dashboard, subsystem cards, and self-test console.
+- [x] Add navigation, VI/EN translations, loading/error/degraded states, and accessibility behavior.
+- [x] Verify pytest, Vitest, typecheck, production build, and final diff quality.
