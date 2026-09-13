@@ -30,7 +30,7 @@ export function PodPreviewModal({
     >
       {order && (
         <div className="max-h-[calc(100vh-13rem)] space-y-5 overflow-y-auto p-5 sm:p-6">
-          <div className="overflow-hidden rounded-xl border border-slate-200 bg-slate-100 dark:border-slate-700 dark:bg-slate-950">
+          <div className="overflow-hidden rounded-sm border border-slate-200 bg-slate-100 dark:border-slate-700 dark:bg-slate-950">
             {order.pod_url ? (
               <img
                 className="max-h-[55vh] w-full object-contain"
@@ -38,23 +38,23 @@ export function PodPreviewModal({
                 alt={t('orders.podImageAlt', { code: order.order_code })}
               />
             ) : (
-              <div className="grid min-h-64 place-items-center p-8 text-center text-sm text-slate-500">
+              <div className="grid min-h-64 place-items-center p-8 text-center text-sm text-slate-500 dark:text-slate-400">
                 {t('orders.noPodImage')}
               </div>
             )}
           </div>
 
-          <dl className="grid gap-4 rounded-xl border border-slate-200 bg-slate-50 p-4 text-sm dark:border-slate-800 dark:bg-slate-950/60 sm:grid-cols-2">
+          <dl className="grid gap-4 rounded-sm border border-slate-200 bg-slate-50 p-4 text-sm dark:border-slate-800 dark:bg-slate-950/60 sm:grid-cols-2">
             <div>
-              <dt className="text-xs font-semibold uppercase tracking-wide text-slate-500">{t('common.status')}</dt>
+              <dt className="text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">{t('common.status')}</dt>
               <dd className="mt-1"><StatusBadge status={order.status} /></dd>
             </div>
             <div>
-              <dt className="text-xs font-semibold uppercase tracking-wide text-slate-500">{t('orders.podUploadedAt')}</dt>
+              <dt className="text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">{t('orders.podUploadedAt')}</dt>
               <dd className="mt-1 font-medium text-slate-900 dark:text-white">{uploadedAt}</dd>
             </div>
             <div className="sm:col-span-2">
-              <dt className="text-xs font-semibold uppercase tracking-wide text-slate-500">{t('orders.podNote')}</dt>
+              <dt className="text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">{t('orders.podNote')}</dt>
               <dd className="mt-1 leading-6 text-slate-700 dark:text-slate-300">{order.delivery_note || t('orders.noPodNote')}</dd>
             </div>
           </dl>
@@ -62,7 +62,7 @@ export function PodPreviewModal({
           {order.pod_url && (
             <div className="flex justify-end">
               <a
-                className="inline-flex h-10 items-center rounded-xl bg-teal-600 px-4 text-sm font-semibold text-white hover:bg-teal-700 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-teal-600"
+                className="inline-flex h-10 items-center rounded-sm bg-amber-700 dark:bg-amber-400 px-4 text-sm font-semibold text-white dark:text-slate-950 hover:bg-amber-800 dark:hover:bg-amber-300 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-amber-600"
                 href={order.pod_url}
                 target="_blank"
                 rel="noreferrer"

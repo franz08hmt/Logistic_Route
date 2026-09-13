@@ -254,7 +254,7 @@ export function DispatchCenter() {
 
   return (
     <div className="space-y-4">
-      <div className="flex flex-col gap-3 rounded-xl border border-slate-200 bg-white p-3 shadow-sm dark:border-slate-800 dark:bg-slate-900 sm:flex-row sm:items-center sm:justify-between">
+      <div className="flex flex-col gap-3 rounded-sm border border-slate-200 bg-white p-3 dark:border-slate-800 dark:bg-slate-900 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <p className="text-sm font-semibold text-slate-950 dark:text-white">
             {t('routeEditor.title')}
@@ -265,7 +265,7 @@ export function DispatchCenter() {
         </div>
         <div className="flex flex-col gap-2 sm:flex-row">
           <button
-            className="inline-flex min-h-11 items-center justify-center rounded-xl bg-teal-600 px-4 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-teal-700 disabled:cursor-not-allowed disabled:opacity-60"
+            className="inline-flex min-h-11 items-center justify-center rounded-sm bg-amber-700 dark:bg-amber-400 px-4 text-sm font-semibold text-white dark:text-slate-950 transition-colors hover:bg-amber-800 dark:hover:bg-amber-300 disabled:cursor-not-allowed disabled:opacity-60"
             type="button"
             onClick={() => void optimizeFleet()}
             disabled={isOptimizingFleet || isSaving}
@@ -273,7 +273,7 @@ export function DispatchCenter() {
             {isOptimizingFleet ? t('routeEditor.optimizingFleet') : t('routeEditor.optimizeFleet')}
           </button>
           <button
-            className="inline-flex min-h-11 items-center justify-center rounded-xl border border-teal-200 bg-teal-50 px-4 text-sm font-semibold text-teal-800 shadow-sm xl:hidden dark:border-teal-900 dark:bg-teal-950/40 dark:text-teal-300"
+            className="inline-flex min-h-11 items-center justify-center rounded-sm border border-amber-200 bg-amber-50 px-4 text-sm font-semibold text-amber-800 xl:hidden dark:border-amber-900 dark:bg-amber-950/40 dark:text-amber-300"
             type="button"
             onClick={() => mapSectionRef.current?.scrollIntoView({
               behavior: 'smooth',
@@ -287,7 +287,7 @@ export function DispatchCenter() {
 
       {feedback && (
         <div
-          className={`rounded-xl border px-4 py-3 text-sm ${
+          className={`rounded-sm border px-4 py-3 text-sm ${
             feedback.tone === 'error'
               ? 'border-rose-200 bg-rose-50 text-rose-800 dark:border-rose-900 dark:bg-rose-950/40 dark:text-rose-300'
               : 'border-emerald-200 bg-emerald-50 text-emerald-800 dark:border-emerald-900 dark:bg-emerald-950/40 dark:text-emerald-300'
@@ -302,17 +302,17 @@ export function DispatchCenter() {
         <DispatchWorkspace onRoutePlanned={handleRoutePlanned} />
 
         <section
-          className="scroll-mt-20 overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm dark:border-slate-800 dark:bg-slate-900"
+          className="scroll-mt-20 overflow-hidden rounded-sm border border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-900"
           ref={mapSectionRef}
           aria-labelledby="dispatch-map-title"
         >
           <header className="flex flex-col gap-3 border-b border-slate-200 px-4 py-3 dark:border-slate-800 lg:flex-row lg:items-center lg:justify-between">
             <div>
-              <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-teal-700 dark:text-teal-400">
+              <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-amber-700 dark:text-amber-400">
                 {t('dispatch.mapEyebrow')}
               </p>
               <h2
-                className="mt-1 text-sm font-semibold text-slate-950 dark:text-white"
+                className="mt-1 font-bold text-slate-950 dark:text-white text-base uppercase tracking-[0.14em]"
                 id="dispatch-map-title"
               >
                 {t('dispatch.mapTitle')}
@@ -321,7 +321,7 @@ export function DispatchCenter() {
             <div className="flex flex-wrap items-center gap-2" aria-live="polite">
               {isTelemetryEnabled && (
                 <>
-                  <span className="rounded-full bg-teal-50 px-2.5 py-1 text-[11px] font-semibold text-teal-800 dark:bg-teal-950/50 dark:text-teal-300">
+                  <span className="rounded-full bg-amber-50 px-2.5 py-1 text-[11px] font-semibold text-amber-800 dark:bg-amber-950/50 dark:text-amber-300">
                     {t('telemetry.activeCount', { count: telemetrySummary.activeVehicles })}
                   </span>
                   <span className={`rounded-full px-2.5 py-1 text-[11px] font-semibold ${
@@ -338,9 +338,9 @@ export function DispatchCenter() {
                 role="switch"
                 aria-checked={isTelemetryEnabled}
                 onClick={() => setIsTelemetryEnabled((enabled) => !enabled)}
-                className={`inline-flex min-h-10 items-center gap-2 rounded-lg border px-3 text-xs font-semibold transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-teal-600 ${
+                className={`inline-flex min-h-10 items-center gap-2 rounded-sm border px-3 text-xs font-semibold transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-amber-600 ${
                   isTelemetryEnabled
-                    ? 'border-teal-200 bg-teal-50 text-teal-800 dark:border-teal-900 dark:bg-teal-950/50 dark:text-teal-300'
+                    ? 'border-amber-200 bg-amber-50 text-amber-800 dark:border-amber-900 dark:bg-amber-950/50 dark:text-amber-300'
                     : 'border-slate-300 bg-white text-slate-600 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-300'
                 }`}
               >
@@ -355,7 +355,7 @@ export function DispatchCenter() {
             </div>
           </header>
           {hasTelemetryError && isTelemetryEnabled && (
-            <p className="border-b border-amber-200 bg-amber-50 px-4 py-2 text-xs text-amber-800 dark:border-amber-900 dark:bg-amber-950/40 dark:text-amber-300" role="status">
+            <p className="border-b border-orange-200 bg-orange-50 px-4 py-2 text-xs text-orange-800 dark:border-orange-900 dark:bg-orange-950/40 dark:text-orange-300" role="status">
               {t('telemetry.refreshError')}
             </p>
           )}
@@ -374,13 +374,13 @@ export function DispatchCenter() {
           />
 
           {hasChanges && (
-            <div className="sticky bottom-0 z-[500] flex flex-col gap-3 border-t border-amber-200 bg-amber-50/95 px-4 py-3 shadow-[0_-8px_24px_rgba(15,23,42,0.12)] backdrop-blur sm:flex-row sm:items-center sm:justify-between dark:border-amber-900 dark:bg-amber-950/90">
-              <p className="text-xs font-medium text-amber-900 dark:text-amber-200">
+            <div className="sticky bottom-0 z-[500] flex flex-col gap-3 border-t border-orange-200 bg-orange-50/95 px-4 py-3 shadow-[0_-8px_24px_rgba(15,23,42,0.12)] backdrop-blur sm:flex-row sm:items-center sm:justify-between dark:border-orange-900 dark:bg-orange-950/90">
+              <p className="text-xs font-medium text-orange-900 dark:text-orange-200">
                 {t('routeEditor.unsavedChanges')}
               </p>
               <div className="flex gap-2">
                 <button
-                  className="min-h-10 rounded-lg border border-slate-300 bg-white px-3 text-sm font-semibold text-slate-700 hover:bg-slate-50 disabled:opacity-60 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200"
+                  className="min-h-10 rounded-sm border border-slate-300 bg-white px-3 text-sm font-semibold text-slate-700 hover:bg-slate-50 disabled:opacity-60 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200"
                   type="button"
                   onClick={() => setRouteResult(persistedRouteResult)}
                   disabled={isSaving}
@@ -388,7 +388,7 @@ export function DispatchCenter() {
                   {t('routeEditor.cancel')}
                 </button>
                 <button
-                  className="min-h-10 rounded-lg bg-teal-600 px-3 text-sm font-semibold text-white hover:bg-teal-700 disabled:cursor-not-allowed disabled:opacity-60"
+                  className="min-h-10 rounded-sm bg-amber-700 dark:bg-amber-400 px-3 text-sm font-semibold text-white dark:text-slate-950 hover:bg-amber-800 dark:hover:bg-amber-300 disabled:cursor-not-allowed disabled:opacity-60"
                   type="button"
                   onClick={() => void saveRoutePlan()}
                   disabled={isSaving || !routeResult?.route_batch_id}

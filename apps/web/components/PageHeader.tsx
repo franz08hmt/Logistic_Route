@@ -1,5 +1,13 @@
 import type { ReactNode } from 'react';
 
+import { SectionHeading } from './ui/Section';
+
+/**
+ * Screen title, set in the landing portal's Story style: an amber eyebrow, a
+ * wide uppercase title, and a short rule. Replacing the old bordered band with
+ * the portal's own heading block is what makes a console screen and the public
+ * page read as one product.
+ */
 export function PageHeader({
   eyebrow,
   title,
@@ -12,19 +20,11 @@ export function PageHeader({
   action?: ReactNode;
 }) {
   return (
-    <header className="flex flex-col gap-5 border-b border-slate-200 pb-6 dark:border-slate-800 sm:flex-row sm:items-end sm:justify-between">
-      <div className="max-w-3xl">
-        <p className="text-xs font-semibold uppercase tracking-[0.18em] text-teal-700 dark:text-teal-400">
-          {eyebrow}
-        </p>
-        <h1 className="mt-2 text-2xl font-semibold tracking-tight text-slate-950 dark:text-white sm:text-3xl">
-          {title}
-        </h1>
-        <p className="mt-2 text-sm leading-6 text-slate-600 dark:text-slate-400">
-          {description}
-        </p>
-      </div>
-      {action}
-    </header>
+    <div className="pb-2">
+      <SectionHeading as="h1" size="page" subtitle={eyebrow} title={title} action={action} />
+      <p className="mt-5 max-w-3xl text-sm leading-relaxed text-slate-600 dark:text-slate-400 sm:text-base">
+        {description}
+      </p>
+    </div>
   );
 }

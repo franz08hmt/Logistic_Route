@@ -39,6 +39,11 @@ describe('driver API contracts', () => {
         signature_url: null,
         signature_uploaded_at: null,
         recipient_name: null,
+        cod_amount: 350000,
+        payment_method: 'COD_CASH',
+        cod_status: 'PENDING',
+        cod_collected_at: null,
+        cod_receipt_note: null,
       },
     ],
   };

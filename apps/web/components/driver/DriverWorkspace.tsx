@@ -1,5 +1,6 @@
 'use client';
 
+import { BanknotesIcon } from '@heroicons/react/24/outline';
 import {
   useEffect,
   useRef,
@@ -22,7 +23,10 @@ import { useI18n } from '@/context/I18nContext';
 
 import { DriverOverview } from './DriverOverview';
 import { DriverStatusDialog } from './DriverStatusDialog';
+import type { CollectablePaymentMethod } from '../cod/cod-contracts';
 import { DriverStopCard } from './DriverStopCard';
+import { ShiftSettlementModal } from './ShiftSettlementModal';
+import { VietQrModal } from './VietQrModal';
 import { DriverUnassignedEmptyState } from './DriverUnassignedEmptyState';
 import {
   createSignatureFormData,
@@ -67,6 +71,10 @@ export function DriverWorkspace() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [toast, setToast] = useState<DriverToast | null>(null);
   const [refreshVersion, setRefreshVersion] = useState(0);
+  const [vietQrOrderId, setVietQrOrderId] = useState<string | null>(null);
+  const [paymentMethod, setPaymentMethod] = useState<CollectablePaymentMethod>('COD_CASH');
+  const [codReceiptNote, setCodReceiptNote] = useState('');
+  const [isSettlementOpen, setIsSettlementOpen] = useState(false);
   const signaturePadRef = useRef<SignaturePadHandle>(null);
 
   useEffect(() => {
@@ -127,6 +135,8 @@ export function DriverWorkspace() {
     setPodPreviewUrl(stop.pod_url ?? '');
     setRecipientName(stop.recipient_name ?? stop.customer_name);
     setHasDrawnSignature(false);
+    setPaymentMethod(stop.payment_method === 'VIETQR' ? 'VIETQR' : 'COD_CASH');
+    setCodReceiptNote(stop.cod_receipt_note ?? '');
     setError(null);
   }
 
@@ -249,6 +259,10 @@ export function DriverWorkspace() {
         throw new Error(t('signature.invalidResponse'));
       }
       const resolvedPodUrl = podUpload?.pod_url ?? podUrl;
+      const collectsCod = selectedStatus === 'DELIVERED'
+        && selectedStop.cod_amount > 0
+        && selectedStop.payment_method !== 'PREPAID'
+        && selectedStop.cod_status === 'PENDING';
 
       const payload = await requestApi(
         `/api/v1/driver/orders/${selectedStop.id}/status`,
@@ -260,6 +274,10 @@ export function DriverWorkspace() {
             delivery_note: deliveryNote.trim() || null,
             failure_reason: selectedStatus === 'FAILED' ? failureReason : null,
             pod_url: resolvedPodUrl || null,
+            // The API records COD collection in the same transaction as the
+            // status change, so a delivered stop and its cash never disagree.
+            payment_method: collectsCod ? paymentMethod : null,
+            cod_receipt_note: collectsCod ? codReceiptNote.trim() || null : null,
           }),
         },
       );
@@ -309,7 +327,7 @@ export function DriverWorkspace() {
     return (
       <div className="grid min-h-[60vh] place-items-center" role="status" aria-busy="true">
         <div className="text-center">
-          <span className="mx-auto block size-8 animate-spin rounded-full border-2 border-slate-300 border-t-teal-600" aria-hidden="true" />
+          <span className="mx-auto block size-8 animate-spin rounded-full border-2 border-slate-300 border-t-amber-600" aria-hidden="true" />
           <p className="mt-3 text-sm font-medium text-slate-600 dark:text-slate-300">{t('driver.loading')}</p>
         </div>
       </div>
@@ -319,7 +337,7 @@ export function DriverWorkspace() {
   return (
     <section className="mx-auto max-w-3xl space-y-6" aria-label={t('driver.workspace')}>
       {toast && (
-        <div className="fixed left-1/2 top-20 z-[1100] w-[calc(100%-2rem)] max-w-md -translate-x-1/2 rounded-xl border border-emerald-200 bg-white/95 px-4 py-3 text-sm font-semibold text-emerald-800 shadow-xl backdrop-blur dark:border-emerald-900 dark:bg-slate-900/95 dark:text-emerald-300" role="status">
+        <div className="fixed left-1/2 top-20 z-[1100] w-[calc(100%-2rem)] max-w-md -translate-x-1/2 rounded-sm border border-emerald-200 bg-white/95 px-4 py-3 text-sm font-semibold text-emerald-800 backdrop-blur dark:border-emerald-900 dark:bg-slate-900/95 dark:text-emerald-300" role="status">
           ✓ {t('driver.updateSuccess', {
             code: toast.code,
             status: t(driverStatusTranslationKeys[toast.status]),
@@ -333,7 +351,7 @@ export function DriverWorkspace() {
         <DriverUnassignedEmptyState isRefreshing={isLoading} onRefresh={refreshAssignment} />
       ) : null}
       {error && (
-        <p className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700 dark:border-red-900 dark:bg-red-950/40 dark:text-red-300" role="alert">
+        <p className="rounded-sm border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700 dark:border-red-900 dark:bg-red-950/40 dark:text-red-300" role="alert">
           {error}
         </p>
       )}
@@ -342,27 +360,76 @@ export function DriverWorkspace() {
         <section aria-labelledby="driver-route-heading">
           <div className="mb-4 flex items-end justify-between gap-4">
             <div>
-              <p className="text-xs font-bold uppercase tracking-[0.16em] text-teal-700 dark:text-teal-400">{t('driver.todayRoute')}</p>
-              <h2 id="driver-route-heading" className="mt-1 text-xl font-bold tracking-tight text-slate-950 dark:text-white">{t('driver.routeTitle')}</h2>
+              <p className="text-xs font-bold uppercase tracking-[0.16em] text-amber-700 dark:text-amber-400">{t('driver.todayRoute')}</p>
+              <h2 id="driver-route-heading" className="mt-1 font-bold tracking-tight text-slate-950 dark:text-white text-base uppercase tracking-[0.14em]">{t('driver.routeTitle')}</h2>
             </div>
             <span className="rounded-full bg-slate-200 px-3 py-1.5 text-xs font-bold text-slate-700 dark:bg-slate-800 dark:text-slate-200">{t('driver.stopCount', { count: route.stops.length })}</span>
           </div>
 
           {route.stops.length === 0 ? (
-            <div className="rounded-2xl border border-dashed border-slate-300 bg-white p-8 text-center dark:border-slate-700 dark:bg-slate-900" role="status">
+            <div className="rounded-sm border border-dashed border-slate-300 bg-white p-8 text-center dark:border-slate-700 dark:bg-slate-900" role="status">
               <span className="mx-auto grid size-12 place-items-center rounded-full bg-emerald-50 text-xl text-emerald-700 dark:bg-emerald-950 dark:text-emerald-300" aria-hidden="true">✓</span>
               <strong className="mt-4 block text-slate-950 dark:text-white">{t('driver.emptyTitle')}</strong>
-              <p className="mt-2 text-sm text-slate-500">{t('driver.emptyDescription')}</p>
+              <p className="mt-2 text-sm text-slate-500 dark:text-slate-400">{t('driver.emptyDescription')}</p>
             </div>
           ) : (
             <ol>
               {route.stops.map((stop) => (
-                <DriverStopCard key={stop.id} stop={stop} onUpdate={openStatusDialog} />
+                <DriverStopCard
+                  key={stop.id}
+                  stop={stop}
+                  onUpdate={openStatusDialog}
+                  onShowVietQr={(target) => setVietQrOrderId(target.id)}
+                />
               ))}
             </ol>
           )}
         </section>
       )}
+
+      {route?.vehicle && (
+        <section
+          aria-labelledby="driver-settlement-heading"
+          className="rounded-sm border border-amber-200 bg-gradient-to-br from-amber-50 to-emerald-50 p-5 dark:border-amber-900 dark:from-amber-950/60 dark:to-emerald-950/30"
+        >
+          <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+            <div>
+              <p className="text-xs font-bold uppercase tracking-[0.16em] text-amber-700 dark:text-amber-300">
+                {t('cod.eyebrow')}
+              </p>
+              <h2
+                id="driver-settlement-heading"
+                className="mt-1 font-bold text-slate-950 dark:text-white text-base uppercase tracking-[0.14em]"
+              >
+                {t('driver.settlement.title')}
+              </h2>
+              <p className="mt-2 text-sm leading-6 text-slate-600 dark:text-slate-300">
+                {t('driver.settlement.description')}
+              </p>
+            </div>
+            <button
+              type="button"
+              className="inline-flex min-h-12 shrink-0 items-center justify-center gap-2 rounded-sm bg-amber-700 dark:bg-amber-400 px-5 text-sm font-bold text-white dark:text-slate-950 transition hover:bg-amber-800 dark:hover:bg-amber-300 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-amber-600"
+              onClick={() => setIsSettlementOpen(true)}
+            >
+              <BanknotesIcon aria-hidden="true" className="size-5" />
+              {t('driver.cod.submitSettlement')}
+            </button>
+          </div>
+        </section>
+      )}
+
+      <VietQrModal
+        open={vietQrOrderId !== null}
+        orderId={vietQrOrderId}
+        onClose={() => setVietQrOrderId(null)}
+      />
+
+      <ShiftSettlementModal
+        open={isSettlementOpen}
+        onClose={() => setIsSettlementOpen(false)}
+        onSubmitted={() => setRefreshVersion((version) => version + 1)}
+      />
 
       <DriverStatusDialog
         stop={selectedStop}
@@ -374,9 +441,14 @@ export function DriverWorkspace() {
         recipientName={recipientName}
         hasDrawnSignature={hasDrawnSignature}
         signaturePadRef={signaturePadRef}
+        paymentMethod={paymentMethod}
+        codReceiptNote={codReceiptNote}
         error={error}
         isSubmitting={isSubmitting}
         onStatusChange={setSelectedStatus}
+        onPaymentMethodChange={setPaymentMethod}
+        onCodReceiptNoteChange={setCodReceiptNote}
+        onShowVietQr={() => selectedStop && setVietQrOrderId(selectedStop.id)}
         onDeliveryNoteChange={setDeliveryNote}
         onFailureReasonChange={setFailureReason}
         onPodFileChange={handlePodFileChange}

@@ -21,7 +21,7 @@ function DeliveryEvidence({
     return order.pod_url ? (
       <button
         type="button"
-        className="mt-2 block text-xs font-semibold text-teal-700 underline-offset-2 hover:underline dark:text-teal-300"
+        className="mt-2 block text-xs font-semibold text-amber-700 underline-offset-2 hover:underline dark:text-amber-300"
         onClick={(event) => {
           event.stopPropagation();
           onOpenPod(order);
@@ -44,7 +44,7 @@ function DeliveryEvidence({
   return (
     <details className="mt-2 text-xs" onClick={(event) => event.stopPropagation()}>
       <summary className="font-semibold text-rose-700 dark:text-rose-300">{t('orders.exceptionDetails')}</summary>
-      <div className="mt-2 rounded-lg border border-rose-200 bg-rose-50 p-3 leading-5 text-slate-700 dark:border-rose-900 dark:bg-rose-950/40 dark:text-slate-300">
+      <div className="mt-2 rounded-sm border border-rose-200 bg-rose-50 p-3 leading-5 text-slate-700 dark:border-rose-900 dark:bg-rose-950/40 dark:text-slate-300">
         <p>
           <strong>{t('orders.failureReason')}</strong>{' '}
           {translatedFailureReason
@@ -55,7 +55,7 @@ function DeliveryEvidence({
         {order.pod_url && (
           <button
             type="button"
-            className="mt-1 inline-block font-semibold text-teal-700 underline-offset-2 hover:underline dark:text-teal-300"
+            className="mt-1 inline-block font-semibold text-amber-700 underline-offset-2 hover:underline dark:text-amber-300"
             onClick={() => onOpenPod(order)}
           >
             {t('orders.openPod')}
@@ -92,7 +92,7 @@ export function OrderList({
     return (
       <div className="space-y-3 p-4" aria-label={t('orders.loading')} aria-busy="true">
         {Array.from({ length: 4 }, (_, index) => (
-          <div key={index} className="h-20 animate-pulse rounded-xl bg-slate-100 dark:bg-slate-800" />
+          <div key={index} className="h-20 animate-pulse rounded-sm bg-slate-100 dark:bg-slate-800" />
         ))}
       </div>
     );
@@ -102,9 +102,9 @@ export function OrderList({
     return (
       <div className="grid min-h-64 place-items-center px-4 py-12 text-center" role="status">
         <div>
-          <span className="mx-auto grid size-11 place-items-center rounded-full bg-teal-50 text-xl text-teal-700 dark:bg-teal-950 dark:text-teal-300" aria-hidden="true">＋</span>
-          <h3 className="mt-3 text-sm font-semibold text-slate-950 dark:text-white">{t('orders.emptyTitle')}</h3>
-          <p className="mt-1 text-sm text-slate-500">{t('orders.emptyDescription')}</p>
+          <span className="mx-auto grid size-11 place-items-center rounded-full bg-amber-50 text-xl text-amber-700 dark:bg-amber-950 dark:text-amber-300" aria-hidden="true">＋</span>
+          <h3 className="mt-3 font-bold text-slate-950 dark:text-white text-base uppercase tracking-[0.14em]">{t('orders.emptyTitle')}</h3>
+          <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">{t('orders.emptyDescription')}</p>
         </div>
       </div>
     );
@@ -117,21 +117,21 @@ export function OrderList({
           <article key={order.id} className="space-y-3 p-4 transition hover:bg-slate-50/70 dark:hover:bg-slate-800/40" onClick={() => onOpenDetails(order)}>
             <div className="flex items-start justify-between gap-3">
               <div>
-                <button type="button" className="text-left text-sm font-semibold text-slate-950 hover:text-teal-700 focus-visible:outline-2 focus-visible:outline-teal-600 dark:text-white dark:hover:text-teal-300" onClick={(event) => { event.stopPropagation(); onOpenDetails(order); }}>{order.order_code}</button>
+                <button type="button" className="text-left text-sm font-semibold text-slate-950 hover:text-amber-700 focus-visible:outline-2 focus-visible:outline-amber-600 dark:text-white dark:hover:text-amber-300" onClick={(event) => { event.stopPropagation(); onOpenDetails(order); }}>{order.order_code}</button>
                 <p className="mt-0.5 text-sm text-slate-600 dark:text-slate-400">{order.customer_name}</p>
               </div>
               <StatusBadge status={order.status} />
             </div>
-            <div className="rounded-lg bg-slate-50 p-3 text-sm dark:bg-slate-950/60">
+            <div className="rounded-sm bg-slate-50 p-3 text-sm dark:bg-slate-950/60">
               <p className="leading-5 text-slate-700 dark:text-slate-300">{order.address}</p>
-              <p className="mt-1 text-xs text-slate-500">{order.latitude.toFixed(4)}, {order.longitude.toFixed(4)} · {weightFormatter.format(order.weight_kg)} kg</p>
+              <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">{order.latitude.toFixed(4)}, {order.longitude.toFixed(4)} · {weightFormatter.format(order.weight_kg)} kg</p>
             </div>
             <DeliveryEvidence order={order} onOpenPod={setPodOrder} />
             <div className="flex flex-wrap gap-3">
               {(order.status === 'PENDING' || order.status === 'FAILED') && (
                 <button
                   type="button"
-                  className="text-xs font-semibold text-teal-700 hover:underline dark:text-teal-300"
+                  className="text-xs font-semibold text-amber-700 hover:underline dark:text-amber-300"
                   onClick={(event) => {
                     event.stopPropagation();
                     onDispatch(order);
@@ -162,18 +162,18 @@ export function OrderList({
           <thead>
             <tr className="border-b border-slate-200 bg-slate-50/80 dark:border-slate-800 dark:bg-slate-950/50">
               {[t('orders.code'), t('orders.customer'), t('orders.deliveryPoint'), t('orders.weight'), t('common.status'), ''].map((heading) => (
-                <th key={heading} scope="col" className="px-5 py-3 text-xs font-semibold uppercase tracking-wide text-slate-500">{heading}</th>
+                <th key={heading} scope="col" className="px-5 py-3 text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">{heading}</th>
               ))}
             </tr>
           </thead>
           <tbody className="divide-y divide-slate-200 dark:divide-slate-800">
             {orders.map((order) => (
               <tr key={order.id} className="cursor-pointer transition hover:bg-slate-50/70 dark:hover:bg-slate-800/40" onClick={() => onOpenDetails(order)}>
-                <td className="whitespace-nowrap px-5 py-4"><button type="button" className="text-sm font-semibold text-slate-950 hover:text-teal-700 focus-visible:outline-2 focus-visible:outline-teal-600 dark:text-white dark:hover:text-teal-300" onClick={(event) => { event.stopPropagation(); onOpenDetails(order); }}>{order.order_code}</button></td>
+                <td className="whitespace-nowrap px-5 py-4"><button type="button" className="text-sm font-semibold text-slate-950 hover:text-amber-700 focus-visible:outline-2 focus-visible:outline-amber-600 dark:text-white dark:hover:text-amber-300" onClick={(event) => { event.stopPropagation(); onOpenDetails(order); }}>{order.order_code}</button></td>
                 <td className="px-5 py-4 text-sm text-slate-700 dark:text-slate-300">{order.customer_name}</td>
                 <td className="max-w-sm px-5 py-4">
                   <p className="text-sm leading-5 text-slate-700 dark:text-slate-300">{order.address}</p>
-                  <small className="mt-1 block text-xs text-slate-500">{order.latitude.toFixed(4)}, {order.longitude.toFixed(4)}</small>
+                  <small className="mt-1 block text-xs text-slate-500 dark:text-slate-400">{order.latitude.toFixed(4)}, {order.longitude.toFixed(4)}</small>
                 </td>
                 <td className="whitespace-nowrap px-5 py-4 text-sm text-slate-700 dark:text-slate-300">{weightFormatter.format(order.weight_kg)} kg</td>
                 <td className="px-5 py-4">
@@ -185,7 +185,7 @@ export function OrderList({
                     {(order.status === 'PENDING' || order.status === 'FAILED') && (
                       <button
                         type="button"
-                        className="rounded-lg bg-teal-50 px-2.5 py-1.5 text-xs font-semibold text-teal-800 hover:bg-teal-100 focus-visible:outline-2 focus-visible:outline-teal-600 dark:bg-teal-950/50 dark:text-teal-300"
+                        className="rounded-sm bg-amber-50 px-2.5 py-1.5 text-xs font-semibold text-amber-800 hover:bg-amber-100 focus-visible:outline-2 focus-visible:outline-amber-600 dark:bg-amber-950/50 dark:text-amber-300"
                         onClick={(event) => {
                           event.stopPropagation();
                           onDispatch(order);
@@ -196,7 +196,7 @@ export function OrderList({
                     )}
                     <button
                       type="button"
-                      className="rounded-lg px-2.5 py-1.5 text-xs font-semibold text-rose-700 hover:bg-rose-50 focus-visible:outline-2 focus-visible:outline-rose-600 disabled:opacity-50 dark:text-rose-300 dark:hover:bg-rose-950/50"
+                      className="rounded-sm px-2.5 py-1.5 text-xs font-semibold text-rose-700 hover:bg-rose-50 focus-visible:outline-2 focus-visible:outline-rose-600 disabled:opacity-50 dark:text-rose-300 dark:hover:bg-rose-950/50"
                       onClick={(event) => {
                         event.stopPropagation();
                         onDelete(order);

@@ -19,6 +19,18 @@ import {
 import { CreateOrderDialog } from './CreateOrderDialog';
 import { CsvImportDialog } from './CsvImportDialog';
 import { DispatchOrderDialog } from './DispatchOrderDialog';
+import { ArrowUpTrayIcon, PlusIcon } from '@heroicons/react/24/outline';
+
+import type { TranslationKey } from '@/lib/i18n/i18n';
+
+import {
+  DataFrame,
+  GhostAction,
+  HairlineCell,
+  HairlineGrid,
+  PrimaryAction,
+  SectionHeading,
+} from '../ui/Section';
 import { OrderList } from './OrderList';
 import { OrderDetailDrawer } from './OrderDetailDrawer';
 import {
@@ -192,46 +204,60 @@ export function OrdersManager() {
     : null;
   const closeOrderDetails = useCallback(() => setSelectedOrder(null), []);
 
+  const ORDER_COUNTS = [
+    { labelKey: 'orders.count.total', value: orders.length },
+    { labelKey: 'orders.count.pending', value: pendingCount },
+    { labelKey: 'orders.count.assigned', value: assignedCount },
+    { labelKey: 'orders.count.delivered', value: deliveredCount },
+  ] satisfies Array<{ labelKey: TranslationKey; value: number }>;
+
   return (
-    <section className="space-y-4" aria-labelledby="orders-heading">
-      <header className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-        <div>
-          <h2 id="orders-heading" className="text-lg font-semibold text-slate-950 dark:text-white">{t('orders.listTitle')}</h2>
-          <div className="mt-2 flex flex-wrap gap-2 text-xs text-slate-500">
-            <span>{t('orders.summary.total', { count: orders.length })}</span><span aria-hidden="true">·</span>
-            <span>{t('orders.summary.pending', { count: pendingCount })}</span><span aria-hidden="true">·</span>
-            <span>{t('orders.summary.assigned', { count: assignedCount })}</span><span aria-hidden="true">·</span>
-            <span>{t('orders.summary.failed', { count: failedCount })}</span><span aria-hidden="true">·</span>
-            <span>{t('orders.summary.delivered', { count: deliveredCount })}</span>
+    <section className="space-y-8" aria-labelledby="orders-heading">
+      {/* No eyebrow here: the page header above already carries it, and
+          repeating it reads as a stutter rather than a hierarchy. */}
+      <SectionHeading
+        id="orders-heading"
+        title={t('orders.listTitle')}
+        action={(
+          <div className="flex flex-col gap-2 sm:flex-row">
+            <PrimaryAction
+              onClick={() => setIsCreateOpen(true)}
+              icon={<PlusIcon aria-hidden="true" className="size-4" strokeWidth={1.6} />}
+            >
+              {t('orders.create')}
+            </PrimaryAction>
+            <GhostAction
+              onClick={() => setIsImportOpen(true)}
+              icon={<ArrowUpTrayIcon aria-hidden="true" className="size-4" strokeWidth={1.6} />}
+            >
+              {t('import.action')}
+            </GhostAction>
           </div>
-        </div>
-        <div className="flex flex-col gap-2 sm:flex-row">
-          <button
-            className="inline-flex h-10 items-center justify-center gap-2 rounded-xl bg-teal-600 px-4 text-sm font-semibold text-white shadow-sm transition hover:bg-teal-700 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-teal-600"
-            type="button"
-            onClick={() => setIsCreateOpen(true)}
-          >
-            <span className="text-lg leading-none" aria-hidden="true">＋</span>
-            {t('orders.create')}
-          </button>
-          <button
-            className="inline-flex h-10 items-center justify-center gap-2 rounded-xl border border-slate-300 bg-white px-4 text-sm font-semibold text-slate-700 transition hover:border-teal-400 hover:text-teal-700 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-teal-600 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200 dark:hover:border-teal-600 dark:hover:text-teal-300"
-            type="button"
-            onClick={() => setIsImportOpen(true)}
-          >
-            <span className="text-base leading-none" aria-hidden="true">↑</span>
-            {t('import.action')}
-          </button>
-        </div>
-      </header>
+        )}
+      />
+
+      <HairlineGrid columns={4}>
+        {ORDER_COUNTS.map(({ labelKey, value }) => (
+          <HairlineCell key={labelKey}>
+            <article className="px-6 py-6">
+              <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-slate-500 dark:text-slate-400">
+                {t(labelKey)}
+              </p>
+              <strong className="mt-2 block text-3xl font-extrabold tabular-nums text-slate-950 dark:text-white">
+                {value}
+              </strong>
+            </article>
+          </HairlineCell>
+        ))}
+      </HairlineGrid>
 
       {error && (
-        <p className="rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700 dark:border-rose-900 dark:bg-rose-950/50 dark:text-rose-300" role="alert">
+        <p className="rounded-sm border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700 dark:border-rose-900 dark:bg-rose-950/50 dark:text-rose-300" role="alert">
           {error}
         </p>
       )}
 
-      <div className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm shadow-slate-950/5 dark:border-slate-800 dark:bg-slate-900 dark:shadow-none">
+      <DataFrame>
         <OrderList
           orders={orders}
           isLoading={isLoading}
@@ -240,7 +266,7 @@ export function OrdersManager() {
           onDispatch={setDispatchOrder}
           onOpenDetails={setSelectedOrder}
         />
-      </div>
+      </DataFrame>
 
       {isCreateOpen && (
         <CreateOrderDialog

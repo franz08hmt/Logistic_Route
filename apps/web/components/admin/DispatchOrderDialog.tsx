@@ -100,14 +100,14 @@ export function DispatchOrderDialog({
         onClose={onClose}
       >
         <form className="space-y-4 px-5 py-5 sm:px-6" onSubmit={handleSubmit}>
-          <div className="rounded-xl border border-slate-200 bg-slate-50 p-4 text-sm dark:border-slate-800 dark:bg-slate-950/60">
+          <div className="rounded-sm border border-slate-200 bg-slate-50 p-4 text-sm dark:border-slate-800 dark:bg-slate-950/60">
             <strong className="block text-slate-950 dark:text-white">
               {order?.customer_name}
             </strong>
             <span className="mt-1 block text-slate-600 dark:text-slate-300">
               {order?.address}
             </span>
-            <span className="mt-1 block text-xs text-slate-500">
+            <span className="mt-1 block text-xs text-slate-500 dark:text-slate-400">
               {order?.weight_kg} kg
               {order?.delivery_region ? ` · ${order.delivery_region}` : ''}
             </span>
@@ -132,12 +132,12 @@ export function DispatchOrderDialog({
             </select>
           </label>
 
-          <p className="text-xs text-slate-500">
+          <p className="text-xs text-slate-500 dark:text-slate-400">
             {t('orders.readyDriverHint', { count: availableDrivers.length })}
           </p>
           {error && (
             <p
-              className="rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700 dark:border-rose-900 dark:bg-rose-950/50 dark:text-rose-300"
+              className="rounded-sm border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700 dark:border-rose-900 dark:bg-rose-950/50 dark:text-rose-300"
               role="alert"
             >
               {error}

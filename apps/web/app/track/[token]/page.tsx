@@ -16,7 +16,7 @@ const PublicTrackingMap = dynamic(
   () => import('@/components/public/PublicTrackingMap').then((module) => module.PublicTrackingMap),
   {
     ssr: false,
-    loading: () => <div className="h-[21rem] animate-pulse rounded-xl bg-slate-200 dark:bg-slate-800 sm:h-[26rem]" />,
+    loading: () => <div className="h-[21rem] animate-pulse rounded-sm bg-slate-200 dark:bg-slate-800 sm:h-[26rem]" />,
   },
 );
 
@@ -113,7 +113,7 @@ export default function PublicTrackingPage() {
       <TrackingState
         title={errorKind === 'not-found' ? t('tracking.notFound') : t('tracking.unavailable')}
         description={errorKind === 'not-found' ? t('tracking.notFoundDescription') : t('tracking.unavailableDescription')}
-        action={<button type="button" className="rounded-lg bg-teal-600 px-4 py-2.5 text-sm font-semibold text-white hover:bg-teal-700 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-teal-600" onClick={() => void loadTracking(undefined, true)}>{t('tracking.retry')}</button>}
+        action={<button type="button" className="rounded-sm bg-amber-700 dark:bg-amber-400 px-4 py-2.5 text-sm font-semibold text-white dark:text-slate-950 hover:bg-amber-800 dark:hover:bg-amber-300 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-amber-600" onClick={() => void loadTracking(undefined, true)}>{t('tracking.retry')}</button>}
       />
     );
   }
@@ -129,7 +129,7 @@ export default function PublicTrackingPage() {
       <header className="border-b border-slate-200 bg-white/95 dark:border-slate-800 dark:bg-slate-900/95">
         <div className="mx-auto flex max-w-5xl items-center justify-between gap-4 px-4 py-4 sm:px-6">
           <div className="flex items-center gap-3">
-            <span className="grid size-10 place-items-center rounded-xl bg-teal-600 text-sm font-black text-white shadow-sm">LR</span>
+            <span className="grid size-10 place-items-center rounded-sm bg-amber-700 dark:bg-amber-400 text-sm font-black text-white dark:text-slate-950">LR</span>
             <div><p className="font-semibold">LogiRoute VN</p><p className="text-xs text-slate-500 dark:text-slate-400">{t('tracking.portal')}</p></div>
           </div>
           <LanguageSwitcher />
@@ -137,10 +137,10 @@ export default function PublicTrackingPage() {
       </header>
 
       <div className="mx-auto max-w-5xl space-y-5 px-4 py-6 sm:px-6 sm:py-8">
-        <section className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-800 dark:bg-slate-900 sm:p-6">
+        <section className="rounded-sm border border-slate-200 bg-white p-5 dark:border-slate-800 dark:bg-slate-900 sm:p-6">
           <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-            <div><p className="text-xs font-semibold uppercase tracking-[0.16em] text-teal-700 dark:text-teal-400">{t('tracking.orderCode')}</p><h1 className="mt-1 text-2xl font-bold tracking-tight sm:text-3xl">{tracking.order.order_code}</h1></div>
-            <div className={`inline-flex w-fit items-center gap-2 rounded-full px-3 py-1.5 text-sm font-semibold ${isFailed ? 'bg-rose-100 text-rose-700 dark:bg-rose-950 dark:text-rose-300' : 'bg-teal-100 text-teal-800 dark:bg-teal-950 dark:text-teal-300'}`}><span className="size-2 rounded-full bg-current" />{t(`status.${tracking.order.status}`)}</div>
+            <div><p className="text-xs font-semibold uppercase tracking-[0.16em] text-amber-700 dark:text-amber-400">{t('tracking.orderCode')}</p><h1 className="mt-1 text-2xl font-bold tracking-tight sm:text-3xl">{tracking.order.order_code}</h1></div>
+            <div className={`inline-flex w-fit items-center gap-2 rounded-full px-3 py-1.5 text-sm font-semibold ${isFailed ? 'bg-rose-100 text-rose-700 dark:bg-rose-950 dark:text-rose-300' : 'bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-300'}`}><span className="size-2 rounded-full bg-current" />{t(`status.${tracking.order.status}`)}</div>
           </div>
           <TrackingProgress currentStep={progress} failed={isFailed} />
           <div className="mt-5 flex flex-wrap gap-x-5 gap-y-2 border-t border-slate-200 pt-4 text-xs text-slate-500 dark:border-slate-800 dark:text-slate-400">
@@ -150,14 +150,14 @@ export default function PublicTrackingPage() {
           </div>
         </section>
 
-        <section className="overflow-hidden rounded-xl border border-slate-200 bg-white p-3 shadow-sm dark:border-slate-800 dark:bg-slate-900 sm:p-4" aria-labelledby="tracking-map-title">
-          <div className="mb-3 px-1"><h2 id="tracking-map-title" className="font-semibold">{t('tracking.routeMap')}</h2><p className="mt-1 text-sm text-slate-500 dark:text-slate-400">{t('tracking.mapDescription')}</p></div>
+        <section className="overflow-hidden rounded-sm border border-slate-200 bg-white p-3 dark:border-slate-800 dark:bg-slate-900 sm:p-4" aria-labelledby="tracking-map-title">
+          <div className="mb-3 px-1"><h2 id="tracking-map-title" className="font-bold text-base uppercase tracking-[0.14em]">{t('tracking.routeMap')}</h2><p className="mt-1 text-sm text-slate-500 dark:text-slate-400">{t('tracking.mapDescription')}</p></div>
           <PublicTrackingMap tracking={tracking} />
         </section>
 
         <div className="grid gap-5 lg:grid-cols-2">
-          <section className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-800 dark:bg-slate-900">
-            <h2 className="font-semibold">{t('tracking.shippingInformation')}</h2>
+          <section className="rounded-sm border border-slate-200 bg-white p-5 dark:border-slate-800 dark:bg-slate-900">
+            <h2 className="font-bold text-base uppercase tracking-[0.14em]">{t('tracking.shippingInformation')}</h2>
             <dl className="mt-4 space-y-4 text-sm">
               <Info label={t('tracking.recipient')} value={tracking.order.customer_name_masked} />
               <Info label={t('tracking.recipientPhone')} value={tracking.order.customer_phone_masked || t('tracking.notAvailable')} />
@@ -166,21 +166,21 @@ export default function PublicTrackingPage() {
               <Info label={t('tracking.stopsBefore')} value={t('tracking.stopCount', { count: tracking.stops_remaining_before })} />
               <Info label={t('tracking.eta')} value={tracking.estimated_arrival_minutes === null ? t('tracking.pendingEta') : tracking.estimated_arrival_minutes === 0 ? t('tracking.completedEta') : t('tracking.etaMinutes', { minutes: tracking.estimated_arrival_minutes })} />
             </dl>
-            {tracking.order.failure_reason && <div className="mt-4 rounded-lg border border-rose-200 bg-rose-50 p-3 text-sm text-rose-800 dark:border-rose-900 dark:bg-rose-950/40 dark:text-rose-200"><strong>{t('tracking.failureReason')}</strong><p className="mt-1">{tracking.order.failure_reason}</p></div>}
-            {tracking.order.delivery_note && <div className="mt-4 rounded-lg bg-slate-100 p-3 text-sm text-slate-700 dark:bg-slate-800 dark:text-slate-200"><strong>{t('tracking.deliveryNote')}</strong><p className="mt-1">{tracking.order.delivery_note}</p></div>}
+            {tracking.order.failure_reason && <div className="mt-4 rounded-sm border border-rose-200 bg-rose-50 p-3 text-sm text-rose-800 dark:border-rose-900 dark:bg-rose-950/40 dark:text-rose-200"><strong>{t('tracking.failureReason')}</strong><p className="mt-1">{tracking.order.failure_reason}</p></div>}
+            {tracking.order.delivery_note && <div className="mt-4 rounded-sm bg-slate-100 p-3 text-sm text-slate-700 dark:bg-slate-800 dark:text-slate-200"><strong>{t('tracking.deliveryNote')}</strong><p className="mt-1">{tracking.order.delivery_note}</p></div>}
           </section>
 
-          <section className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-800 dark:bg-slate-900">
-            <h2 className="font-semibold">{t('tracking.driverTitle')}</h2>
+          <section className="rounded-sm border border-slate-200 bg-white p-5 dark:border-slate-800 dark:bg-slate-900">
+            <h2 className="font-bold text-base uppercase tracking-[0.14em]">{t('tracking.driverTitle')}</h2>
             {tracking.driver ? (
               <div className="mt-4 flex items-start gap-4">
-                <span className="grid size-12 shrink-0 place-items-center rounded-xl bg-teal-100 text-xl dark:bg-teal-950" aria-hidden="true">🚚</span>
+                <span className="grid size-12 shrink-0 place-items-center rounded-sm bg-amber-100 text-xl dark:bg-amber-950" aria-hidden="true">🚚</span>
                 <dl className="min-w-0 flex-1 space-y-3 text-sm">
                   <Info label={t('tracking.driverName')} value={tracking.driver.driver_name} />
                   <Info label={t('tracking.driverPhone')} value={tracking.driver.driver_phone || t('tracking.notAvailable')} />
                   <Info label={t('tracking.vehicle')} value={`${tracking.driver.license_plate} · ${tracking.driver.vehicle_type === 'TRUCK' ? t('tracking.truck') : tracking.driver.vehicle_type}`} />
                   {tracking.driver.driver_phone?.includes('*') && <p className="text-xs leading-5 text-slate-500 dark:text-slate-400">{t('tracking.phoneProtected')}</p>}
-                  {tracking.driver.driver_phone && !tracking.driver.driver_phone.includes('*') && <a href={`tel:${tracking.driver.driver_phone}`} className="inline-flex rounded-lg bg-teal-600 px-4 py-2.5 font-semibold text-white hover:bg-teal-700 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-teal-600">{t('tracking.callDriver')}</a>}
+                  {tracking.driver.driver_phone && !tracking.driver.driver_phone.includes('*') && <a href={`tel:${tracking.driver.driver_phone}`} className="inline-flex rounded-sm bg-amber-700 dark:bg-amber-400 px-4 py-2.5 font-semibold text-white dark:text-slate-950 hover:bg-amber-800 dark:hover:bg-amber-300 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-amber-600">{t('tracking.callDriver')}</a>}
                 </dl>
               </div>
             ) : <p className="mt-4 text-sm leading-6 text-slate-500 dark:text-slate-400">{t('tracking.driverPending')}</p>}
@@ -200,8 +200,8 @@ function TrackingProgress({ currentStep, failed }: { currentStep: number; failed
         const terminalFailure = failed && index === 3;
         return (
           <li key={key} className="relative text-center">
-            {index > 0 && <span className={`absolute right-1/2 top-3 h-0.5 w-full ${active ? terminalFailure ? 'bg-rose-500' : 'bg-teal-600' : 'bg-slate-200 dark:bg-slate-700'}`} aria-hidden="true" />}
-            <span className={`relative mx-auto grid size-6 place-items-center rounded-full border-2 text-[10px] font-bold ${active ? terminalFailure ? 'border-rose-600 bg-rose-600 text-white' : 'border-teal-600 bg-teal-600 text-white' : 'border-slate-300 bg-white text-slate-400 dark:border-slate-700 dark:bg-slate-900'}`}>{active ? '✓' : index + 1}</span>
+            {index > 0 && <span className={`absolute right-1/2 top-3 h-0.5 w-full ${active ? terminalFailure ? 'bg-rose-500' : 'bg-amber-600' : 'bg-slate-200 dark:bg-slate-700'}`} aria-hidden="true" />}
+            <span className={`relative mx-auto grid size-6 place-items-center rounded-full border-2 text-[10px] font-bold ${active ? terminalFailure ? 'border-rose-600 bg-rose-600 text-white dark:text-slate-950' : 'border-amber-600 bg-amber-700 dark:bg-amber-400 text-white dark:text-slate-950' : 'border-slate-300 bg-white text-slate-400 dark:border-slate-700 dark:bg-slate-900'}`}>{active ? '✓' : index + 1}</span>
             <span className={`mt-2 block text-[10px] font-medium leading-4 sm:text-xs ${active ? 'text-slate-900 dark:text-white' : 'text-slate-400'}`}>{t(failed && index === 3 ? 'tracking.stepFailed' : key)}</span>
           </li>
         );
@@ -211,9 +211,9 @@ function TrackingProgress({ currentStep, failed }: { currentStep: number; failed
 }
 
 function Info({ label, value }: { label: string; value: React.ReactNode }) {
-  return <div><dt className="text-xs font-semibold uppercase tracking-wide text-slate-500">{label}</dt><dd className="mt-1 leading-6 text-slate-800 dark:text-slate-200">{value}</dd></div>;
+  return <div><dt className="text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">{label}</dt><dd className="mt-1 leading-6 text-slate-800 dark:text-slate-200">{value}</dd></div>;
 }
 
 function TrackingState({ title, description, action }: { title: string; description: string; action?: React.ReactNode }) {
-  return <main className="grid min-h-screen place-items-center bg-slate-50 px-4 dark:bg-slate-950"><section className="w-full max-w-md rounded-xl border border-slate-200 bg-white p-8 text-center shadow-sm dark:border-slate-800 dark:bg-slate-900"><span className="mx-auto grid size-14 place-items-center rounded-xl bg-teal-100 text-2xl dark:bg-teal-950" aria-hidden="true">📦</span><h1 className="mt-5 text-xl font-semibold text-slate-950 dark:text-white">{title}</h1><p className="mt-2 text-sm leading-6 text-slate-500 dark:text-slate-400">{description}</p>{action && <div className="mt-5">{action}</div>}</section></main>;
+  return <main className="grid min-h-screen place-items-center bg-slate-50 px-4 dark:bg-slate-950"><section className="w-full max-w-md rounded-sm border border-slate-200 bg-white p-8 text-center dark:border-slate-800 dark:bg-slate-900"><span className="mx-auto grid size-14 place-items-center rounded-sm bg-amber-100 text-2xl dark:bg-amber-950" aria-hidden="true">📦</span><h1 className="mt-5 text-xl font-semibold text-slate-950 dark:text-white">{title}</h1><p className="mt-2 text-sm leading-6 text-slate-500 dark:text-slate-400">{description}</p>{action && <div className="mt-5">{action}</div>}</section></main>;
 }

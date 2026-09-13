@@ -1,3 +1,10 @@
+import {
+  COD_STATUSES,
+  PAYMENT_METHODS,
+  type CodStatus,
+  type PaymentMethod,
+} from '../cod/cod-contracts';
+
 import { apiFetch } from '../../lib/api-client';
 
 export const ORDER_STATUSES = [
@@ -35,6 +42,13 @@ export type Order = {
   signature_uploaded_at: string | null;
   recipient_name: string | null;
   delivery_region: string | null;
+  cod_amount: number;
+  payment_method: PaymentMethod;
+  cod_status: CodStatus;
+  cod_collected_at: string | null;
+  cod_reconciled_at: string | null;
+  cod_receipt_note: string | null;
+  shift_settlement_id: string | null;
 };
 
 export type CreateOrderInput = {
@@ -47,6 +61,8 @@ export type CreateOrderInput = {
   longitude: number;
   weight_kg: number;
   delivery_region?: string | null;
+  cod_amount?: number;
+  payment_method?: PaymentMethod;
 };
 
 export type DispatchOrderInput = {
@@ -139,7 +155,16 @@ function isOrder(value: unknown): value is Order {
     isNullableSignatureUrl(value.signature_url) &&
     isNullableIsoDate(value.signature_uploaded_at) &&
     (typeof value.recipient_name === 'string' || value.recipient_name === null) &&
-    (typeof value.delivery_region === 'string' || value.delivery_region === null)
+    (typeof value.delivery_region === 'string' || value.delivery_region === null) &&
+    typeof value.cod_amount === 'number' &&
+    Number.isInteger(value.cod_amount) &&
+    value.cod_amount >= 0 &&
+    PAYMENT_METHODS.includes(value.payment_method as PaymentMethod) &&
+    COD_STATUSES.includes(value.cod_status as CodStatus) &&
+    (typeof value.cod_collected_at === 'string' || value.cod_collected_at === null) &&
+    (typeof value.cod_reconciled_at === 'string' || value.cod_reconciled_at === null) &&
+    (typeof value.cod_receipt_note === 'string' || value.cod_receipt_note === null) &&
+    (typeof value.shift_settlement_id === 'string' || value.shift_settlement_id === null)
   );
 }
 

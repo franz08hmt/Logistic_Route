@@ -76,6 +76,13 @@ const orders: Order[] = [
     signature_uploaded_at: null,
     recipient_name: null,
     delivery_region: null,
+    cod_amount: 0,
+    payment_method: 'PREPAID',
+    cod_status: 'PENDING',
+    cod_collected_at: null,
+    cod_reconciled_at: null,
+    cod_receipt_note: null,
+    shift_settlement_id: null,
   },
   {
     id: 'order-2',
@@ -100,6 +107,13 @@ const orders: Order[] = [
     signature_uploaded_at: null,
     recipient_name: null,
     delivery_region: null,
+    cod_amount: 0,
+    payment_method: 'PREPAID',
+    cod_status: 'PENDING',
+    cod_collected_at: null,
+    cod_reconciled_at: null,
+    cod_receipt_note: null,
+    shift_settlement_id: null,
   },
 ];
 

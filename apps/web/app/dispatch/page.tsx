@@ -1,4 +1,4 @@
-import { AppShell } from '@/components/AppShell';
+import { AppShell, ConsoleSection } from '@/components/AppShell';
 import { DispatchCenter } from '@/components/dispatch/DispatchCenter';
 import { LocalizedPageHeader } from '@/components/LocalizedPageHeader';
 import { RoleGuard } from '@/components/RoleGuard';
@@ -6,16 +6,16 @@ import { RoleGuard } from '@/components/RoleGuard';
 export default function DispatchPage() {
   return (
     <AppShell>
-      <div className="mx-auto max-w-[96rem] space-y-6">
-        <RoleGuard allowedRoles={['ADMIN', 'DISPATCHER']} redirectTo="/driver">
-          <LocalizedPageHeader
-            eyebrowKey="dispatch.eyebrow"
-            titleKey="dispatch.title"
-            descriptionKey="dispatch.description"
-          />
+      <RoleGuard allowedRoles={['ADMIN', 'DISPATCHER']} redirectTo="/driver">
+        <LocalizedPageHeader
+          eyebrowKey="dispatch.eyebrow"
+          titleKey="dispatch.title"
+          descriptionKey="dispatch.description"
+        />
+        <ConsoleSection>
           <DispatchCenter />
-        </RoleGuard>
-      </div>
+        </ConsoleSection>
+      </RoleGuard>
     </AppShell>
   );
 }

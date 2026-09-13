@@ -35,7 +35,7 @@ export const RegionMismatchDialog = forwardRef<
   return (
     <dialog
       ref={dialogRef}
-      className="m-auto w-[min(28rem,calc(100%-2rem))] overflow-visible rounded-2xl border-0 bg-transparent p-0 backdrop:bg-slate-950/60 backdrop:backdrop-blur-sm"
+      className="m-auto w-[min(28rem,calc(100%-2rem))] overflow-visible rounded-sm border-0 bg-transparent p-0 backdrop:bg-slate-950/60 backdrop:backdrop-blur-sm"
       aria-modal="true"
       aria-labelledby="region-mismatch-title"
       aria-describedby="region-mismatch-description"
@@ -49,8 +49,8 @@ export const RegionMismatchDialog = forwardRef<
         }
       }}
     >
-      <section className="w-full rounded-2xl border border-amber-200 bg-white p-5 text-slate-950 shadow-2xl dark:border-amber-900 dark:bg-slate-900 dark:text-white">
-        <span className="grid size-11 place-items-center rounded-full bg-amber-100 text-xl text-amber-800 dark:bg-amber-950 dark:text-amber-300" aria-hidden="true">!</span>
+      <section className="w-full rounded-sm border border-orange-200 bg-white p-5 text-slate-950 dark:border-orange-900 dark:bg-slate-900 dark:text-white">
+        <span className="grid size-11 place-items-center rounded-full bg-orange-100 text-xl text-orange-800 dark:bg-orange-950 dark:text-orange-300" aria-hidden="true">!</span>
         <h3 id="region-mismatch-title" className="mt-4 text-lg font-bold">{title}</h3>
         <p id="region-mismatch-description" className="mt-2 text-sm leading-6 text-slate-600 dark:text-slate-300">
           {description}

@@ -13,7 +13,7 @@ const labelKeys: Record<OrderStatus | VehicleStatus, TranslationKey> = {
 };
 
 const styles: Record<OrderStatus | VehicleStatus, string> = {
-  PENDING: 'bg-amber-50 text-amber-700 ring-amber-600/20 dark:bg-amber-950/50 dark:text-amber-300',
+  PENDING: 'bg-orange-50 text-orange-700 ring-orange-600/20 dark:bg-orange-950/50 dark:text-orange-300',
   ASSIGNED: 'bg-sky-50 text-sky-700 ring-sky-600/20 dark:bg-sky-950/50 dark:text-sky-300',
   DELIVERING: 'bg-indigo-50 text-indigo-700 ring-indigo-600/20 dark:bg-indigo-950/50 dark:text-indigo-300',
   DELIVERED: 'bg-emerald-50 text-emerald-700 ring-emerald-600/20 dark:bg-emerald-950/50 dark:text-emerald-300',

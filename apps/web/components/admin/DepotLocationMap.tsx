@@ -54,7 +54,7 @@ export function DepotLocationMap({
   const mapPosition = isValidDepotCoordinates(position) ? position : FALLBACK_POSITION;
 
   return (
-    <div className="h-64 overflow-hidden rounded-xl border border-slate-200 dark:border-slate-700">
+    <div className="h-64 overflow-hidden rounded-sm border border-slate-200 dark:border-slate-700">
       <MapContainer center={[mapPosition.latitude, mapPosition.longitude]} zoom={13} className="h-full w-full" scrollWheelZoom>
         <TileLayer
           attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'

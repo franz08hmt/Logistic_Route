@@ -121,12 +121,12 @@ export function OrderLocationPicker({
             required
           />
         </label>
-        {isSearching && <span className="absolute bottom-3 right-3 size-4 animate-spin rounded-full border-2 border-slate-300 border-t-teal-600" aria-label={t('orders.searchingAddress')} />}
+        {isSearching && <span className="absolute bottom-3 right-3 size-4 animate-spin rounded-full border-2 border-slate-300 border-t-amber-600" aria-label={t('orders.searchingAddress')} />}
         {results.length > 0 && (
-          <ul id={listboxId} className="absolute z-[1300] mt-1 max-h-56 w-full overflow-y-auto rounded-xl border border-slate-200 bg-white p-1 shadow-xl dark:border-slate-700 dark:bg-slate-900" role="listbox">
+          <ul id={listboxId} className="absolute z-[1300] mt-1 max-h-56 w-full overflow-y-auto rounded-sm border border-slate-200 bg-white p-1 dark:border-slate-700 dark:bg-slate-900" role="listbox">
             {results.map((result) => (
               <li key={result.id} role="option" aria-selected="false">
-                <button className="w-full rounded-lg px-3 py-2.5 text-left text-sm text-slate-700 hover:bg-teal-50 focus-visible:outline-2 focus-visible:outline-teal-600 dark:text-slate-200 dark:hover:bg-teal-950/40" type="button" onClick={() => selectResult(result)}>
+                <button className="w-full rounded-sm px-3 py-2.5 text-left text-sm text-slate-700 hover:bg-amber-50 focus-visible:outline-2 focus-visible:outline-amber-600 dark:text-slate-200 dark:hover:bg-amber-950/40" type="button" onClick={() => selectResult(result)}>
                   {result.formatted_address}
                 </button>
               </li>
@@ -135,9 +135,9 @@ export function OrderLocationPicker({
         )}
       </div>
 
-      {searchError && <p className="text-xs text-amber-700 dark:text-amber-300" role="status">{searchError} {t('orders.pinFallback')}</p>}
+      {searchError && <p className="text-xs text-orange-700 dark:text-orange-300" role="status">{searchError} {t('orders.pinFallback')}</p>}
 
-      <div className="overflow-hidden rounded-xl border border-slate-200 dark:border-slate-700" aria-label={t('orders.locationMap')}>
+      <div className="overflow-hidden rounded-sm border border-slate-200 dark:border-slate-700" aria-label={t('orders.locationMap')}>
         <OrderLocationMap
           position={value}
           onChange={(coordinates) => onChange({ ...value, ...coordinates })}
@@ -145,7 +145,7 @@ export function OrderLocationPicker({
       </div>
       <p className="text-right text-[11px] text-slate-500 dark:text-slate-400">
         <a
-          className="underline underline-offset-2 hover:text-teal-700 dark:hover:text-teal-300"
+          className="underline underline-offset-2 hover:text-amber-700 dark:hover:text-amber-300"
           href="https://www.geoapify.com/"
           rel="noreferrer"
           target="_blank"
@@ -158,7 +158,7 @@ export function OrderLocationPicker({
           <span>{t('orders.deliveryRegion')}</span>
           <input className={fieldInputClass} value={value.region} onChange={(event) => onChange({ ...value, region: event.target.value })} placeholder={t('orders.deliveryRegionPlaceholder')} />
         </label>
-        <div className="self-end rounded-xl bg-slate-50 px-3 py-2.5 text-xs tabular-nums text-slate-600 dark:bg-slate-950 dark:text-slate-300">
+        <div className="self-end rounded-sm bg-slate-50 px-3 py-2.5 text-xs tabular-nums text-slate-600 dark:bg-slate-950 dark:text-slate-300">
           {value.latitude.toFixed(5)}, {value.longitude.toFixed(5)}
         </div>
       </div>

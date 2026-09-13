@@ -73,13 +73,13 @@ export function CreateVehicleDialog({ open, onClose, onCreate }: CreateVehicleDi
             <input className={fieldInputClass} name="vehicle_type" placeholder={t('fleet.vehicleTypePlaceholder')} defaultValue="TRUCK" maxLength={50} required />
           </label>
           <label className={`${fieldLabelClass} sm:col-span-2`}>
-            <span>{t('fleet.driverName')} <small className="font-normal text-slate-500">({t('common.optional')})</small></span>
+            <span>{t('fleet.driverName')} <small className="font-normal text-slate-500 dark:text-slate-400">({t('common.optional')})</small></span>
             <input className={fieldInputClass} name="driver_name" placeholder={t('fleet.driverPlaceholder')} maxLength={150} />
           </label>
         </div>
 
         {error && (
-          <p className="mt-4 rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700 dark:border-rose-900 dark:bg-rose-950/50 dark:text-rose-300" role="alert">
+          <p className="mt-4 rounded-sm border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700 dark:border-rose-900 dark:bg-rose-950/50 dark:text-rose-300" role="alert">
             {error}
           </p>
         )}

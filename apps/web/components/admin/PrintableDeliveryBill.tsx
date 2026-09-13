@@ -1,10 +1,15 @@
 'use client';
 
-import { useEffect, useId, useRef } from 'react';
+import { useEffect, useId, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { QRCodeSVG } from 'qrcode.react';
 
 import { useI18n } from '@/context/I18nContext';
+import {
+  fetchOrderVietQr,
+  type VietQrPayment,
+} from '@/components/cod/cod-contracts';
+import { formatVnd } from '@/components/cod/cod-format';
 import type { PublicTrackingResponse } from '@/components/public/tracking-contracts';
 import type { Order, Vehicle } from './api-contracts';
 
@@ -32,6 +37,32 @@ export function PrintableDeliveryBillPreview({
   const { t } = useI18n();
   const closeRef = useRef<HTMLButtonElement>(null);
   const titleId = useId();
+  const [vietQr, setVietQr] = useState<VietQrPayment | null>(null);
+  const orderId = order?.id ?? null;
+  const needsVietQr = Boolean(
+    order && order.cod_amount > 0 && order.payment_method !== 'PREPAID',
+  );
+
+  useEffect(() => {
+    if (!open || !orderId || !needsVietQr) {
+      setVietQr(null);
+      return;
+    }
+
+    let cancelled = false;
+    fetchOrderVietQr(orderId)
+      .then((payment) => {
+        if (!cancelled) {
+          setVietQr(payment);
+        }
+      })
+      // A missing code must not block printing the rest of the bill.
+      .catch(() => undefined);
+
+    return () => {
+      cancelled = true;
+    };
+  }, [open, orderId, needsVietQr]);
 
   useEffect(() => {
     if (!open) {
@@ -64,17 +95,17 @@ export function PrintableDeliveryBillPreview({
         role="dialog"
         aria-modal="true"
         aria-labelledby={titleId}
-        className="relative mx-auto max-w-[210mm] overflow-hidden rounded-xl bg-white shadow-2xl"
+        className="relative mx-auto max-w-[210mm] overflow-hidden rounded-sm bg-white"
       >
         <header className="delivery-bill-print-controls sticky top-0 z-10 flex items-center justify-between gap-4 border-b border-slate-200 bg-white/95 px-4 py-3 backdrop-blur sm:px-6">
           <div>
-            <p className="text-xs font-bold uppercase tracking-[0.16em] text-teal-700">{t('bill.previewEyebrow')}</p>
+            <p className="text-xs font-bold uppercase tracking-[0.16em] text-amber-700">{t('bill.previewEyebrow')}</p>
             <h2 id={titleId} className="mt-1 text-lg font-bold text-slate-950">{t('bill.previewTitle')}</h2>
           </div>
           <div className="flex items-center gap-2">
             <button
               type="button"
-              className="rounded-lg bg-teal-600 px-4 py-2.5 text-sm font-bold text-white transition hover:bg-teal-700 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-teal-600"
+              className="rounded-sm bg-amber-700 px-4 py-2.5 text-sm font-bold text-white transition hover:bg-amber-800 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-amber-600"
               onClick={() => window.print()}
             >
               {t('bill.printNow')}
@@ -82,7 +113,7 @@ export function PrintableDeliveryBillPreview({
             <button
               ref={closeRef}
               type="button"
-              className="grid size-10 place-items-center rounded-lg text-xl text-slate-500 transition hover:bg-slate-100 focus-visible:outline-2 focus-visible:outline-teal-600"
+              className="grid size-10 place-items-center rounded-sm text-xl text-slate-500 transition hover:bg-slate-100 focus-visible:outline-2 focus-visible:outline-amber-600"
               aria-label={t('bill.close')}
               onClick={onClose}
             >
@@ -96,7 +127,7 @@ export function PrintableDeliveryBillPreview({
             {t('bill.loading')}
           </div>
         ) : error || !depot ? (
-          <div className="m-6 rounded-xl border border-rose-200 bg-rose-50 p-4 text-sm text-rose-700" role="alert">
+          <div className="m-6 rounded-sm border border-rose-200 bg-rose-50 p-4 text-sm text-rose-700" role="alert">
             {error ?? t('bill.loadError')}
           </div>
         ) : (
@@ -105,6 +136,7 @@ export function PrintableDeliveryBillPreview({
             vehicle={vehicle}
             depot={depot}
             estimatedArrivalMinutes={estimatedArrivalMinutes}
+            vietQr={vietQr}
           />
         )}
       </section>
@@ -118,11 +150,13 @@ export function PrintableDeliveryBill({
   vehicle,
   depot,
   estimatedArrivalMinutes,
+  vietQr = null,
 }: {
   order: Order;
   vehicle: Vehicle | null;
   depot: Depot;
   estimatedArrivalMinutes: number | null;
+  vietQr?: VietQrPayment | null;
 }) {
   const { locale, t } = useI18n();
   const trackingUrl = typeof window === 'undefined'
@@ -144,7 +178,7 @@ export function PrintableDeliveryBill({
       <header className="grid gap-6 border-b-2 border-slate-900 pb-6 sm:grid-cols-[1fr_auto] sm:items-start">
         <div>
           <div className="flex items-center gap-3">
-            <span className="grid size-12 place-items-center rounded-xl bg-teal-600 text-lg font-black text-white">LR</span>
+            <span className="grid size-12 place-items-center rounded-sm bg-amber-700 text-lg font-black text-white">LR</span>
             <div>
               <strong className="text-xl font-black tracking-tight">LogiRoute VN</strong>
               <p className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-500">Smart Logistics Platform</p>
@@ -193,6 +227,71 @@ export function PrintableDeliveryBill({
         </BillCard>
       </section>
 
+      {order.cod_amount > 0 && order.payment_method !== 'PREPAID' && (
+        <section
+          className="mt-6 break-inside-avoid rounded-sm border-2 border-amber-700 p-4"
+          aria-labelledby="bill-cod-heading"
+        >
+          <h3
+            id="bill-cod-heading"
+            className="text-xs font-black uppercase tracking-[0.14em] text-amber-700"
+          >
+            {t('bill.codTitle')}
+          </h3>
+          <div className="mt-3 grid gap-4 sm:grid-cols-[1fr_auto] sm:items-center">
+            <dl className="space-y-2">
+              <div className="flex items-baseline gap-3">
+                <dt className="text-xs font-semibold uppercase tracking-[0.1em] text-slate-500">
+                  {t('bill.codAmount')}
+                </dt>
+                <dd className="text-2xl font-black tabular-nums text-amber-800">
+                  {formatVnd(order.cod_amount, locale)}
+                </dd>
+              </div>
+              <BillRow
+                label={t('bill.codMethod')}
+                value={t(`cod.paymentMethod.${order.payment_method}`)}
+              />
+              {vietQr && (
+                <>
+                  <BillRow
+                    label={t('bill.codBank')}
+                    value={`${vietQr.bank_code} · ${vietQr.bank_bin}`}
+                  />
+                  <BillRow label={t('bill.codAccount')} value={vietQr.account_no} />
+                  <BillRow
+                    label={t('bill.codAccountName')}
+                    value={vietQr.account_name}
+                  />
+                  <BillRow
+                    label={t('bill.codTransferNote')}
+                    value={vietQr.add_info}
+                  />
+                </>
+              )}
+            </dl>
+            {vietQr && (
+              <div className="text-center">
+                {/* Rendered from the EMVCo payload so the printed sheet never
+                    depends on a remote image loading in time. */}
+                <QRCodeSVG
+                  value={vietQr.payload}
+                  size={128}
+                  level="M"
+                  marginSize={2}
+                  title={t('bill.codQrTitle', { code: order.order_code })}
+                  bgColor="#ffffff"
+                  fgColor="#0f172a"
+                />
+                <p className="mt-2 max-w-[10rem] text-[10px] font-semibold leading-4 text-slate-600">
+                  {t('bill.codScanHint')}
+                </p>
+              </div>
+            )}
+          </div>
+        </section>
+      )}
+
       <section className="mt-6 break-inside-avoid" aria-labelledby="bill-confirmation-heading">
         <h3 id="bill-confirmation-heading" className="border-b border-slate-300 pb-2 text-sm font-black uppercase tracking-[0.14em]">{t('bill.confirmation')}</h3>
         <div className="grid grid-cols-3 gap-4 pt-4 text-center text-xs sm:text-sm">
@@ -210,7 +309,7 @@ export function PrintableDeliveryBill({
         <section className="mt-6 break-inside-avoid border-t border-slate-300 pt-5">
           <h3 className="text-sm font-black uppercase tracking-[0.14em]">{t('bill.podEvidence')}</h3>
           <img
-            className="mt-3 max-h-64 w-full rounded-lg border border-slate-300 object-contain"
+            className="mt-3 max-h-64 w-full rounded-sm border border-slate-300 object-contain"
             src={order.pod_url}
             alt={t('bill.podAlt', { code: order.order_code })}
           />
@@ -226,8 +325,8 @@ export function PrintableDeliveryBill({
 
 function BillCard({ title, children }: { title: string; children: React.ReactNode }) {
   return (
-    <section className="break-inside-avoid rounded-lg border border-slate-300 p-4">
-      <h3 className="text-xs font-black uppercase tracking-[0.14em] text-teal-700">{title}</h3>
+    <section className="break-inside-avoid rounded-sm border border-slate-300 p-4">
+      <h3 className="text-xs font-black uppercase tracking-[0.14em] text-amber-700">{title}</h3>
       <dl className="mt-3 space-y-2">{children}</dl>
     </section>
   );
@@ -247,7 +346,7 @@ function SignatureBox({
   imageUrl?: string;
 }) {
   return (
-    <div className="flex min-h-40 flex-col rounded-lg border border-slate-300 p-3">
+    <div className="flex min-h-40 flex-col rounded-sm border border-slate-300 p-3">
       <strong>{title}</strong>
       <div className="grid flex-1 place-items-center py-3">
         {imageUrl && <img className="max-h-20 w-full object-contain" src={imageUrl} alt={title} />}
