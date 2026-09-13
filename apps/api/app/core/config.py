@@ -53,3 +53,11 @@ WEB_ORIGINS = [
     for origin in getenv("WEB_ORIGINS", getenv("WEB_ORIGIN", _default_web_origins)).split(",")
     if origin.strip()
 ]
+
+# Default VietQR beneficiary used when a depot has no dedicated bank account.
+VIETQR_BANK_CODE = getenv("VIETQR_BANK_CODE", "VCB").strip().upper()
+VIETQR_ACCOUNT_NO = getenv("VIETQR_ACCOUNT_NO", "0071001234567").strip()
+VIETQR_ACCOUNT_NAME = getenv(
+    "VIETQR_ACCOUNT_NAME",
+    "CONG TY LOGIROUTE VIET NAM",
+).strip()

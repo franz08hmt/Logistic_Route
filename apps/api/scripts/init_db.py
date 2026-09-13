@@ -249,6 +249,73 @@ def main() -> None:
             "CREATE INDEX IF NOT EXISTS ix_route_analytics_snapshots_depot_id "
             "ON route_analytics_snapshots (depot_id)"
         ))
+        # Migration 013: COD collection and driver shift cash settlement.
+        connection.execute(text(
+            "CREATE TABLE IF NOT EXISTS driver_shift_settlements ("
+            "id UUID PRIMARY KEY DEFAULT gen_random_uuid(), "
+            "settlement_code VARCHAR(50) UNIQUE NOT NULL, "
+            "depot_id UUID NOT NULL REFERENCES depots(id) ON DELETE CASCADE, "
+            "driver_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE, "
+            "vehicle_id UUID NOT NULL REFERENCES vehicles(id) ON DELETE CASCADE, "
+            "total_orders_count INT NOT NULL DEFAULT 0, "
+            "delivered_count INT NOT NULL DEFAULT 0, "
+            "failed_count INT NOT NULL DEFAULT 0, "
+            "total_cod_expected NUMERIC(12, 0) NOT NULL DEFAULT 0, "
+            "expected_cash_amount NUMERIC(12, 0) NOT NULL DEFAULT 0, "
+            "total_cash_collected NUMERIC(12, 0) NOT NULL DEFAULT 0, "
+            "total_vietqr_collected NUMERIC(12, 0) NOT NULL DEFAULT 0, "
+            "variance_amount NUMERIC(12, 0) NOT NULL DEFAULT 0, "
+            "status VARCHAR(20) NOT NULL DEFAULT 'SUBMITTED', "
+            "submitted_at TIMESTAMPTZ NOT NULL DEFAULT NOW(), "
+            "approved_at TIMESTAMPTZ NULL, "
+            "approved_by_id UUID NULL REFERENCES users(id) ON DELETE SET NULL, "
+            "notes TEXT NULL, "
+            "review_note TEXT NULL)"
+        ))
+        connection.execute(text(
+            "ALTER TABLE orders ADD COLUMN IF NOT EXISTS "
+            "cod_amount NUMERIC(12, 0) NOT NULL DEFAULT 0"
+        ))
+        connection.execute(text(
+            "ALTER TABLE orders ADD COLUMN IF NOT EXISTS "
+            "payment_method VARCHAR(20) NOT NULL DEFAULT 'COD_CASH'"
+        ))
+        connection.execute(text(
+            "ALTER TABLE orders ADD COLUMN IF NOT EXISTS "
+            "cod_status VARCHAR(20) NOT NULL DEFAULT 'PENDING'"
+        ))
+        connection.execute(text(
+            "ALTER TABLE orders ADD COLUMN IF NOT EXISTS cod_collected_at TIMESTAMPTZ"
+        ))
+        connection.execute(text(
+            "ALTER TABLE orders ADD COLUMN IF NOT EXISTS cod_reconciled_at TIMESTAMPTZ"
+        ))
+        connection.execute(text(
+            "ALTER TABLE orders ADD COLUMN IF NOT EXISTS cod_receipt_note TEXT"
+        ))
+        connection.execute(text(
+            "ALTER TABLE orders ADD COLUMN IF NOT EXISTS shift_settlement_id UUID "
+            "REFERENCES driver_shift_settlements(id) ON DELETE SET NULL"
+        ))
+        connection.execute(text(
+            "CREATE INDEX IF NOT EXISTS ix_orders_cod_status ON orders (cod_status)"
+        ))
+        connection.execute(text(
+            "CREATE INDEX IF NOT EXISTS ix_orders_payment_method "
+            "ON orders (payment_method)"
+        ))
+        connection.execute(text(
+            "CREATE INDEX IF NOT EXISTS ix_orders_shift_settlement_id "
+            "ON orders (shift_settlement_id)"
+        ))
+        connection.execute(text(
+            "CREATE INDEX IF NOT EXISTS ix_driver_shift_settlements_scope "
+            "ON driver_shift_settlements (depot_id, driver_id, status)"
+        ))
+        connection.execute(text(
+            "CREATE INDEX IF NOT EXISTS ix_driver_shift_settlements_submitted_at "
+            "ON driver_shift_settlements (submitted_at)"
+        ))
         connection.execute(text(
             "UPDATE vehicles SET status = 'IDLE' "
             "WHERE status = 'ON_ROUTE' AND NOT EXISTS ("

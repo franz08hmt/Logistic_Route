@@ -12,7 +12,16 @@ from app.core.config import (
     SIGNATURE_PUBLIC_BASE_URL,
     SIGNATURE_UPLOAD_DIR,
 )
-from app.db.models import Depot, Order, OrderStatus, User, UserRole, Vehicle
+from app.db.models import (
+    CodStatus,
+    Depot,
+    Order,
+    OrderStatus,
+    PaymentMethod,
+    User,
+    UserRole,
+    Vehicle,
+)
 from app.db.session import get_db
 from app.schemas import (
     DepotRead,
@@ -395,6 +404,22 @@ def update_driver_order_status(
     order.pod_url = effective_pod_url
     if effective_pod_url and order.pod_uploaded_at is None:
         order.pod_uploaded_at = datetime.now(timezone.utc)
+
+    # COD collection rides along with the delivery confirmation so the stop and
+    # its cash record can never disagree.
+    cod_collected = False
+    if (
+        requested_status is OrderStatus.DELIVERED
+        and payload.payment_method is not None
+        and order.payment_method is not PaymentMethod.PREPAID
+        and int(order.cod_amount or 0) > 0
+        and order.cod_status is CodStatus.PENDING
+    ):
+        order.payment_method = PaymentMethod(payload.payment_method)
+        order.cod_status = CodStatus.COLLECTED
+        order.cod_collected_at = datetime.now(timezone.utc)
+        order.cod_receipt_note = payload.cod_receipt_note
+        cod_collected = True
     db.flush()
     log_order_activity(
         db,
@@ -409,6 +434,14 @@ def update_driver_order_status(
             else order.delivery_note
         ),
     )
+    if cod_collected:
+        log_order_activity(
+            db,
+            order_id=order.id,
+            action="COD_COLLECTED",
+            actor=current_user,
+            detail=f"{order.payment_method.value}: {int(order.cod_amount or 0)} VND",
+        )
     template_code = notification_template_for_status(requested_status)
     if old_status != requested_status.value and template_code is not None:
         send_order_notification(

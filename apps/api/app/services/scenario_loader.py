@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from datetime import datetime, timedelta, timezone
+from decimal import Decimal
 from uuid import NAMESPACE_URL, uuid5
 
 from sqlalchemy import delete, select, update
@@ -14,12 +15,14 @@ from app.core.config import (
 )
 from app.core.security import get_password_hash
 from app.db.models import (
+    CodStatus,
     CustomerNotification,
     Depot,
     NotificationChannel,
     Order,
     OrderActivityLog,
     OrderStatus,
+    PaymentMethod,
     RouteAnalyticsSnapshot,
     User,
     UserRole,
@@ -133,6 +136,9 @@ MULTI_REGION_STOPS = HCMC_STOPS[:6] + (
     ("Bến Lức", "Thị trấn Bến Lức, Long An", 10.6425, 106.4934),
     ("Nhơn Trạch", "KCN Nhơn Trạch, Đồng Nai", 10.7218, 106.9497),
 )
+
+# Delivered stops the customer paid by bank transfer instead of cash.
+VIETQR_STOP_INDEXES = frozenset({2, 4})
 
 SCENARIO_STOPS = {
     ScenarioType.HCMC_PEAK_DAY: HCMC_STOPS,
@@ -265,6 +271,11 @@ def _create_scenario_orders(
         "Đỗ Khánh Linh", "Ngô Minh Khoa", "Dương Mai Anh", "Huỳnh Gia Phúc",
     )
     weights = (85, 120, 64, 95, 240, 180, 150, 210, 75, 130, 160, 190)
+    # Realistic Vietnamese last-mile COD tickets; index 3 and 8 are prepaid.
+    cod_amounts = (
+        350_000, 720_000, 0, 1_250_000, 480_000, 2_150_000,
+        890_000, 0, 615_000, 1_480_000, 275_000, 3_200_000,
+    )
     batch_ids = (
         uuid5(NAMESPACE_URL, f"logiroute:{scenario_type.value}:route-1"),
         uuid5(NAMESPACE_URL, f"logiroute:{scenario_type.value}:route-2"),
@@ -300,6 +311,26 @@ def _create_scenario_orders(
             signature_uploaded_at=now - timedelta(minutes=34 + index) if delivered else None,
             recipient_name=customers[index - 1] if delivered else None,
             delivery_region=region,
+            cod_amount=Decimal(cod_amounts[index - 1]),
+            payment_method=(
+                PaymentMethod.PREPAID
+                if cod_amounts[index - 1] == 0
+                # Stops 2 and 4 are paid by bank QR so the reconciliation KPIs
+                # show a real cash/VietQR split rather than an all-cash demo.
+                else PaymentMethod.VIETQR
+                if index in VIETQR_STOP_INDEXES
+                else PaymentMethod.COD_CASH
+            ),
+            cod_status=(
+                CodStatus.COLLECTED
+                if delivered and cod_amounts[index - 1] > 0
+                else CodStatus.PENDING
+            ),
+            cod_collected_at=(
+                now - timedelta(minutes=36 + index)
+                if delivered and cod_amounts[index - 1] > 0
+                else None
+            ),
         )
         db.add(order)
         orders.append(order)
