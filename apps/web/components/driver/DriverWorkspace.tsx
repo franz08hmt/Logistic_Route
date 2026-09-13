@@ -359,10 +359,11 @@ export function DriverWorkspace() {
       {route?.vehicle && (
         <section aria-labelledby="driver-route-heading">
           <div className="mb-4 flex items-end justify-between gap-4">
-            <div>
-              <p className="text-xs font-bold uppercase tracking-[0.16em] text-amber-700 dark:text-amber-400">{t('driver.todayRoute')}</p>
-              <h2 id="driver-route-heading" className="mt-1 font-bold tracking-tight text-slate-950 dark:text-white text-base uppercase tracking-[0.14em]">{t('driver.routeTitle')}</h2>
-            </div>
+            {/* The banner above is already titled with driver.routeTitle, so
+                this section takes the day label instead of repeating it. */}
+            <h2 id="driver-route-heading" className="text-base font-bold uppercase tracking-[0.14em] text-slate-950 dark:text-white">
+              {t('driver.todayRoute')}
+            </h2>
             <span className="rounded-full bg-slate-200 px-3 py-1.5 text-xs font-bold text-slate-700 dark:bg-slate-800 dark:text-slate-200">{t('driver.stopCount', { count: route.stops.length })}</span>
           </div>
 

@@ -1,8 +1,17 @@
 import { TruckIcon } from '@heroicons/react/24/outline';
 
 import { useI18n } from '@/context/I18nContext';
+import { HairlineCell, HairlineGrid, SectionHeading } from '../ui/Section';
 import type { DriverRoute } from './driver-contracts';
 
+/**
+ * Shift summary for the signed-in driver.
+ *
+ * The page banner above already carries the eyebrow, title and description, so
+ * this block no longer repeats them, and its greeting is an `h2`: the banner
+ * owns the page's only `h1`. The saturated gradient slab it used to sit on was
+ * the last surface still painted in the pre-redesign palette.
+ */
 export function DriverOverview({
   route,
   driverName,
@@ -17,51 +26,84 @@ export function DriverOverview({
       : Math.round((route.completed_orders / route.total_orders) * 100);
 
   return (
-    <header className="overflow-hidden rounded-sm bg-gradient-to-br from-amber-700 via-amber-600 to-emerald-600 p-5 text-white sm:p-6">
-      <div className="flex flex-col gap-5 sm:flex-row sm:items-start sm:justify-between">
-        <div>
-          <p className="text-xs font-semibold uppercase tracking-[0.18em] text-amber-100">
-            {t('driver.eyebrow')}
+    <section aria-labelledby="driver-shift-heading" className="space-y-5">
+      <SectionHeading
+        id="driver-shift-heading"
+        title={t('driver.greeting', { name: driverName })}
+        action={(
+          <p className="inline-flex items-center gap-3 rounded-sm border border-slate-200 px-4 py-3 dark:border-cinema-line">
+            <span
+              className="grid size-10 shrink-0 place-items-center rounded-sm bg-cinema-accent/15 text-amber-700 dark:text-cinema-accent"
+              aria-hidden="true"
+            >
+              <TruckIcon className="size-5" strokeWidth={1.5} />
+            </span>
+            <span>
+              <small className="block text-[10px] font-bold uppercase tracking-[0.16em] text-slate-500 dark:text-slate-400">
+                {t('driver.assignedVehicle')}
+              </small>
+              <strong className="mt-0.5 block text-lg font-extrabold tabular-nums text-slate-950 dark:text-white">
+                {route.vehicle?.license_plate ?? t('driver.awaitingVehicle')}
+              </strong>
+            </span>
           </p>
-          <h1 className="mt-2 text-2xl font-bold tracking-tight sm:text-3xl">
-            {t('driver.greeting', { name: driverName })}
-          </h1>
-          <p className="mt-2 max-w-md text-sm leading-6 text-amber-50/90">
-            {t('driver.description')}
-          </p>
-        </div>
-        <div className="flex items-center gap-3 rounded-sm border border-white/20 bg-white/12 px-4 py-3 backdrop-blur">
-          <span className="grid size-10 place-items-center rounded-sm bg-white/15" aria-hidden="true"><TruckIcon className="size-5" /></span>
-          <span>
-            <small className="block text-[10px] font-semibold uppercase tracking-wide text-amber-100">{t('driver.assignedVehicle')}</small>
-          <strong className="mt-0.5 block text-lg">{route.vehicle?.license_plate ?? t('driver.awaitingVehicle')}</strong>
+        )}
+      />
+
+      <div className="rounded-sm border border-slate-200 p-5 dark:border-cinema-line">
+        <p className="flex items-center justify-between gap-4">
+          <span className="text-[11px] font-bold uppercase tracking-[0.16em] text-slate-500 dark:text-slate-400">
+            {t('driver.progress')}
           </span>
-        </div>
+          <strong className="text-sm font-extrabold tabular-nums text-slate-950 dark:text-white">
+            {t('driver.progressValue', {
+              completed: route.completed_orders,
+              total: route.total_orders,
+              percent: progressPercent,
+            })}
+          </strong>
+        </p>
+        <span
+          className="mt-3 block h-2 overflow-hidden rounded-full bg-slate-200 dark:bg-white/10"
+          role="progressbar"
+          aria-label={t('driver.progressAria')}
+          aria-valuemin={0}
+          aria-valuemax={100}
+          aria-valuenow={progressPercent}
+        >
+          <span
+            className="block h-full rounded-full bg-amber-700 transition-all dark:bg-cinema-accent"
+            style={{ width: `${progressPercent}%` }}
+          />
+        </span>
       </div>
 
-      <div className="mt-6 rounded-sm bg-slate-950/20 p-4">
-        <div className="flex items-center justify-between gap-4 text-sm">
-          <span className="font-medium text-amber-50">{t('driver.progress')}</span>
-          <strong>{t('driver.progressValue', { completed: route.completed_orders, total: route.total_orders, percent: progressPercent })}</strong>
-        </div>
-        <div className="mt-3 h-2 overflow-hidden rounded-full bg-white/20" role="progressbar" aria-label={t('driver.progressAria')} aria-valuemin={0} aria-valuemax={100} aria-valuenow={progressPercent}>
-          <span className="block h-full rounded-full bg-white transition-all" style={{ width: `${progressPercent}%` }} />
-        </div>
-        <div className="mt-4 grid grid-cols-3 divide-x divide-white/15 text-center">
-          <Metric value={route.total_orders} label={t('map.deliveryStops')} />
-          <Metric value={route.total_orders - route.completed_orders} label={t('driver.remaining')} />
-          <Metric value={route.depot?.name.replace('LogiRoute Depot ', '') ?? '—'} label={t('driver.startingPoint')} />
-        </div>
-      </div>
-    </header>
+      <HairlineGrid columns={3} as="div">
+        <Metric value={route.total_orders} label={t('map.deliveryStops')} />
+        <Metric
+          value={route.total_orders - route.completed_orders}
+          label={t('driver.remaining')}
+        />
+        <Metric
+          value={route.depot?.name.replace('LogiRoute Depot ', '') ?? '—'}
+          label={t('driver.startingPoint')}
+        />
+      </HairlineGrid>
+    </section>
   );
 }
 
 function Metric({ value, label }: { value: string | number; label: string }) {
   return (
-    <div className="px-2">
-      <strong className="block text-lg">{value}</strong>
-      <span className="mt-0.5 block text-[10px] font-medium text-amber-100">{label}</span>
-    </div>
+    <HairlineCell as="div">
+      <p className="px-5 py-5">
+        <span className="block text-[10px] font-bold uppercase tracking-[0.16em] text-slate-500 dark:text-slate-400">
+          {label}
+        </span>
+        <strong className="mt-1.5 block text-2xl font-extrabold tabular-nums text-slate-950 dark:text-white">
+          {value}
+        </strong>
+      </p>
+    </HairlineCell>
   );
 }

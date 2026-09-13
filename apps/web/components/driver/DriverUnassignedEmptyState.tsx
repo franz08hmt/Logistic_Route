@@ -26,7 +26,7 @@ export function DriverUnassignedEmptyState({
           </svg>
         </div>
         <p className="mt-6 text-xs font-bold uppercase tracking-[0.18em] text-amber-700 dark:text-amber-400">{t('driver.onboardingEyebrow')}</p>
-        <h1 id="driver-onboarding-title" className="mt-2 text-2xl font-bold tracking-tight text-slate-950 dark:text-white sm:text-3xl">{t('driver.onboardingTitle')}</h1>
+        <h2 id="driver-onboarding-title" className="mt-2 text-xl font-bold uppercase tracking-wider text-slate-950 dark:text-white sm:text-2xl">{t('driver.onboardingTitle')}</h2>
         <p className="mx-auto mt-3 max-w-xl text-sm leading-6 text-slate-600 dark:text-slate-400">{t('driver.onboardingDescription')}</p>
       </div>
 
