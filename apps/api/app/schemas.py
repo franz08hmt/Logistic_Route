@@ -6,9 +6,12 @@ from uuid import UUID
 from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
 from app.db.models import (
+    CodStatus,
     NotificationChannel,
     NotificationStatus,
     OrderStatus,
+    PaymentMethod,
+    SettlementStatus,
     UserRole,
     UserStatus,
     VehicleStatus,
@@ -228,6 +231,15 @@ class OrderBase(BaseModel):
 
 class OrderCreate(OrderBase):
     delivery_region: str | None = Field(default=None, max_length=150)
+    # VND has no sub-unit, and NUMERIC(12, 0) caps a single order at 12 digits.
+    cod_amount: int = Field(default=0, ge=0, le=999_999_999_999)
+    payment_method: PaymentMethod = PaymentMethod.COD_CASH
+
+    @model_validator(mode="after")
+    def require_zero_cod_for_prepaid(self) -> "OrderCreate":
+        if self.payment_method is PaymentMethod.PREPAID and self.cod_amount != 0:
+            raise ValueError("a prepaid order cannot carry a COD amount")
+        return self
 
     @field_validator("status")
     @classmethod
@@ -257,6 +269,13 @@ class OrderRead(OrderBase, OrmSchema):
     signature_uploaded_at: datetime | None = None
     recipient_name: str | None = None
     delivery_region: str | None = None
+    cod_amount: int = Field(default=0, ge=0)
+    payment_method: PaymentMethod = PaymentMethod.COD_CASH
+    cod_status: CodStatus = CodStatus.PENDING
+    cod_collected_at: datetime | None = None
+    cod_reconciled_at: datetime | None = None
+    cod_receipt_note: str | None = None
+    shift_settlement_id: UUID | None = None
 
 
 class BulkImportRowError(BaseModel):
@@ -620,6 +639,10 @@ class DriverOrderStatusUpdate(BaseModel):
     delivery_note: str | None = Field(default=None, max_length=2000)
     failure_reason: str | None = Field(default=None, max_length=500)
     pod_url: str | None = Field(default=None, max_length=1000)
+    # Optional so the driver can record how a COD order was paid in the same
+    # call that marks it delivered.
+    payment_method: Literal[PaymentMethod.COD_CASH, PaymentMethod.VIETQR] | None = None
+    cod_receipt_note: str | None = Field(default=None, max_length=500)
 
     @field_validator("delivery_note", "failure_reason", "pod_url")
     @classmethod
@@ -676,6 +699,11 @@ class DriverStopRead(OrmSchema):
     signature_url: str | None
     signature_uploaded_at: datetime | None
     recipient_name: str | None
+    cod_amount: int = Field(default=0, ge=0)
+    payment_method: PaymentMethod = PaymentMethod.COD_CASH
+    cod_status: CodStatus = CodStatus.PENDING
+    cod_collected_at: datetime | None = None
+    cod_receipt_note: str | None = None
 
 
 class DriverRouteRead(BaseModel):
@@ -684,3 +712,119 @@ class DriverRouteRead(BaseModel):
     total_orders: int
     completed_orders: int
     stops: list[DriverStopRead]
+
+
+class CodSummaryRead(BaseModel):
+    """Depot-scoped cash position across the COD lifecycle."""
+
+    depot_id: UUID | None = None
+    depot_name: str | None = None
+    total_cod_expected: int = Field(ge=0)
+    total_cash_in_hand: int = Field(ge=0)
+    total_vietqr_paid: int = Field(ge=0)
+    total_reconciled: int = Field(ge=0)
+    pending_settlements_count: int = Field(ge=0)
+    pending_orders_count: int = Field(ge=0)
+
+
+class CodCollectionRequest(BaseModel):
+    payment_method: Literal[PaymentMethod.COD_CASH, PaymentMethod.VIETQR]
+    cod_receipt_note: str | None = Field(default=None, max_length=500)
+
+
+class VietQrRead(BaseModel):
+    """Everything the client needs to render and explain a VietQR code."""
+
+    order_code: str
+    amount: int = Field(gt=0)
+    bank_code: str
+    bank_bin: str
+    account_no: str
+    account_name: str
+    add_info: str
+    payload: str = Field(min_length=1)
+    image_url: str
+
+
+class DriverShiftOrderRead(OrmSchema):
+    id: UUID
+    order_code: str
+    customer_name: str
+    address: str
+    status: OrderStatus
+    cod_amount: int = Field(ge=0)
+    payment_method: PaymentMethod
+    cod_status: CodStatus
+
+
+class ShiftSettlementPreviewRead(BaseModel):
+    """Server-computed cash position for the driver's open shift."""
+
+    depot_id: UUID | None = None
+    depot_name: str | None = None
+    vehicle_id: UUID | None = None
+    license_plate: str | None = None
+    total_orders_count: int = Field(ge=0)
+    delivered_count: int = Field(ge=0)
+    failed_count: int = Field(ge=0)
+    total_cod_expected: int = Field(ge=0)
+    expected_cash_amount: int = Field(ge=0)
+    total_vietqr_collected: int = Field(ge=0)
+    can_submit: bool
+    orders: list[DriverShiftOrderRead] = Field(default_factory=list)
+
+
+class ShiftSettlementSubmitRequest(BaseModel):
+    # Only the declared cash is driver input. Expected totals are recomputed
+    # server-side so the cashier can see any shortfall.
+    total_cash_collected: int = Field(ge=0, le=999_999_999_999)
+    notes: str | None = Field(default=None, max_length=1000)
+
+
+class ShiftSettlementReviewRequest(BaseModel):
+    review_note: str | None = Field(default=None, max_length=1000)
+
+
+class ShiftSettlementRead(OrmSchema):
+    id: UUID
+    settlement_code: str
+    depot_id: UUID
+    depot_name: str | None = None
+    driver_id: UUID
+    driver_name: str | None = None
+    driver_email: str | None = None
+    vehicle_id: UUID
+    license_plate: str | None = None
+    total_orders_count: int = Field(ge=0)
+    delivered_count: int = Field(ge=0)
+    failed_count: int = Field(ge=0)
+    total_cod_expected: int = Field(ge=0)
+    expected_cash_amount: int = Field(ge=0)
+    total_cash_collected: int = Field(ge=0)
+    total_vietqr_collected: int = Field(ge=0)
+    variance_amount: int
+    status: SettlementStatus
+    submitted_at: datetime
+    approved_at: datetime | None = None
+    approved_by_id: UUID | None = None
+    approved_by_name: str | None = None
+    notes: str | None = None
+    review_note: str | None = None
+
+
+class CodLedgerItemRead(BaseModel):
+    order_id: UUID
+    order_code: str
+    customer_name: str
+    address: str
+    depot_id: UUID | None = None
+    depot_name: str | None = None
+    license_plate: str | None = None
+    driver_name: str | None = None
+    status: OrderStatus
+    cod_amount: int = Field(ge=0)
+    payment_method: PaymentMethod
+    cod_status: CodStatus
+    cod_collected_at: datetime | None = None
+    cod_reconciled_at: datetime | None = None
+    settlement_code: str | None = None

@@ -1,8 +1,19 @@
 import uuid
 from datetime import datetime, timezone
+from decimal import Decimal
 from enum import Enum
 
-from sqlalchemy import Boolean, DateTime, Double, Enum as SqlEnum, ForeignKey, String, Text, func
+from sqlalchemy import (
+    Boolean,
+    DateTime,
+    Double,
+    Enum as SqlEnum,
+    ForeignKey,
+    Numeric,
+    String,
+    Text,
+    func,
+)
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import Mapped, mapped_column
 
@@ -33,6 +44,25 @@ class UserStatus(str, Enum):
     PENDING_APPROVAL = "PENDING_APPROVAL"
     ACTIVE = "ACTIVE"
     SUSPENDED = "SUSPENDED"
+
+
+class PaymentMethod(str, Enum):
+    COD_CASH = "COD_CASH"
+    VIETQR = "VIETQR"
+    PREPAID = "PREPAID"
+
+
+class CodStatus(str, Enum):
+    PENDING = "PENDING"
+    COLLECTED = "COLLECTED"
+    RECONCILED = "RECONCILED"
+    FAILED = "FAILED"
+
+
+class SettlementStatus(str, Enum):
+    SUBMITTED = "SUBMITTED"
+    APPROVED = "APPROVED"
+    REJECTED = "REJECTED"
 
 
 class NotificationChannel(str, Enum):
@@ -214,6 +244,42 @@ class Order(Base):
     )
     recipient_name: Mapped[str | None] = mapped_column(String(150), nullable=True)
     delivery_region: Mapped[str | None] = mapped_column(String(150), nullable=True)
+    # VND amounts use Numeric(12, 0) so cash reconciliation stays exact.
+    cod_amount: Mapped[Decimal] = mapped_column(
+        Numeric(12, 0),
+        nullable=False,
+        default=Decimal(0),
+        server_default="0",
+    )
+    payment_method: Mapped[PaymentMethod] = mapped_column(
+        SqlEnum(PaymentMethod, native_enum=False, length=20),
+        nullable=False,
+        default=PaymentMethod.COD_CASH,
+        server_default=PaymentMethod.COD_CASH.value,
+        index=True,
+    )
+    cod_status: Mapped[CodStatus] = mapped_column(
+        SqlEnum(CodStatus, native_enum=False, length=20),
+        nullable=False,
+        default=CodStatus.PENDING,
+        server_default=CodStatus.PENDING.value,
+        index=True,
+    )
+    cod_collected_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True),
+        nullable=True,
+    )
+    cod_reconciled_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True),
+        nullable=True,
+    )
+    cod_receipt_note: Mapped[str | None] = mapped_column(Text, nullable=True)
+    shift_settlement_id: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True),
+        ForeignKey("driver_shift_settlements.id", ondelete="SET NULL"),
+        nullable=True,
+        index=True,
+    )
 
 
 class OrderActivityLog(Base):
@@ -315,3 +381,98 @@ class RouteAnalyticsSnapshot(Base):
         server_default=func.now(),
         index=True,
     )
+
+
+class DriverShiftSettlement(Base):
+    """Cash handover record a driver files at the end of a delivery shift.
+
+    Expected amounts are computed by the server from the orders bound to the
+    settlement; `total_cash_collected` is what the driver declares handing over.
+    `variance_amount` is the difference the depot cashier reviews before
+    approving, which is the whole point of the reconciliation step.
+    """
+
+    __tablename__ = "driver_shift_settlements"
+
+    id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True),
+        primary_key=True,
+        default=uuid.uuid4,
+    )
+    settlement_code: Mapped[str] = mapped_column(
+        String(50),
+        unique=True,
+        index=True,
+        nullable=False,
+    )
+    depot_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True),
+        ForeignKey("depots.id", ondelete="CASCADE"),
+        nullable=False,
+        index=True,
+    )
+    driver_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True),
+        ForeignKey("users.id", ondelete="CASCADE"),
+        nullable=False,
+        index=True,
+    )
+    vehicle_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True),
+        ForeignKey("vehicles.id", ondelete="CASCADE"),
+        nullable=False,
+        index=True,
+    )
+    total_orders_count: Mapped[int] = mapped_column(nullable=False, default=0)
+    delivered_count: Mapped[int] = mapped_column(nullable=False, default=0)
+    failed_count: Mapped[int] = mapped_column(nullable=False, default=0)
+    total_cod_expected: Mapped[Decimal] = mapped_column(
+        Numeric(12, 0),
+        nullable=False,
+        default=Decimal(0),
+    )
+    expected_cash_amount: Mapped[Decimal] = mapped_column(
+        Numeric(12, 0),
+        nullable=False,
+        default=Decimal(0),
+    )
+    total_cash_collected: Mapped[Decimal] = mapped_column(
+        Numeric(12, 0),
+        nullable=False,
+        default=Decimal(0),
+    )
+    total_vietqr_collected: Mapped[Decimal] = mapped_column(
+        Numeric(12, 0),
+        nullable=False,
+        default=Decimal(0),
+    )
+    variance_amount: Mapped[Decimal] = mapped_column(
+        Numeric(12, 0),
+        nullable=False,
+        default=Decimal(0),
+    )
+    status: Mapped[SettlementStatus] = mapped_column(
+        SqlEnum(SettlementStatus, native_enum=False, length=20),
+        nullable=False,
+        default=SettlementStatus.SUBMITTED,
+        index=True,
+    )
+    submitted_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        nullable=False,
+        default=lambda: datetime.now(timezone.utc),
+        server_default=func.now(),
+        index=True,
+    )
+    # Set when a cashier reviews the settlement, for both approval and rejection.
+    approved_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True),
+        nullable=True,
+    )
+    approved_by_id: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True),
+        ForeignKey("users.id", ondelete="SET NULL"),
+        nullable=True,
+    )
+    notes: Mapped[str | None] = mapped_column(Text, nullable=True)
+    review_note: Mapped[str | None] = mapped_column(Text, nullable=True)

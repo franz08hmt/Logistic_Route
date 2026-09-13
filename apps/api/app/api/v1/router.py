@@ -4,6 +4,7 @@ from app.api.v1 import (
     admin,
     analytics,
     auth,
+    cod,
     depots,
     driver,
     orders,
@@ -18,6 +19,7 @@ from app.api.v1 import (
 router = APIRouter()
 router.include_router(auth.router)
 router.include_router(depots.router)
+router.include_router(cod.router)
 router.include_router(admin.router)
 router.include_router(analytics.router)
 router.include_router(overview.router)

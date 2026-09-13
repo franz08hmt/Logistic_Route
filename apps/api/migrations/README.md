@@ -36,6 +36,16 @@ Brandname delivery messages. Notification records are deleted automatically
 when their parent order is deleted.
 Migration `011_order_signature.sql` stores the recipient name and public PNG
 signature metadata used by the driver e-signature flow and printable bill.
+Migration `012_multi_depot.sql` adds depot codes, cities, and the single
+default-hub constraint, then scopes vehicles, orders, and analytics snapshots to
+a depot so multi-hub operations can be filtered per region.
+Migration `013_order_cod_and_shift_settlement.sql` adds cash-on-delivery
+collection to `orders` (`cod_amount`, `payment_method`, `cod_status`, collection
+and reconciliation timestamps) and the `driver_shift_settlements` table used for
+the end-of-shift cash handover. `orders.shift_settlement_id` binds each order to
+the handover that carries its cash, so a cashier approval reconciles an explicit
+set instead of re-deriving the shift from a timestamp window. VND amounts use
+`NUMERIC(12, 0)` so cash totals never inherit floating point rounding error.
 The local container is
 published on host port `5433` so it does not collide with another PostgreSQL
 instance on host port `5432`.
