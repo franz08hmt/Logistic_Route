@@ -6,8 +6,8 @@ import type { DriverPerformanceItem } from './driver-performance-contracts';
 const RANK_PRESENTATION = {
   1: {
     medal: '👑',
-    card: 'border-amber-300 bg-amber-50/70 dark:border-amber-700 dark:bg-amber-950/20 sm:order-2 sm:-translate-y-4',
-    avatar: 'bg-amber-100 text-amber-800 dark:bg-amber-900 dark:text-amber-200',
+    card: 'border-orange-300 bg-orange-50/70 dark:border-orange-700 dark:bg-orange-950/20 sm:order-2 sm:-translate-y-4',
+    avatar: 'bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-200',
   },
   2: {
     medal: '🥈',
@@ -35,10 +35,10 @@ export function DriverPerformancePodium({
     <section aria-labelledby="performance-podium-title">
       <div className="mb-8 flex items-center justify-between gap-3">
         <div>
-          <p className="text-xs font-semibold uppercase tracking-[0.18em] text-teal-700 dark:text-teal-300">
+          <p className="text-xs font-semibold uppercase tracking-[0.18em] text-amber-700 dark:text-amber-300">
             {t('leaderboard.podiumEyebrow')}
           </p>
-          <h2 className="mt-1 text-lg font-semibold text-slate-950 dark:text-white" id="performance-podium-title">
+          <h2 className="mt-1 font-bold text-slate-950 dark:text-white text-base uppercase tracking-[0.14em]" id="performance-podium-title">
             {t('leaderboard.podiumTitle')}
           </h2>
         </div>
@@ -48,7 +48,7 @@ export function DriverPerformancePodium({
           const presentation = RANK_PRESENTATION[driver.rank as 1 | 2 | 3];
           return (
             <li
-              className={`rounded-xl border p-5 text-center shadow-sm transition-transform ${presentation.card}`}
+              className={`rounded-sm border p-5 text-center transition-transform ${presentation.card}`}
               key={driver.driver_id}
             >
               <span className="text-3xl" aria-hidden="true">{presentation.medal}</span>
@@ -56,23 +56,23 @@ export function DriverPerformancePodium({
               <span className={`mx-auto mt-3 grid size-14 place-items-center rounded-full text-lg font-bold ${presentation.avatar}`}>
                 {driver.driver_name.charAt(0).toUpperCase()}
               </span>
-              <h3 className="mt-3 truncate font-semibold text-slate-950 dark:text-white">
+              <h3 className="mt-3 truncate text-base font-bold text-slate-950 dark:text-white">
                 {driver.driver_name}
               </h3>
-              <p className="mt-1 truncate text-xs text-slate-500">
+              <p className="mt-1 truncate text-xs text-slate-500 dark:text-slate-400">
                 {driver.license_plate ?? t('leaderboard.noVehicle')}
               </p>
               <strong className="mt-4 block text-3xl tracking-tight text-slate-950 dark:text-white">
                 {decimal.format(driver.overall_score)}
               </strong>
-              <span className="text-xs font-medium text-slate-500">{t('leaderboard.score')}</span>
+              <span className="text-xs font-medium text-slate-500 dark:text-slate-400">{t('leaderboard.score')}</span>
               <dl className="mt-4 grid grid-cols-2 divide-x divide-slate-200 border-t border-slate-200 pt-3 text-sm dark:divide-slate-700 dark:border-slate-700">
                 <div>
-                  <dt className="text-xs text-slate-500">{t('leaderboard.delivered')}</dt>
+                  <dt className="text-xs text-slate-500 dark:text-slate-400">{t('leaderboard.delivered')}</dt>
                   <dd className="mt-1 font-semibold text-slate-900 dark:text-white">{driver.delivered_count}</dd>
                 </div>
                 <div>
-                  <dt className="text-xs text-slate-500">{t('leaderboard.co2Saved')}</dt>
+                  <dt className="text-xs text-slate-500 dark:text-slate-400">{t('leaderboard.co2Saved')}</dt>
                   <dd className="mt-1 font-semibold text-emerald-700 dark:text-emerald-300">
                     {decimal.format(driver.estimated_co2_saved_kg)} kg
                   </dd>

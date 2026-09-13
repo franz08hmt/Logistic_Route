@@ -13,12 +13,12 @@ export function DepotSwitcher({ compact = false }: { compact?: boolean }) {
         {t('depots.switchLabel')}
       </label>
       <div className="relative">
-        <span className="pointer-events-none absolute inset-y-0 left-3 flex items-center text-teal-600" aria-hidden="true">
+        <span className="pointer-events-none absolute inset-y-0 left-3 flex items-center text-cinema-accent" aria-hidden="true">
           ●
         </span>
         <select
           id={compact ? 'depot-switcher-mobile' : 'depot-switcher'}
-          className={`min-h-10 appearance-none rounded-xl border border-slate-200 bg-white pl-7 pr-8 text-xs font-semibold text-slate-800 outline-none transition focus:border-teal-500 focus:ring-2 focus:ring-teal-500/20 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-100 ${compact ? 'max-w-44' : 'w-full'}`}
+          className={`min-h-10 appearance-none rounded-sm border border-cinema-line bg-cinema-700 pl-7 pr-8 text-xs font-semibold text-slate-100 outline-none transition focus:border-cinema-accent focus:ring-2 focus:ring-cinema-accent/25 ${compact ? 'max-w-44' : 'w-full'}`}
           value={selectedDepot?.id ?? ''}
           onChange={(event) => selectDepot(event.target.value)}
           disabled={isLoading || depots.length === 0}
@@ -31,9 +31,9 @@ export function DepotSwitcher({ compact = false }: { compact?: boolean }) {
             </option>
           ))}
         </select>
-        <span className="pointer-events-none absolute inset-y-0 right-3 flex items-center text-slate-400" aria-hidden="true">⌄</span>
+        <span className="console-chrome-muted pointer-events-none absolute inset-y-0 right-3 flex items-center" aria-hidden="true">⌄</span>
       </div>
-      {error && <p className="mt-1 text-[10px] text-rose-600" id="depot-switcher-error">{t('depots.loadError')}</p>}
+      {error && <p className="mt-1 text-[10px] text-rose-300" id="depot-switcher-error">{t('depots.loadError')}</p>}
     </div>
   );
 }

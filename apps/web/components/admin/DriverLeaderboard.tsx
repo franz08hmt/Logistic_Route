@@ -101,15 +101,15 @@ export function DriverLeaderboard() {
 
   return (
     <div className="space-y-5">
-      <div className="flex flex-col gap-4 rounded-xl border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-800 dark:bg-slate-900 lg:flex-row lg:items-center lg:justify-between">
+      <div className="flex flex-col gap-4 rounded-sm border border-slate-200 bg-white p-4 dark:border-slate-800 dark:bg-slate-900 lg:flex-row lg:items-center lg:justify-between">
         <div>
           <p className="text-sm font-semibold text-slate-950 dark:text-white">{t('leaderboard.periodTitle')}</p>
-          <div className="mt-2 inline-flex rounded-lg bg-slate-100 p-1 dark:bg-slate-950" aria-label={t('leaderboard.periodSelector')}>
+          <div className="mt-2 inline-flex rounded-sm bg-slate-100 p-1 dark:bg-slate-950" aria-label={t('leaderboard.periodSelector')}>
             {PERFORMANCE_PERIODS.map((days) => (
               <button
-                className={`rounded-md px-3 py-2 text-sm font-semibold transition ${
+                className={`rounded-sm px-3 py-2 text-sm font-semibold transition ${
                   period === days
-                    ? 'bg-teal-600 text-white shadow-sm'
+                    ? 'bg-amber-700 dark:bg-amber-400 text-white dark:text-slate-950'
                     : 'text-slate-600 hover:text-slate-950 dark:text-slate-400 dark:hover:text-white'
                 }`}
                 aria-pressed={period === days}
@@ -124,7 +124,7 @@ export function DriverLeaderboard() {
         </div>
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
           {performance && (
-            <div className="rounded-lg bg-emerald-50 px-4 py-2 text-sm text-emerald-800 dark:bg-emerald-950/50 dark:text-emerald-200" aria-live="polite">
+            <div className="rounded-sm bg-emerald-50 px-4 py-2 text-sm text-emerald-800 dark:bg-emerald-950/50 dark:text-emerald-200" aria-live="polite">
               <span className="font-semibold">{decimal.format(performance.total_co2_saved_all_kg)} kg</span>{' '}
               {t('leaderboard.totalCo2')}
               <span aria-hidden="true"> · </span>
@@ -132,7 +132,7 @@ export function DriverLeaderboard() {
             </div>
           )}
           <button
-            className="inline-flex min-h-10 items-center justify-center gap-2 rounded-lg border border-slate-300 bg-white px-4 text-sm font-semibold text-slate-700 transition hover:border-teal-500 hover:text-teal-700 disabled:cursor-not-allowed disabled:opacity-50 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-200 dark:hover:border-teal-500 dark:hover:text-teal-300"
+            className="inline-flex min-h-10 items-center justify-center gap-2 rounded-sm border border-slate-300 bg-white px-4 text-sm font-semibold text-slate-700 transition hover:border-amber-500 hover:text-amber-700 disabled:cursor-not-allowed disabled:opacity-50 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-200 dark:hover:border-amber-500 dark:hover:text-amber-300"
             disabled={!performance?.drivers.length}
             type="button"
             onClick={exportCsv}
@@ -144,7 +144,7 @@ export function DriverLeaderboard() {
       </div>
 
       {error && (
-        <div className="flex flex-col gap-3 rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700 dark:border-rose-900 dark:bg-rose-950/50 dark:text-rose-300 sm:flex-row sm:items-center sm:justify-between" role="alert">
+        <div className="flex flex-col gap-3 rounded-sm border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700 dark:border-rose-900 dark:bg-rose-950/50 dark:text-rose-300 sm:flex-row sm:items-center sm:justify-between" role="alert">
           <span>{error}</span>
           <button className="font-semibold underline underline-offset-4" type="button" onClick={() => void loadPerformance()}>
             {t('leaderboard.retry')}
@@ -156,10 +156,10 @@ export function DriverLeaderboard() {
         <div className="space-y-5" aria-busy="true" aria-label={t('leaderboard.loading')}>
           <div className="grid gap-4 sm:grid-cols-3">
             {Array.from({ length: 3 }, (_, index) => (
-              <div className="h-64 animate-pulse rounded-xl bg-slate-200/70 dark:bg-slate-800" key={index} />
+              <div className="h-64 animate-pulse rounded-sm bg-slate-200/70 dark:bg-slate-800" key={index} />
             ))}
           </div>
-          <div className="h-96 animate-pulse rounded-xl bg-slate-200/70 dark:bg-slate-800" />
+          <div className="h-96 animate-pulse rounded-sm bg-slate-200/70 dark:bg-slate-800" />
         </div>
       ) : performance?.drivers.length ? (
         <div className={`space-y-7 transition-opacity ${isLoading ? 'opacity-60' : ''}`}>
@@ -167,11 +167,11 @@ export function DriverLeaderboard() {
           <DriverPerformanceTable drivers={performance.drivers} />
         </div>
       ) : (
-        <div className="grid min-h-64 place-items-center rounded-xl border border-dashed border-slate-300 bg-white p-8 text-center dark:border-slate-700 dark:bg-slate-900" role="status">
+        <div className="grid min-h-64 place-items-center rounded-sm border border-dashed border-slate-300 bg-white p-8 text-center dark:border-slate-700 dark:bg-slate-900" role="status">
           <div>
             <span className="mx-auto grid size-12 place-items-center rounded-full bg-emerald-50 text-xl dark:bg-emerald-950" aria-hidden="true">🌱</span>
-            <h2 className="mt-3 font-semibold text-slate-950 dark:text-white">{t('leaderboard.emptyTitle')}</h2>
-            <p className="mt-1 max-w-md text-sm text-slate-500">{t('leaderboard.emptyDescription')}</p>
+            <h2 className="mt-3 font-bold text-slate-950 dark:text-white text-base uppercase tracking-[0.14em]">{t('leaderboard.emptyTitle')}</h2>
+            <p className="mt-1 max-w-md text-sm text-slate-500 dark:text-slate-400">{t('leaderboard.emptyDescription')}</p>
           </div>
         </div>
       )}

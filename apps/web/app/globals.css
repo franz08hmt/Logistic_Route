@@ -3,13 +3,44 @@
 @custom-variant dark (&:where(.dark, .dark *));
 
 @theme {
-  --font-sans: "Inter", "Segoe UI", Arial, sans-serif;
-  --color-brand-50: #f0fdfa;
-  --color-brand-100: #ccfbf1;
-  --color-brand-500: #14b8a6;
-  --color-brand-600: #0d9488;
-  --color-brand-700: #0f766e;
-  --color-brand-900: #134e4a;
+  --font-sans: var(--font-poppins), "Segoe UI", Arial, sans-serif;
+
+  /* The dark end of the slate ramp is retuned from Tailwind's navy to a neutral
+     charcoal. Every screen already ships a full set of `dark:` variants, so
+     moving these four steps converts the whole console to the operations-console
+     ground in one place instead of rewriting 54 files. The light steps
+     (50 - 600) are untouched, so light mode and muted text are unaffected. */
+  --color-slate-950: #13151a;
+  --color-slate-900: #1b1e25;
+  --color-slate-800: #23262e;
+  --color-slate-700: #2d3138;
+  /* One brand ramp, the landing portal's amber, shared by both halves. */
+  --color-brand-50: #fffbeb;
+  --color-brand-100: #fef3c7;
+  --color-brand-500: #f59e0b;
+  --color-brand-600: #d97706;
+  --color-brand-700: #b45309;
+  --color-brand-900: #78350f;
+
+  /* Dark Cinema. Shared by the public landing portal and the console chrome
+     (sidebar, top bar, stat tiles) so both halves of the product read as one
+     brand. Data surfaces stay light-first and keep the light/dark toggle. */
+  --color-cinema-900: #0e1014;
+  --color-cinema-800: #13151a;
+  --color-cinema-700: #1b1e25;
+  --color-cinema-600: #23262e;
+  --color-cinema-line: #2d3138;
+  --color-cinema-muted: #98a0b3;
+  /* A bronze-leaning amber rather than Tailwind's neon amber-400, matching
+     the reference theme's subdued tone. 8.77:1 on --color-cinema-900.
+     `--color-amber-400` is redefined to the same value just below, so every
+     literal `amber-400` class in the portal and the console softens with it
+     instead of needing a rename. */
+  --color-cinema-accent: #e8a838;
+  --color-amber-400: #e8a838;
+  /* The same accent pitched down for text on a light surface: 5.02:1 on white,
+     4.80:1 on slate-50. The lighter orange-600 measures 3.19:1 and fails AA. */
+  --color-cinema-accent-ink: #b45309;
 }
 
 :root {
@@ -24,12 +55,12 @@
 
 .dark {
   color-scheme: dark;
-  background: #020617;
+  background: #13151a;
   --chart-grid: #334155;
   --chart-muted: #94a3b8;
   --chart-text: #f8fafc;
-  --chart-surface: #0f172a;
-  --chart-tooltip-bg: #0f172a;
+  --chart-surface: #1b1e25;
+  --chart-tooltip-bg: #1b1e25;
 }
 
 html {
@@ -40,7 +71,7 @@ html {
 }
 
 html.dark {
-  background: #020617;
+  background: #13151a;
 }
 
 body {
@@ -65,7 +96,7 @@ button:disabled {
 }
 
 .dark .leaflet-container {
-  background: #0f172a;
+  background: #1b1e25;
 }
 
 .dark .route-map-root .leaflet-tile-pane {
@@ -84,8 +115,20 @@ button:disabled {
   color: #e2e8f0;
 }
 
+/* Map attribution sits on the tiles themselves, so it carries its own ground.
+   The inherited #64748b measured 3.70:1 over the dark tile layer. */
 .leaflet-control-attribution {
-  color: #64748b;
+  background: rgb(255 255 255 / 0.88);
+  color: #475569;
+}
+
+.dark .leaflet-control-attribution {
+  background: rgb(19 21 26 / 0.88);
+  color: #cbd5e1;
+}
+
+.leaflet-control-attribution a {
+  color: inherit;
 }
 
 .route-stop-icon-shell,
@@ -142,7 +185,7 @@ button:disabled {
   width: 3rem;
   height: 3rem;
   place-items: center;
-  border: 3px solid #14b8a6;
+  border: 3px solid #e8a838;
   border-radius: 9999px;
   background: rgba(255, 255, 255, 0.96);
   box-shadow: 0 6px 18px rgb(15 23 42 / 28%);
@@ -224,12 +267,15 @@ button:disabled {
   background: #e11d48;
 }
 
+/* The destination is the goal of the trip, so it reads as success; the
+   driver marker carries the brand. Keeping them different hues is what
+   lets a customer tell the two apart on the map. */
 .tracking-marker--destination {
-  background: #0d9488;
+  background: #10b981;
 }
 
 .tracking-marker--driver {
-  background: #f59e0b;
+  background: #e8a838;
 }
 
 @media print {
@@ -278,4 +324,128 @@ button:disabled {
     print-color-adjust: exact;
     -webkit-print-color-adjust: exact;
   }
+}
+
+/* ---------------------------------------------------------------------------
+   Landing portal (public "/" page)
+   The portal commits to a dark cinematic look regardless of the app theme, so
+   every colour here is painted explicitly instead of inheriting light/dark.
+--------------------------------------------------------------------------- */
+.landing-portal {
+  color-scheme: dark;
+  background: var(--color-cinema-900);
+  color: #f4f6fb;
+}
+
+/* Vignette that carries the hero photograph into the flat black below it. */
+.landing-hero-scrim {
+  background:
+    linear-gradient(
+      to bottom,
+      rgb(14 16 20 / 0.78) 0%,
+      rgb(14 16 20 / 0.34) 26%,
+      rgb(14 16 20 / 0.52) 60%,
+      var(--color-cinema-900) 100%
+    );
+}
+
+/* Oversized watermark behind the story column. */
+.landing-watermark {
+  font-weight: 800;
+  letter-spacing: -0.04em;
+  line-height: 0.8;
+  color: rgb(255 255 255 / 0.035);
+  user-select: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .landing-portal *,
+  .landing-portal *::before,
+  .landing-portal *::after {
+    transition-duration: 0.01ms !important;
+    animation-duration: 0.01ms !important;
+  }
+}
+
+/* ---------------------------------------------------------------------------
+   Console chrome
+   The sidebar, mobile bars, and stat tiles commit to the Dark Cinema surface in
+   both app themes, matching the landing portal. Content surfaces below them
+   keep the light/dark toggle, which is why every colour here is explicit.
+--------------------------------------------------------------------------- */
+.console-chrome {
+  color-scheme: dark;
+  background: var(--color-cinema-900);
+  color: #f4f6fb;
+  border-color: var(--color-cinema-line);
+}
+
+/* Muted chrome text. slate-500 measures 4.18:1 here and fails AA, so the
+   muted tone is pinned to the token rather than a Tailwind slate step. */
+.console-chrome-muted {
+  color: var(--color-cinema-muted);
+}
+
+/* A raised panel inside the chrome: switchers, avatars, stat tiles. */
+.console-panel {
+  background: var(--color-cinema-700);
+  border: 1px solid var(--color-cinema-line);
+}
+
+/* Sticky mobile bars. These float over LIGHT console content, unlike the
+   landing bars which float over the dark hero, so the ground stays nearly
+   opaque: at 0.78 alpha a white page showed through and dragged the muted
+   labels to 3.84:1. At 0.96 they measure 7.0:1 against the worst case. */
+.console-chrome-blur {
+  background: rgb(14 16 20 / 0.98);
+}
+
+@supports (backdrop-filter: blur(1px)) {
+  .console-chrome-blur {
+    background: rgb(14 16 20 / 0.96);
+    backdrop-filter: blur(16px);
+  }
+}
+
+/* Vignette under a console page banner.
+   Two layers, because one cannot do both jobs. The vertical layer resolves the
+   photograph into the page ground below it. The horizontal layer sits only
+   behind the text column: lifting a dark photograph enough to be visible also
+   lifts the backdrop under the title, and the amber eyebrow measured 2.28:1
+   against it. Darkening the whole vignette would hide the photograph again, so
+   the text gets its own ground and the right of the frame keeps the image. */
+.console-banner-scrim {
+  background:
+    linear-gradient(
+      to right,
+      rgb(14 16 20 / 0.76) 0%,
+      rgb(14 16 20 / 0.66) 34%,
+      rgb(14 16 20 / 0.26) 58%,
+      rgb(14 16 20 / 0) 76%
+    ),
+    linear-gradient(
+      to bottom,
+      rgb(14 16 20 / 0.6) 0%,
+      rgb(14 16 20 / 0.4) 38%,
+      rgb(19 21 26 / 0.8) 76%,
+      var(--color-slate-950) 100%
+    );
+}
+
+:root:not(.dark) .console-banner-scrim {
+  background:
+    linear-gradient(
+      to right,
+      rgb(14 16 20 / 0.8) 0%,
+      rgb(14 16 20 / 0.7) 34%,
+      rgb(14 16 20 / 0.28) 58%,
+      rgb(14 16 20 / 0) 76%
+    ),
+    linear-gradient(
+      to bottom,
+      rgb(14 16 20 / 0.64) 0%,
+      rgb(14 16 20 / 0.46) 40%,
+      rgb(14 16 20 / 0.86) 82%,
+      #f8fafc 100%
+    );
 }

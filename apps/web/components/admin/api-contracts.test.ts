@@ -31,6 +31,13 @@ describe('admin API contracts', () => {
       signature_uploaded_at: null,
       recipient_name: null,
       delivery_region: null,
+      cod_amount: 350000,
+      payment_method: 'COD_CASH',
+      cod_status: 'PENDING',
+      cod_collected_at: null,
+      cod_reconciled_at: null,
+      cod_receipt_note: null,
+      shift_settlement_id: null,
     };
 
     expect(isOrderList([order])).toBe(true);

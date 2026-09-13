@@ -1,5 +1,6 @@
 'use client';
 
+import { PlusIcon } from '@heroicons/react/24/outline';
 import { useEffect, useState } from 'react';
 import { useI18n } from '@/context/I18nContext';
 import { useDepot } from '@/context/DepotContext';
@@ -91,8 +92,8 @@ export function FleetManager() {
     <section className="space-y-4" aria-labelledby="fleet-heading">
       <header className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h2 id="fleet-heading" className="text-lg font-semibold text-slate-950 dark:text-white">{t('fleet.listTitle')}</h2>
-          <p className="mt-2 text-xs text-slate-500">
+          <h2 id="fleet-heading" className="font-bold text-slate-950 dark:text-white text-base uppercase tracking-[0.14em]">{t('fleet.listTitle')}</h2>
+          <p className="mt-2 text-xs text-slate-500 dark:text-slate-400">
             {t('fleet.summary', {
               total: vehicles.length,
               available: availableCount,
@@ -101,22 +102,22 @@ export function FleetManager() {
           </p>
         </div>
         <button
-          className="inline-flex h-10 items-center justify-center gap-2 rounded-xl bg-teal-600 px-4 text-sm font-semibold text-white shadow-sm transition hover:bg-teal-700 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-teal-600"
+          className="inline-flex h-10 items-center justify-center gap-2 rounded-sm bg-amber-700 dark:bg-amber-400 px-4 text-sm font-semibold text-white dark:text-slate-950 transition hover:bg-amber-800 dark:hover:bg-amber-300 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-amber-600"
           type="button"
           onClick={() => setIsCreateOpen(true)}
         >
-          <span className="text-lg leading-none" aria-hidden="true">＋</span>
+          <PlusIcon aria-hidden="true" className="size-4" />
           {t('fleet.add')}
         </button>
       </header>
 
       {error && (
-        <p className="rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700 dark:border-rose-900 dark:bg-rose-950/50 dark:text-rose-300" role="alert">
+        <p className="rounded-sm border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700 dark:border-rose-900 dark:bg-rose-950/50 dark:text-rose-300" role="alert">
           {error}
         </p>
       )}
 
-      <div className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm shadow-slate-950/5 dark:border-slate-800 dark:bg-slate-900 dark:shadow-none">
+      <div className="overflow-hidden rounded-sm border border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-900 dark:shadow-none">
         <FleetList vehicles={vehicles} isLoading={isLoading} />
       </div>
 

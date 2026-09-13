@@ -1,4 +1,4 @@
-import { AppShell } from '@/components/AppShell';
+import { AppShell, ConsoleSection } from '@/components/AppShell';
 import { LocalizedPageHeader } from '@/components/LocalizedPageHeader';
 import { OrdersManager } from '@/components/admin/OrdersManager';
 import { RoleGuard } from '@/components/RoleGuard';
@@ -6,16 +6,16 @@ import { RoleGuard } from '@/components/RoleGuard';
 export default function OrdersPage() {
   return (
     <AppShell>
-      <div className="mx-auto max-w-7xl space-y-6">
-        <RoleGuard allowedRoles={['ADMIN', 'DISPATCHER']} redirectTo="/driver">
-          <LocalizedPageHeader
-            eyebrowKey="orders.eyebrow"
-            titleKey="orders.title"
-            descriptionKey="orders.description"
-          />
+      <RoleGuard allowedRoles={['ADMIN', 'DISPATCHER']} redirectTo="/driver">
+        <LocalizedPageHeader
+          eyebrowKey="orders.eyebrow"
+          titleKey="orders.title"
+          descriptionKey="orders.description"
+        />
+        <ConsoleSection>
           <OrdersManager />
-        </RoleGuard>
-      </div>
+        </ConsoleSection>
+      </RoleGuard>
     </AppShell>
   );
 }

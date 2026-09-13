@@ -1,3 +1,10 @@
+import {
+  COD_STATUSES,
+  PAYMENT_METHODS,
+  type CodStatus,
+  type PaymentMethod,
+} from '../cod/cod-contracts';
+
 export const DRIVER_ORDER_STATUSES = [
   'ASSIGNED',
   'DELIVERING',
@@ -25,6 +32,11 @@ export type DriverStop = {
   signature_url: string | null;
   signature_uploaded_at: string | null;
   recipient_name: string | null;
+  cod_amount: number;
+  payment_method: PaymentMethod;
+  cod_status: CodStatus;
+  cod_collected_at: string | null;
+  cod_receipt_note: string | null;
 };
 
 export type DriverRoute = {
@@ -79,7 +91,14 @@ export function isDriverStop(value: unknown): value is DriverStop {
     (typeof value.pod_uploaded_at === 'string' || value.pod_uploaded_at === null) &&
     (typeof value.signature_url === 'string' || value.signature_url === null) &&
     (typeof value.signature_uploaded_at === 'string' || value.signature_uploaded_at === null) &&
-    (typeof value.recipient_name === 'string' || value.recipient_name === null)
+    (typeof value.recipient_name === 'string' || value.recipient_name === null) &&
+    typeof value.cod_amount === 'number' &&
+    Number.isInteger(value.cod_amount) &&
+    value.cod_amount >= 0 &&
+    PAYMENT_METHODS.includes(value.payment_method as PaymentMethod) &&
+    COD_STATUSES.includes(value.cod_status as CodStatus) &&
+    (typeof value.cod_collected_at === 'string' || value.cod_collected_at === null) &&
+    (typeof value.cod_receipt_note === 'string' || value.cod_receipt_note === null)
   );
 }
 

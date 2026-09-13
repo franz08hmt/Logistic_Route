@@ -57,8 +57,8 @@ function ChartCard({
   children: React.ReactNode;
 }) {
   return (
-    <section className={`rounded-xl border border-slate-200 bg-white p-5 shadow-sm shadow-slate-950/5 dark:border-slate-800 dark:bg-slate-900 dark:shadow-none ${className}`}>
-      <h2 className="text-base font-semibold text-slate-950 dark:text-white">
+    <section className={`rounded-sm border border-slate-200 bg-white p-5 dark:border-slate-800 dark:bg-slate-900 dark:shadow-none ${className}`}>
+      <h2 className="font-bold text-slate-950 dark:text-white text-base uppercase tracking-[0.14em]">
         {title}
       </h2>
       <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
@@ -112,8 +112,8 @@ export default function AnalyticsCharts({
           <AreaChart data={chartData} margin={{ top: 8, right: 8, left: 4, bottom: 0 }}>
             <defs>
               <linearGradient id="analyticsFuel" x1="0" y1="0" x2="0" y2="1">
-                <stop offset="5%" stopColor="#0d9488" stopOpacity={0.7} />
-                <stop offset="95%" stopColor="#0d9488" stopOpacity={0.08} />
+                <stop offset="5%" stopColor="#e8a838" stopOpacity={0.7} />
+                <stop offset="95%" stopColor="#e8a838" stopOpacity={0.08} />
               </linearGradient>
               <linearGradient id="analyticsDriver" x1="0" y1="0" x2="0" y2="1">
                 <stop offset="5%" stopColor="#0ea5e9" stopOpacity={0.65} />
@@ -149,7 +149,7 @@ export default function AnalyticsCharts({
               dataKey="fuel_cost_vnd"
               name={labels.fuelCost}
               stackId="cost"
-              stroke="#0d9488"
+              stroke="#e8a838"
               fill="url(#analyticsFuel)"
               strokeWidth={2}
             />

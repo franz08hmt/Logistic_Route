@@ -1,5 +1,6 @@
 'use client';
 
+import { LinkIcon, PrinterIcon, XMarkIcon } from '@heroicons/react/24/outline';
 import { useEffect, useId, useRef, useState } from 'react';
 
 import { useI18n } from '@/context/I18nContext';
@@ -13,6 +14,7 @@ import {
 } from './activity-contracts';
 import { type Order, type Vehicle, requestApi } from './api-contracts';
 import { OrderActivityTimeline } from './OrderActivityTimeline';
+import { codStatusTone, formatVnd } from '../cod/cod-format';
 import { OrderNotificationSection } from './OrderNotificationSection';
 import { shouldResetOrderDetailOverlays } from './order-detail-state';
 import { PodPreviewModal } from './PodPreviewModal';
@@ -233,54 +235,89 @@ export function OrderDetailDrawer({
         aria-modal="true"
         aria-labelledby={titleId}
         inert={!open}
-        className={`absolute inset-y-0 right-0 flex w-full flex-col border-l border-slate-200 bg-white shadow-2xl transition-transform duration-300 ease-out dark:border-slate-800 dark:bg-slate-900 sm:w-[28rem] lg:w-[32rem] ${open ? 'translate-x-0' : 'translate-x-full'}`}
+        className={`absolute inset-y-0 right-0 flex w-full flex-col border-l border-slate-200 bg-white transition-transform duration-300 ease-out dark:border-slate-800 dark:bg-slate-900 sm:w-[28rem] lg:w-[32rem] ${open ? 'translate-x-0' : 'translate-x-full'}`}
       >
         {activeOrder && (
           <>
             <header className="flex items-start justify-between gap-4 border-b border-slate-200 px-5 py-5 dark:border-slate-800 sm:px-6">
               <div className="min-w-0">
-                <span className="text-xs font-semibold uppercase tracking-[0.16em] text-teal-700 dark:text-teal-400">{t('orderDetail.eyebrow')}</span>
+                <span className="text-xs font-semibold uppercase tracking-[0.16em] text-amber-700 dark:text-amber-400">{t('orderDetail.eyebrow')}</span>
                 <h2 id={titleId} className="mt-1 truncate text-xl font-semibold text-slate-950 dark:text-white">{activeOrder.order_code}</h2>
                 <div className="mt-3"><StatusBadge status={activeOrder.status} /></div>
               </div>
-              <button ref={closeRef} type="button" className="grid size-10 shrink-0 place-items-center rounded-lg text-xl text-slate-500 transition hover:bg-slate-100 hover:text-slate-950 focus-visible:outline-2 focus-visible:outline-teal-600 dark:hover:bg-slate-800 dark:hover:text-white" aria-label={t('orderDetail.close')} onClick={onClose}>×</button>
+              <button ref={closeRef} type="button" className="grid size-10 shrink-0 place-items-center rounded-sm text-xl text-slate-500 dark:text-slate-400 transition hover:bg-slate-100 hover:text-slate-950 focus-visible:outline-2 focus-visible:outline-amber-600 dark:hover:bg-slate-800 dark:hover:text-white" aria-label={t('orderDetail.close')} onClick={onClose}><XMarkIcon aria-hidden="true" className="size-5" /></button>
             </header>
 
             <div className="flex-1 overflow-y-auto px-5 py-5 sm:px-6">
               <section aria-labelledby={`${titleId}-info`}>
-                <h3 id={`${titleId}-info`} className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-500">{t('orderDetail.information')}</h3>
-                <dl className="mt-3 grid gap-4 rounded-xl border border-slate-200 bg-slate-50 p-4 text-sm dark:border-slate-800 dark:bg-slate-950/50 sm:grid-cols-2">
+                <h3 id={`${titleId}-info`} className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-500 dark:text-slate-400">{t('orderDetail.information')}</h3>
+                <dl className="mt-3 grid gap-4 rounded-sm border border-slate-200 bg-slate-50 p-4 text-sm dark:border-slate-800 dark:bg-slate-950/50 sm:grid-cols-2">
                   <Info label={t('orderDetail.customer')} value={activeOrder.customer_name} />
-                  <Info label={t('orderDetail.phone')} value={activeOrder.customer_phone ? <a className="font-semibold text-teal-700 hover:underline dark:text-teal-300" href={`tel:${activeOrder.customer_phone}`}>{activeOrder.customer_phone}</a> : t('orderDetail.notAvailable')} />
+                  <Info label={t('orderDetail.phone')} value={activeOrder.customer_phone ? <a className="font-semibold text-amber-700 hover:underline dark:text-amber-300" href={`tel:${activeOrder.customer_phone}`}>{activeOrder.customer_phone}</a> : t('orderDetail.notAvailable')} />
                   <Info wide label={t('orderDetail.address')} value={activeOrder.address} />
                   <Info label={t('orderDetail.weight')} value={`${weightFormatter.format(activeOrder.weight_kg)} kg`} />
                   <Info label={t('orderDetail.region')} value={activeOrder.delivery_region || t('orderDetail.notAvailable')} />
                   {activeVehicle && <><Info label={t('orderDetail.vehicle')} value={activeVehicle.license_plate} /><Info label={t('orderDetail.driver')} value={activeVehicle.driver_name || t('orderDetail.notAvailable')} /></>}
                 </dl>
-                <button type="button" className="mt-3 inline-flex w-full items-center justify-center gap-2 rounded-lg border border-teal-200 bg-teal-50 px-4 py-2.5 text-sm font-semibold text-teal-800 transition hover:bg-teal-100 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-teal-600 dark:border-teal-900 dark:bg-teal-950/50 dark:text-teal-200 dark:hover:bg-teal-950" onClick={() => void copyTrackingLink()}>
-                  <span aria-hidden="true">🔗</span>
+                <button type="button" className="mt-3 inline-flex w-full items-center justify-center gap-2 rounded-sm border border-amber-200 bg-amber-50 px-4 py-2.5 text-sm font-semibold text-amber-800 transition hover:bg-amber-100 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-amber-600 dark:border-amber-900 dark:bg-amber-950/50 dark:text-amber-200 dark:hover:bg-amber-950" onClick={() => void copyTrackingLink()}>
+                  <LinkIcon aria-hidden="true" className="size-4" />
                   {copyState === 'copied' ? t('orderDetail.trackingLinkCopied') : t('orderDetail.copyTrackingLink')}
                 </button>
-                <p className={`mt-2 text-xs ${copyState === 'error' ? 'text-rose-600 dark:text-rose-300' : 'text-slate-500'}`} aria-live="polite">
+                <p className={`mt-2 text-xs ${copyState === 'error' ? 'text-rose-600 dark:text-rose-300' : 'text-slate-500 dark:text-slate-400'}`} aria-live="polite">
                   {copyState === 'error' ? t('orderDetail.trackingLinkCopyError') : copyState === 'copied' ? t('orderDetail.trackingLinkCopiedHint') : ''}
                 </p>
                 <button
                   type="button"
-                  className="mt-2 inline-flex w-full items-center justify-center gap-2 rounded-lg bg-slate-950 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-slate-800 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-teal-600 dark:bg-white dark:text-slate-950 dark:hover:bg-slate-200"
+                  className="mt-2 inline-flex w-full items-center justify-center gap-2 rounded-sm bg-slate-950 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-slate-800 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-amber-600 dark:bg-white dark:text-slate-950 dark:hover:bg-slate-200"
                   onClick={() => void openBillPreview()}
                 >
-                  <span aria-hidden="true">🖨️</span>
+                  <PrinterIcon aria-hidden="true" className="size-4" />
                   {t('bill.printAction')}
                 </button>
               </section>
 
-              {activeOrder.failure_reason && <div className="mt-4 rounded-xl border border-rose-200 bg-rose-50 p-4 text-sm text-rose-800 dark:border-rose-900 dark:bg-rose-950/40 dark:text-rose-200"><strong>{t('orderDetail.failureReason')}</strong><p className="mt-1 leading-6">{activeOrder.failure_reason}</p></div>}
-              {activeOrder.delivery_note && <div className="mt-4 rounded-xl border border-slate-200 p-4 text-sm dark:border-slate-800"><strong className="text-slate-950 dark:text-white">{t('orderDetail.deliveryNote')}</strong><p className="mt-1 leading-6 text-slate-600 dark:text-slate-300">{activeOrder.delivery_note}</p></div>}
-              {activeOrder.pod_url && <button type="button" className="mt-4 w-full overflow-hidden rounded-xl border border-slate-200 text-left focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-teal-600 dark:border-slate-800" onClick={() => setIsPodOpen(true)}><img className="h-32 w-full bg-slate-100 object-cover dark:bg-slate-950" src={activeOrder.pod_url} alt={t('orderDetail.podAlt', { code: activeOrder.order_code })} /><span className="block px-4 py-3 text-sm font-semibold text-teal-700 dark:text-teal-300">{t('orderDetail.openPod')}</span></button>}
+              {activeOrder.cod_amount > 0 && activeOrder.payment_method !== 'PREPAID' && (
+                <section className="mt-4" aria-labelledby={`${titleId}-cod`}>
+                  <h3 id={`${titleId}-cod`} className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-500 dark:text-slate-400">{t('bill.codTitle')}</h3>
+                  <dl className="mt-3 grid gap-4 rounded-sm border border-amber-200 bg-amber-50/60 p-4 text-sm dark:border-amber-900 dark:bg-amber-950/30 sm:grid-cols-2">
+                    <Info
+                      label={t('cod.ledger.amount')}
+                      value={<span className="text-base font-black tabular-nums text-amber-800 dark:text-amber-300">{formatVnd(activeOrder.cod_amount, locale)}</span>}
+                    />
+                    <Info
+                      label={t('cod.ledger.paymentMethod')}
+                      value={t(`cod.paymentMethod.${activeOrder.payment_method}`)}
+                    />
+                    <Info
+                      label={t('cod.ledger.codStatus')}
+                      value={(
+                        <span className={`inline-block rounded-sm px-2.5 py-1 text-xs font-bold ${codStatusTone(activeOrder.cod_status)}`}>
+                          {t(`cod.codStatus.${activeOrder.cod_status}`)}
+                        </span>
+                      )}
+                    />
+                    <Info
+                      label={t('cod.ledger.collectedAt')}
+                      value={activeOrder.cod_collected_at ? new Date(activeOrder.cod_collected_at).toLocaleString(locale === 'vi' ? 'vi-VN' : 'en-US') : t('orderDetail.notAvailable')}
+                    />
+                    <Info
+                      label={t('cod.ledger.reconciledAt')}
+                      value={activeOrder.cod_reconciled_at ? new Date(activeOrder.cod_reconciled_at).toLocaleString(locale === 'vi' ? 'vi-VN' : 'en-US') : t('orderDetail.notAvailable')}
+                    />
+                    {activeOrder.cod_receipt_note && (
+                      <Info wide label={t('driver.cod.receiptNote')} value={activeOrder.cod_receipt_note} />
+                    )}
+                  </dl>
+                </section>
+              )}
+
+              {activeOrder.failure_reason && <div className="mt-4 rounded-sm border border-rose-200 bg-rose-50 p-4 text-sm text-rose-800 dark:border-rose-900 dark:bg-rose-950/40 dark:text-rose-200"><strong>{t('orderDetail.failureReason')}</strong><p className="mt-1 leading-6">{activeOrder.failure_reason}</p></div>}
+              {activeOrder.delivery_note && <div className="mt-4 rounded-sm border border-slate-200 p-4 text-sm dark:border-slate-800"><strong className="text-slate-950 dark:text-white">{t('orderDetail.deliveryNote')}</strong><p className="mt-1 leading-6 text-slate-600 dark:text-slate-300">{activeOrder.delivery_note}</p></div>}
+              {activeOrder.pod_url && <button type="button" className="mt-4 w-full overflow-hidden rounded-sm border border-slate-200 text-left focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-amber-600 dark:border-slate-800" onClick={() => setIsPodOpen(true)}><img className="h-32 w-full bg-slate-100 object-cover dark:bg-slate-950" src={activeOrder.pod_url} alt={t('orderDetail.podAlt', { code: activeOrder.order_code })} /><span className="block px-4 py-3 text-sm font-semibold text-amber-700 dark:text-amber-300">{t('orderDetail.openPod')}</span></button>}
               {activeOrder.signature_url && (
-                <section className="mt-4 rounded-xl border border-slate-200 p-4 dark:border-slate-800" aria-labelledby={`${titleId}-signature`}>
-                  <h3 id={`${titleId}-signature`} className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-500">{t('signature.title')}</h3>
-                  <img className="mt-3 h-24 w-full rounded-lg bg-white object-contain p-2" src={activeOrder.signature_url} alt={t('signature.existingAlt')} />
+                <section className="mt-4 rounded-sm border border-slate-200 p-4 dark:border-slate-800" aria-labelledby={`${titleId}-signature`}>
+                  <h3 id={`${titleId}-signature`} className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-500 dark:text-slate-400">{t('signature.title')}</h3>
+                  <img className="mt-3 h-24 w-full rounded-sm bg-white object-contain p-2" src={activeOrder.signature_url} alt={t('signature.existingAlt')} />
                   <p className="mt-2 text-sm font-semibold text-slate-800 dark:text-slate-200">{activeOrder.recipient_name ?? t('orderDetail.notAvailable')}</p>
                 </section>
               )}
@@ -288,7 +325,7 @@ export function OrderDetailDrawer({
               <OrderNotificationSection order={open ? activeOrder : null} />
 
               <section className="mt-7" aria-labelledby={`${titleId}-timeline`}>
-                <h3 id={`${titleId}-timeline`} className="mb-4 text-xs font-semibold uppercase tracking-[0.16em] text-slate-500">{t('activity.title')}</h3>
+                <h3 id={`${titleId}-timeline`} className="mb-4 text-xs font-semibold uppercase tracking-[0.16em] text-slate-500 dark:text-slate-400">{t('activity.title')}</h3>
                 <OrderActivityTimeline activities={activities} isLoading={isLoading} error={error} />
               </section>
             </div>
@@ -311,5 +348,5 @@ export function OrderDetailDrawer({
 }
 
 function Info({ label, value, wide = false }: { label: string; value: React.ReactNode; wide?: boolean }) {
-  return <div className={wide ? 'sm:col-span-2' : ''}><dt className="text-xs font-semibold uppercase tracking-wide text-slate-500">{label}</dt><dd className="mt-1 leading-6 text-slate-800 dark:text-slate-200">{value}</dd></div>;
+  return <div className={wide ? 'sm:col-span-2' : ''}><dt className="text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">{label}</dt><dd className="mt-1 leading-6 text-slate-800 dark:text-slate-200">{value}</dd></div>;
 }

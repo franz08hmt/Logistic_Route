@@ -12,7 +12,7 @@ type Coordinates = {
 
 const pinIcon = divIcon({
   className: '',
-  html: '<span class="block size-7 rounded-full border-4 border-white bg-teal-600 shadow-lg"></span>',
+  html: '<span class="block size-7 rounded-full border-4 border-white bg-amber-600"></span>',
   iconAnchor: [14, 14],
   iconSize: [28, 28],
 });

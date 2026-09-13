@@ -1,6 +1,11 @@
 'use client';
 
 import {
+  ArrowDownTrayIcon,
+  CheckCircleIcon,
+  ExclamationTriangleIcon,
+} from '@heroicons/react/24/outline';
+import {
   useRef,
   useState,
   type ChangeEvent,
@@ -194,7 +199,7 @@ export function CsvImportDialog({
     >
       <div className="max-h-[calc(100vh-13rem)] overflow-y-auto px-5 py-5 sm:px-6">
         {error && (
-          <p role="alert" className="mb-4 rounded-lg border border-rose-200 bg-rose-50 px-3 py-2 text-sm text-rose-700 dark:border-rose-900 dark:bg-rose-950/50 dark:text-rose-300">
+          <p role="alert" className="mb-4 rounded-sm border border-rose-200 bg-rose-50 px-3 py-2 text-sm text-rose-700 dark:border-rose-900 dark:bg-rose-950/50 dark:text-rose-300">
             {error}
           </p>
         )}
@@ -203,10 +208,10 @@ export function CsvImportDialog({
           <div className="space-y-4">
             <button
               type="button"
-              className={`grid min-h-52 cursor-pointer place-items-center rounded-xl border-2 border-dashed px-6 py-8 text-center transition ${
+              className={`grid min-h-52 cursor-pointer place-items-center rounded-sm border-2 border-dashed px-6 py-8 text-center transition ${
                 isDragging
-                  ? 'border-teal-500 bg-teal-50 dark:bg-teal-950/30'
-                  : 'border-slate-300 bg-slate-50 hover:border-teal-400 dark:border-slate-700 dark:bg-slate-950/40'
+                  ? 'border-amber-500 bg-amber-50 dark:bg-amber-950/30'
+                  : 'border-slate-300 bg-slate-50 hover:border-amber-400 dark:border-slate-700 dark:bg-slate-950/40'
               }`}
               onClick={() => inputRef.current?.click()}
               onDragEnter={(event) => {
@@ -219,7 +224,7 @@ export function CsvImportDialog({
               aria-label={t('import.dropzoneLabel')}
             >
               <div>
-                <span className="mx-auto grid size-14 place-items-center rounded-full bg-teal-100 text-teal-700 dark:bg-teal-950 dark:text-teal-300">
+                <span className="mx-auto grid size-14 place-items-center rounded-full bg-amber-100 text-amber-700 dark:bg-amber-950 dark:text-amber-300">
                   <UploadIcon />
                 </span>
                 <p className="mt-4 font-semibold">{t('import.dropTitle')}</p>
@@ -228,8 +233,8 @@ export function CsvImportDialog({
               </div>
             </button>
             <input ref={inputRef} className="sr-only" type="file" accept=".csv,text/csv" onChange={handleFileInput} />
-            <button type="button" onClick={() => void downloadTemplate()} className="inline-flex items-center gap-2 text-sm font-semibold text-teal-700 hover:text-teal-800 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-teal-600 dark:text-teal-400">
-              <span aria-hidden="true">↓</span>
+            <button type="button" onClick={() => void downloadTemplate()} className="inline-flex items-center gap-2 text-sm font-semibold text-amber-700 hover:text-amber-800 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-amber-600 dark:text-amber-400">
+              <ArrowDownTrayIcon aria-hidden="true" className="size-4" />
               {t('import.downloadTemplate')}
             </button>
           </div>
@@ -248,15 +253,15 @@ export function CsvImportDialog({
               </p>
             </div>
             {preview.missingRequiredColumns.length > 0 && (
-              <p role="alert" className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-800 dark:border-amber-900 dark:bg-amber-950/40 dark:text-amber-200">
+              <p role="alert" className="rounded-sm border border-orange-200 bg-orange-50 px-3 py-2 text-sm text-orange-800 dark:border-orange-900 dark:bg-orange-950/40 dark:text-orange-200">
                 {t('import.missingColumns', {
                   columns: preview.missingRequiredColumns.join(', '),
                 })}
               </p>
             )}
-            <div className="max-h-72 overflow-auto rounded-xl border border-slate-200 dark:border-slate-800">
+            <div className="max-h-72 overflow-auto rounded-sm border border-slate-200 dark:border-slate-800">
               <table className="min-w-full divide-y divide-slate-200 text-left text-sm dark:divide-slate-800">
-                <thead className="sticky top-0 bg-slate-50 text-xs uppercase tracking-wide text-slate-500 dark:bg-slate-950">
+                <thead className="sticky top-0 bg-slate-50 text-xs uppercase tracking-wide text-slate-500 dark:text-slate-400 dark:bg-slate-950">
                   <tr>
                     <th className="px-3 py-2">#</th>
                     <th className="px-3 py-2">{t('import.orderCode')}</th>
@@ -267,7 +272,7 @@ export function CsvImportDialog({
                 <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
                   {preview.rows.map((row) => (
                     <tr key={row.row}>
-                      <td className="px-3 py-2 text-slate-500">{row.row}</td>
+                      <td className="px-3 py-2 text-slate-500 dark:text-slate-400">{row.row}</td>
                       <td className="whitespace-nowrap px-3 py-2 font-medium">{row.orderCode || '—'}</td>
                       <td className="whitespace-nowrap px-3 py-2">{row.customerName || '—'}</td>
                       <td className="min-w-64 px-3 py-2 text-slate-600 dark:text-slate-300">{row.address || '—'}</td>
@@ -277,12 +282,12 @@ export function CsvImportDialog({
               </table>
             </div>
             {preview.totalRows > preview.rows.length && (
-              <p className="text-xs text-slate-500">{t('import.previewLimited', { count: preview.rows.length })}</p>
+              <p className="text-xs text-slate-500 dark:text-slate-400">{t('import.previewLimited', { count: preview.rows.length })}</p>
             )}
             <p className="text-sm font-medium">{t('import.totalReady', { count: preview.totalRows })}</p>
             <div className="flex flex-col-reverse gap-2 border-t border-slate-200 pt-4 dark:border-slate-800 sm:flex-row sm:justify-end">
-              <button type="button" onClick={() => setStep('upload')} className="h-10 rounded-xl border border-slate-300 px-4 text-sm font-semibold hover:bg-slate-50 dark:border-slate-700 dark:hover:bg-slate-800">{t('common.cancel')}</button>
-              <button type="button" disabled={isSubmitting || preview.missingRequiredColumns.length > 0} onClick={() => void submitImport()} className="h-10 rounded-xl bg-teal-600 px-4 text-sm font-semibold text-white hover:bg-teal-700 disabled:cursor-not-allowed disabled:opacity-50">
+              <button type="button" onClick={() => setStep('upload')} className="h-10 rounded-sm border border-slate-300 px-4 text-sm font-semibold hover:bg-slate-50 dark:border-slate-700 dark:hover:bg-slate-800">{t('common.cancel')}</button>
+              <button type="button" disabled={isSubmitting || preview.missingRequiredColumns.length > 0} onClick={() => void submitImport()} className="h-10 rounded-sm bg-amber-700 dark:bg-amber-400 px-4 text-sm font-semibold text-white dark:text-slate-950 hover:bg-amber-800 dark:hover:bg-amber-300 disabled:cursor-not-allowed disabled:opacity-50">
                 {isSubmitting ? t('import.importing') : t('import.confirm')}
               </button>
             </div>
@@ -294,16 +299,16 @@ export function CsvImportDialog({
             <div>
               <h3 className="font-semibold">{t('import.resultTitle')}</h3>
               <div className="mt-3 grid gap-3 sm:grid-cols-2">
-                <p className="rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm font-semibold text-emerald-800 dark:border-emerald-900 dark:bg-emerald-950/40 dark:text-emerald-200">
-                  ✓ {t('import.createdCount', { count: result.created_count })}
+                <p className="rounded-sm border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm font-semibold text-emerald-800 dark:border-emerald-900 dark:bg-emerald-950/40 dark:text-emerald-200">
+                  <CheckCircleIcon aria-hidden="true" className="inline size-4 align-text-bottom" />{' '}{t('import.createdCount', { count: result.created_count })}
                 </p>
-                <p className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm font-semibold text-amber-800 dark:border-amber-900 dark:bg-amber-950/40 dark:text-amber-200">
-                  ⚠ {t('import.errorCount', { count: result.error_count })}
+                <p className="rounded-sm border border-orange-200 bg-orange-50 px-4 py-3 text-sm font-semibold text-orange-800 dark:border-orange-900 dark:bg-orange-950/40 dark:text-orange-200">
+                  <ExclamationTriangleIcon aria-hidden="true" className="inline size-4 align-text-bottom" />{' '}{t('import.errorCount', { count: result.error_count })}
                 </p>
               </div>
             </div>
             {result.errors.length > 0 && (
-              <ul className="max-h-72 divide-y divide-slate-200 overflow-auto rounded-xl border border-slate-200 dark:divide-slate-800 dark:border-slate-800">
+              <ul className="max-h-72 divide-y divide-slate-200 overflow-auto rounded-sm border border-slate-200 dark:divide-slate-800 dark:border-slate-800">
                 {result.errors.map((rowError) => (
                   <li key={rowError.row} className="px-4 py-3">
                     <p className="text-sm font-semibold">
@@ -320,7 +325,7 @@ export function CsvImportDialog({
               </ul>
             )}
             <div className="flex justify-end border-t border-slate-200 pt-4 dark:border-slate-800">
-              <button type="button" onClick={resetAndClose} className="h-10 rounded-xl bg-teal-600 px-5 text-sm font-semibold text-white hover:bg-teal-700">
+              <button type="button" onClick={resetAndClose} className="h-10 rounded-sm bg-amber-700 dark:bg-amber-400 px-5 text-sm font-semibold text-white dark:text-slate-950 hover:bg-amber-800 dark:hover:bg-amber-300">
                 {t('common.close')}
               </button>
             </div>

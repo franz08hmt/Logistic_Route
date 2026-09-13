@@ -74,7 +74,7 @@ export function PublicTrackingMap({
   );
 
   return (
-    <div className="h-[21rem] w-full overflow-hidden rounded-xl sm:h-[26rem]">
+    <div className="h-[21rem] w-full overflow-hidden rounded-sm sm:h-[26rem]">
       <MapContainer
         center={depotPosition}
         zoom={12}
@@ -91,7 +91,7 @@ export function PublicTrackingMap({
         <FitTrackingBounds depot={depotPosition} destination={destinationPosition} />
         <Polyline
           positions={[depotPosition, destinationPosition]}
-          pathOptions={{ color: '#0d9488', weight: 5, opacity: 0.8, dashArray: '10 8' }}
+          pathOptions={{ color: '#e8a838', weight: 5, opacity: 0.8, dashArray: '10 8' }}
         />
         <Marker position={depotPosition} icon={depotIcon} title={tracking.depot.name}>
           <Popup><strong>{tracking.depot.name}</strong><br />{tracking.depot.address}</Popup>

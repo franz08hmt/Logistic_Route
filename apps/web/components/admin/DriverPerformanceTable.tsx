@@ -7,7 +7,7 @@ import type {
 } from './driver-performance-contracts';
 
 const TIER_STYLES: Record<PerformanceTier, string> = {
-  GOLD: 'border-amber-300 bg-amber-50 text-amber-800 dark:border-amber-800 dark:bg-amber-950/40 dark:text-amber-200',
+  GOLD: 'border-orange-300 bg-orange-50 text-orange-800 dark:border-orange-800 dark:bg-orange-950/40 dark:text-orange-200',
   SILVER: 'border-slate-300 bg-slate-100 text-slate-700 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200',
   BRONZE: 'border-orange-300 bg-orange-50 text-orange-800 dark:border-orange-800 dark:bg-orange-950/40 dark:text-orange-200',
 };
@@ -22,12 +22,12 @@ export function DriverPerformanceTable({
   const decimal = new Intl.NumberFormat(numberLocale, { maximumFractionDigits: 1 });
 
   return (
-    <section className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm dark:border-slate-800 dark:bg-slate-900" aria-labelledby="performance-ranking-title">
+    <section className="overflow-hidden rounded-sm border border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-900" aria-labelledby="performance-ranking-title">
       <div className="border-b border-slate-200 px-5 py-4 dark:border-slate-800">
-        <p className="text-xs font-semibold uppercase tracking-[0.18em] text-teal-700 dark:text-teal-300">
+        <p className="text-xs font-semibold uppercase tracking-[0.18em] text-amber-700 dark:text-amber-300">
           {t('leaderboard.rankingEyebrow')}
         </p>
-        <h2 className="mt-1 text-lg font-semibold text-slate-950 dark:text-white" id="performance-ranking-title">
+        <h2 className="mt-1 font-bold text-slate-950 dark:text-white text-base uppercase tracking-[0.14em]" id="performance-ranking-title">
           {t('leaderboard.rankingTitle')}
         </h2>
       </div>
@@ -55,12 +55,12 @@ export function DriverPerformanceTable({
                 </td>
                 <td className="px-5 py-4">
                   <div className="flex items-center gap-3">
-                    <span className="grid size-10 shrink-0 place-items-center rounded-full bg-teal-50 font-semibold text-teal-700 dark:bg-teal-950 dark:text-teal-300">
+                    <span className="grid size-10 shrink-0 place-items-center rounded-full bg-amber-50 font-semibold text-amber-700 dark:bg-amber-950 dark:text-amber-300">
                       {driver.driver_name.charAt(0).toUpperCase()}
                     </span>
                     <div className="min-w-0">
                       <p className="font-semibold text-slate-950 dark:text-white">{driver.driver_name}</p>
-                      <p className="mt-0.5 text-xs text-slate-500">
+                      <p className="mt-0.5 text-xs text-slate-500 dark:text-slate-400">
                         {driver.phone_number ?? t('leaderboard.noPhone')}
                         <span aria-hidden="true"> · </span>
                         {driver.license_plate ?? t('leaderboard.noVehicle')}
@@ -70,10 +70,10 @@ export function DriverPerformanceTable({
                 </td>
                 <td className="px-5 py-4">
                   <div className="flex items-center gap-3">
-                    <progress className="h-2 w-24 accent-teal-600" max="100" value={driver.success_rate} aria-label={t('leaderboard.successRate')} />
+                    <progress className="h-2 w-24 accent-amber-600" max="100" value={driver.success_rate} aria-label={t('leaderboard.successRate')} />
                     <span className="font-semibold tabular-nums text-slate-800 dark:text-slate-200">{decimal.format(driver.success_rate)}%</span>
                   </div>
-                  <p className="mt-1 text-xs text-slate-500">{driver.delivered_count}/{driver.total_orders_handled}</p>
+                  <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">{driver.delivered_count}/{driver.total_orders_handled}</p>
                 </td>
                 <td className="px-5 py-4 font-medium tabular-nums text-slate-800 dark:text-slate-200">
                   {decimal.format(driver.route_adherence_score)}%
