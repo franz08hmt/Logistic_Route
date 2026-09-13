@@ -1,5 +1,7 @@
 import type { ChangeEventHandler, FormEventHandler, Ref } from 'react';
 
+import { BanknotesIcon, DevicePhoneMobileIcon } from '@heroicons/react/24/outline';
+
 import { useI18n } from '@/context/I18nContext';
 import {
   fieldInputClass,
@@ -120,7 +122,7 @@ export function DriverStatusDialog({
 
         {needsCodCollection && stop && (
           <section className="rounded-sm border border-emerald-300 bg-emerald-50 p-4 dark:border-emerald-800 dark:bg-emerald-950/40" aria-labelledby="cod-collection-title">
-            <h3 id="cod-collection-title" className="font-bold text-slate-900 dark:text-white text-base uppercase tracking-[0.14em]">
+            <h3 id="cod-collection-title" className="text-base font-semibold tracking-tight text-slate-900 dark:text-white">
               {t('driver.cod.choosePayment')}
             </h3>
             <p className="mt-1 text-2xl font-black tabular-nums text-emerald-800 dark:text-emerald-300">
@@ -131,20 +133,21 @@ export function DriverStatusDialog({
                 type="button"
                 aria-pressed={paymentMethod === 'COD_CASH'}
                 disabled={isSubmitting}
-                className={`min-h-12 rounded-sm border px-4 text-sm font-bold transition ${
+                className={`inline-flex min-h-12 items-center justify-center gap-2 rounded-sm border px-4 text-sm font-bold transition ${
                   paymentMethod === 'COD_CASH'
                     ? 'border-emerald-700 bg-emerald-700 text-white'
                     : 'border-slate-300 bg-white text-slate-700 hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200'
                 }`}
                 onClick={() => onPaymentMethodChange('COD_CASH')}
               >
-                💵 {t('driver.cod.collectCash')}
+                <BanknotesIcon aria-hidden="true" className="size-5" strokeWidth={1.7} />
+                {t('driver.cod.collectCash')}
               </button>
               <button
                 type="button"
                 aria-pressed={paymentMethod === 'VIETQR'}
                 disabled={isSubmitting}
-                className={`min-h-12 rounded-sm border px-4 text-sm font-bold transition ${
+                className={`inline-flex min-h-12 items-center justify-center gap-2 rounded-sm border px-4 text-sm font-bold transition ${
                   paymentMethod === 'VIETQR'
                     ? 'border-amber-700 bg-amber-700 text-white'
                     : 'border-slate-300 bg-white text-slate-700 hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200'
@@ -154,7 +157,8 @@ export function DriverStatusDialog({
                   onShowVietQr();
                 }}
               >
-                📱 {t('driver.cod.showVietQR')}
+                <DevicePhoneMobileIcon aria-hidden="true" className="size-5" strokeWidth={1.7} />
+                {t('driver.cod.showVietQR')}
               </button>
             </div>
             <label className={`${fieldLabelClass} mt-3`}>
@@ -173,7 +177,7 @@ export function DriverStatusDialog({
         <section className="rounded-sm border border-slate-200 p-4 dark:border-slate-700" aria-labelledby="pod-image-title">
           <div className="flex items-start justify-between gap-3">
             <div>
-              <h3 id="pod-image-title" className="font-bold text-slate-900 dark:text-white text-base uppercase tracking-[0.14em]">{t('driver.podImage')}</h3>
+              <h3 id="pod-image-title" className="text-base font-semibold tracking-tight text-slate-900 dark:text-white">{t('driver.podImage')}</h3>
               <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">{delivered ? t('driver.podRequired') : t('driver.podOptional')}</p>
             </div>
             {podPreviewUrl && <span className="rounded-full bg-emerald-50 px-2 py-1 text-[10px] font-bold text-emerald-700 dark:bg-emerald-950 dark:text-emerald-300">POD</span>}
@@ -193,7 +197,7 @@ export function DriverStatusDialog({
           <section className="rounded-sm border border-slate-200 p-4 dark:border-slate-700" aria-labelledby="recipient-signature-title">
             <div className="flex items-start justify-between gap-3">
               <div>
-                <h3 id="recipient-signature-title" className="font-bold text-slate-900 dark:text-white text-base uppercase tracking-[0.14em]">{t('signature.title')}</h3>
+                <h3 id="recipient-signature-title" className="text-base font-semibold tracking-tight text-slate-900 dark:text-white">{t('signature.title')}</h3>
                 <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">{t('signature.requiredHint')}</p>
               </div>
               {(hasDrawnSignature || stop?.signature_url) && (

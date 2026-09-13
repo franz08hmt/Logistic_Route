@@ -1,5 +1,8 @@
 import type { DriverStop } from './driver-contracts';
 import {
+  BanknotesIcon,
+  BuildingLibraryIcon,
+  CheckBadgeIcon,
   CubeIcon,
   DevicePhoneMobileIcon,
   MapPinIcon,
@@ -158,29 +161,41 @@ export function DriverStopCard({
   );
 }
 
+/**
+ * COD state for one stop.
+ *
+ * The icons are Heroicons rather than emoji: a colour emoji keeps its own
+ * palette whatever the badge does, so it cannot be darkened for a driver
+ * reading the phone in direct sunlight, and it renders differently on every
+ * handset. A stroke icon inherits `currentColor` and travels with the label.
+ */
 function CodBadge({ stop }: { stop: DriverStop }) {
   const { t, locale } = useI18n();
 
   if (stop.payment_method === 'PREPAID' || stop.cod_amount === 0) {
     return (
-      <span className="rounded-sm bg-slate-100 px-2.5 py-1 text-xs font-bold text-slate-600 dark:bg-slate-800 dark:text-slate-300">
-        ✅ {t('driver.cod.prepaid')}
+      <span className="inline-flex items-center gap-1.5 rounded-sm bg-slate-100 px-2.5 py-1 text-xs font-bold text-slate-600 dark:bg-slate-800 dark:text-slate-300">
+        <CheckBadgeIcon aria-hidden="true" className="size-4" strokeWidth={1.8} />
+        {t('driver.cod.prepaid')}
       </span>
     );
   }
 
   if (stop.cod_status === 'RECONCILED') {
     return (
-      <span className="rounded-sm bg-amber-100 px-2.5 py-1 text-xs font-bold text-amber-800 dark:bg-amber-900/60 dark:text-amber-200">
-        🏦 {t('driver.cod.reconciled')}
+      <span className="inline-flex items-center gap-1.5 rounded-sm bg-amber-100 px-2.5 py-1 text-xs font-bold text-amber-800 dark:bg-amber-900/60 dark:text-amber-200">
+        <BuildingLibraryIcon aria-hidden="true" className="size-4" strokeWidth={1.8} />
+        {t('driver.cod.reconciled')}
       </span>
     );
   }
 
   if (stop.cod_status === 'COLLECTED') {
+    const CollectedIcon =
+      stop.payment_method === 'VIETQR' ? DevicePhoneMobileIcon : BanknotesIcon;
     return (
-      <span className="rounded-sm bg-orange-100 px-2.5 py-1 text-xs font-bold text-orange-900 dark:bg-orange-900/60 dark:text-orange-200">
-        {stop.payment_method === 'VIETQR' ? '📱' : '💵'}{' '}
+      <span className="inline-flex items-center gap-1.5 rounded-sm bg-orange-100 px-2.5 py-1 text-xs font-bold text-orange-900 dark:bg-orange-900/60 dark:text-orange-200">
+        <CollectedIcon aria-hidden="true" className="size-4" strokeWidth={1.8} />
         {t('driver.cod.collected', {
           amount: formatVnd(stop.cod_amount, locale),
         })}
@@ -190,8 +205,9 @@ function CodBadge({ stop }: { stop: DriverStop }) {
 
   // Money still owed. High contrast so it reads in direct sunlight.
   return (
-    <span className="rounded-sm bg-emerald-700 px-2.5 py-1 text-xs font-black text-white dark:bg-emerald-600">
-      💵 {t('driver.cod.badge', { amount: formatVnd(stop.cod_amount, locale) })}
+    <span className="inline-flex items-center gap-1.5 rounded-sm bg-emerald-700 px-2.5 py-1 text-xs font-black text-white dark:bg-emerald-600">
+      <BanknotesIcon aria-hidden="true" className="size-4" strokeWidth={1.8} />
+      {t('driver.cod.badge', { amount: formatVnd(stop.cod_amount, locale) })}
     </span>
   );
 }

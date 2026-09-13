@@ -1,17 +1,21 @@
 'use client';
 
 import { PlusIcon } from '@heroicons/react/24/outline';
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useI18n } from '@/context/I18nContext';
 import { useDepot } from '@/context/DepotContext';
 import { withDepotQuery } from '@/components/depot-contracts';
 
 import {
+  VEHICLE_STATUSES,
   isVehicleList,
   requestApi,
   type CreateVehicleInput,
   type Vehicle,
+  type VehicleStatus,
 } from './api-contracts';
+import { FilterBar, SearchField, SelectField } from '../ui/Controls';
+import { filterVehicles } from './list-filters';
 import { CreateVehicleDialog } from './CreateVehicleDialog';
 import { FleetList } from './FleetList';
 import { subscribeToDataInvalidated } from './orders-sync';
@@ -23,6 +27,9 @@ export function FleetManager() {
   const [isLoading, setIsLoading] = useState(true);
   const [isCreateOpen, setIsCreateOpen] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [search, setSearch] = useState('');
+  const [statusFilter, setStatusFilter] = useState<VehicleStatus | ''>('');
+  const [driverFilter, setDriverFilter] = useState<'' | 'true' | 'false'>('');
 
   useEffect(() => {
     let active = true;
@@ -78,6 +85,12 @@ export function FleetManager() {
     setVehicles((current) => [createdVehicles[0], ...current]);
   }
 
+  const visibleVehicles = useMemo(
+    () => filterVehicles(vehicles, { search, status: statusFilter, hasDriver: driverFilter }),
+    [driverFilter, search, statusFilter, vehicles],
+  );
+  const isFiltered = visibleVehicles.length !== vehicles.length;
+
   const availableCount = vehicles.filter((vehicle) => vehicle.status === 'IDLE').length;
   const totalCapacity = vehicles.reduce(
     (total, vehicle) => total + vehicle.capacity_kg,
@@ -111,6 +124,43 @@ export function FleetManager() {
         </button>
       </header>
 
+      <FilterBar
+        label={t('fleet.filterLabel')}
+        resultCount={t('fleet.resultCount', {
+          count: visibleVehicles.length,
+          total: vehicles.length,
+        })}
+      >
+        <SearchField
+          hideLabel={false}
+          label={t('fleet.searchLabel')}
+          placeholder={t('fleet.searchPlaceholder')}
+          value={search}
+          onChange={setSearch}
+        />
+        <SelectField
+          label={t('fleet.statusFilter')}
+          value={statusFilter}
+          onChange={(next) => setStatusFilter(next as VehicleStatus | '')}
+        >
+          <option value="">{t('fleet.allStatuses')}</option>
+          {VEHICLE_STATUSES.map((status) => (
+            <option key={status} value={status}>
+              {t(`status.${status}`)}
+            </option>
+          ))}
+        </SelectField>
+        <SelectField
+          label={t('fleet.driverFilter')}
+          value={driverFilter}
+          onChange={(next) => setDriverFilter(next as '' | 'true' | 'false')}
+        >
+          <option value="">{t('fleet.allDriverStates')}</option>
+          <option value="true">{t('fleet.withDriver')}</option>
+          <option value="false">{t('fleet.withoutDriver')}</option>
+        </SelectField>
+      </FilterBar>
+
       {error && (
         <p className="rounded-sm border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700 dark:border-rose-900 dark:bg-rose-950/50 dark:text-rose-300" role="alert">
           {error}
@@ -118,7 +168,11 @@ export function FleetManager() {
       )}
 
       <div className="overflow-hidden rounded-sm border border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-900 dark:shadow-none">
-        <FleetList vehicles={vehicles} isLoading={isLoading} />
+        <FleetList
+          vehicles={visibleVehicles}
+          isFiltered={isFiltered}
+          isLoading={isLoading}
+        />
       </div>
 
       {isCreateOpen && (

@@ -1,6 +1,6 @@
 'use client';
 
-import { TruckIcon } from '@heroicons/react/24/outline';
+import { MagnifyingGlassIcon, TruckIcon } from '@heroicons/react/24/outline';
 import { useI18n } from '@/context/I18nContext';
 import type { Vehicle } from './api-contracts';
 import { StatusBadge } from './StatusBadge';
@@ -8,9 +8,12 @@ import { StatusBadge } from './StatusBadge';
 export function FleetList({
   vehicles,
   isLoading,
+  isFiltered = false,
 }: {
   vehicles: Vehicle[];
   isLoading: boolean;
+  /** An empty list means something different once a filter is applied. */
+  isFiltered?: boolean;
 }) {
   const { locale, t } = useI18n();
   const weightFormatter = new Intl.NumberFormat(
@@ -29,14 +32,24 @@ export function FleetList({
   }
 
   if (vehicles.length === 0) {
+    const EmptyIcon = isFiltered ? MagnifyingGlassIcon : TruckIcon;
     return (
-      <div className="grid min-h-64 place-items-center px-4 py-12 text-center" role="status">
-        <div>
-          <span className="mx-auto grid size-11 place-items-center rounded-full bg-amber-50 text-amber-700 dark:bg-amber-950 dark:text-amber-300" aria-hidden="true"><TruckIcon className="size-5" /></span>
-          <h3 className="mt-3 font-bold text-slate-950 dark:text-white text-base uppercase tracking-[0.14em]">{t('fleet.emptyTitle')}</h3>
-          <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">{t('fleet.emptyDescription')}</p>
-        </div>
-      </div>
+      <p className="grid min-h-64 place-items-center px-4 py-12 text-center" role="status">
+        <span className="block">
+          <span
+            aria-hidden="true"
+            className="mx-auto grid size-11 place-items-center rounded-full bg-amber-50 text-amber-700 dark:bg-amber-950 dark:text-amber-300"
+          >
+            <EmptyIcon className="size-5" strokeWidth={1.6} />
+          </span>
+          <strong className="mt-3 block text-base font-bold uppercase tracking-[0.14em] text-slate-950 dark:text-white">
+            {t(isFiltered ? 'fleet.noMatchTitle' : 'fleet.emptyTitle')}
+          </strong>
+          <span className="mt-1 block text-sm text-slate-500 dark:text-slate-400">
+            {t(isFiltered ? 'fleet.noMatchDescription' : 'fleet.emptyDescription')}
+          </span>
+        </span>
+      </p>
     );
   }
 

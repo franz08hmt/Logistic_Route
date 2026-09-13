@@ -1,11 +1,12 @@
 'use client';
 
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 
 import { useI18n } from '@/context/I18nContext';
 import { useDepot } from '@/context/DepotContext';
 import { withDepotQuery } from '@/components/depot-contracts';
 import {
+  ORDER_STATUSES,
   isAvailableDriverList,
   isOrderList,
   isVehicleList,
@@ -14,8 +15,11 @@ import {
   type CreateOrderInput,
   type DispatchOrderInput,
   type Order,
+  type OrderStatus,
   type Vehicle,
 } from './api-contracts';
+import { PAYMENT_METHODS, type PaymentMethod } from '../cod/cod-contracts';
+import { filterOrders } from './list-filters';
 import { CreateOrderDialog } from './CreateOrderDialog';
 import { CsvImportDialog } from './CsvImportDialog';
 import { DispatchOrderDialog } from './DispatchOrderDialog';
@@ -23,6 +27,7 @@ import { ArrowUpTrayIcon, PlusIcon } from '@heroicons/react/24/outline';
 
 import type { TranslationKey } from '@/lib/i18n/i18n';
 
+import { FilterBar, SearchField, SelectField } from '../ui/Controls';
 import {
   DataFrame,
   GhostAction,
@@ -54,6 +59,9 @@ export function OrdersManager() {
   const [isDispatching, setIsDispatching] = useState(false);
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [search, setSearch] = useState('');
+  const [statusFilter, setStatusFilter] = useState<OrderStatus | ''>('');
+  const [paymentFilter, setPaymentFilter] = useState<PaymentMethod | ''>('');
 
   const loadData = useCallback(async () => {
     try {
@@ -195,6 +203,12 @@ export function OrdersManager() {
     }
   }
 
+  const visibleOrders = useMemo(
+    () => filterOrders(orders, { search, status: statusFilter, paymentMethod: paymentFilter }),
+    [orders, paymentFilter, search, statusFilter],
+  );
+  const isFiltered = visibleOrders.length !== orders.length;
+
   const pendingCount = orders.filter((order) => order.status === 'PENDING').length;
   const assignedCount = orders.filter((order) => order.status === 'ASSIGNED').length;
   const failedCount = orders.filter((order) => order.status === 'FAILED').length;
@@ -251,6 +265,46 @@ export function OrdersManager() {
         ))}
       </HairlineGrid>
 
+      <FilterBar
+        label={t('orders.filterLabel')}
+        resultCount={t('orders.resultCount', {
+          count: visibleOrders.length,
+          total: orders.length,
+        })}
+      >
+        <SearchField
+          hideLabel={false}
+          label={t('orders.searchLabel')}
+          placeholder={t('orders.searchPlaceholder')}
+          value={search}
+          onChange={setSearch}
+        />
+        <SelectField
+          label={t('orders.statusFilter')}
+          value={statusFilter}
+          onChange={(next) => setStatusFilter(next as OrderStatus | '')}
+        >
+          <option value="">{t('orders.allStatuses')}</option>
+          {ORDER_STATUSES.map((status) => (
+            <option key={status} value={status}>
+              {t(`status.${status}`)}
+            </option>
+          ))}
+        </SelectField>
+        <SelectField
+          label={t('orders.paymentFilter')}
+          value={paymentFilter}
+          onChange={(next) => setPaymentFilter(next as PaymentMethod | '')}
+        >
+          <option value="">{t('orders.allPayments')}</option>
+          {PAYMENT_METHODS.map((method) => (
+            <option key={method} value={method}>
+              {t(`cod.paymentMethod.${method}`)}
+            </option>
+          ))}
+        </SelectField>
+      </FilterBar>
+
       {error && (
         <p className="rounded-sm border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700 dark:border-rose-900 dark:bg-rose-950/50 dark:text-rose-300" role="alert">
           {error}
@@ -259,7 +313,8 @@ export function OrdersManager() {
 
       <DataFrame>
         <OrderList
-          orders={orders}
+          orders={visibleOrders}
+          isFiltered={isFiltered}
           isLoading={isLoading}
           deletingId={deletingId}
           onDelete={(order) => void deleteOrder(order)}

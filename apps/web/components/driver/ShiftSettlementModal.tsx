@@ -1,5 +1,6 @@
 'use client';
 
+import { CheckCircleIcon } from '@heroicons/react/24/outline';
 import { useEffect, useState } from 'react';
 
 import { ModalDialog } from '@/components/admin/ModalDialog';
@@ -124,9 +125,14 @@ export function ShiftSettlementModal({
           <div className="space-y-4">
             <p
               role="status"
-              className="rounded-sm bg-amber-50 px-4 py-4 text-sm font-semibold text-amber-800 dark:bg-amber-950/50 dark:text-amber-200"
+              className="flex items-start gap-2 rounded-sm bg-amber-50 px-4 py-4 text-sm font-semibold text-amber-800 dark:bg-amber-950/50 dark:text-amber-200"
             >
-              ✅ {success}
+              <CheckCircleIcon
+                aria-hidden="true"
+                className="mt-0.5 size-5 shrink-0"
+                strokeWidth={1.7}
+              />
+              {success}
             </p>
             <button
               type="button"

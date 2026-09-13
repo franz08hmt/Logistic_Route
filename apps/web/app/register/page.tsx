@@ -14,7 +14,7 @@ import {
 } from '@/lib/auth/contracts';
 
 const inputClassName =
-  'mt-2 block h-11 w-full rounded-sm border border-slate-300 bg-white px-3.5 text-sm text-slate-950 outline-none transition placeholder:text-slate-400 focus:border-amber-600 focus:ring-4 focus:ring-amber-600/10 dark:border-slate-700 dark:bg-slate-900 dark:text-white dark:focus:border-amber-500';
+  'mt-2 block h-11 w-full rounded-sm border border-slate-300 bg-white px-3.5 text-sm text-slate-950 outline-none transition placeholder:text-slate-500 dark:placeholder:text-slate-400 focus:border-amber-600 focus:ring-4 focus:ring-amber-600/10 dark:border-slate-700 dark:bg-slate-900 dark:text-white dark:focus:border-amber-500';
 
 export default function RegisterPage() {
   const { t } = useI18n();

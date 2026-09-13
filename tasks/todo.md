@@ -119,7 +119,7 @@
 ### Still open
 
 - [ ] Tune the data-heavy bodies (orders, dispatch, fleet, drivers, analytics, driver workspace) to the new rhythm; they inherit the chrome and header today but their cards still use the older radius and label scale.
-- [ ] Decide whether the remaining `teal-*` usages that are decorative rather than status-bearing should move to the accent.
+- [x] No `teal-*` remains anywhere in `components/` or `app/`.
 
 ## Phase 18: Console Dark UI (reference-matched, accessible)
 
@@ -133,7 +133,7 @@
 
 ### Still open
 
-- [ ] Adopt the shared controls on the pages that grow a toolbar later; orders, fleet, and drivers have no search or filter row today.
+- [x] Orders, fleet and drivers now carry a `FilterBar` toolbar built on the shared controls.
 - [ ] The reference uses circular brand avatars in its list rows. The order and fleet lists could carry depot or vehicle marks the same way once there is artwork for them.
 
 ## Phase 19: Landing parity — one accent across the whole product
@@ -148,7 +148,7 @@
 
 ### Still open
 
-- [ ] `--color-brand-*` is now correct but still almost unused; either adopt it in place of raw `amber-*` classes or drop it.
+- [x] Dropped `--color-brand-*`: it held the same hexes as Tailwind's amber ramp with no callers, so it was a second name for one colour and a way for the two to drift.
 - [ ] The portal separates its service cards with hairline rules rather than bordered cards. Data screens need the card, but the marketing-adjacent surfaces (dashboard cost panel, driver shift summary) could take the lighter treatment.
 
 ## Phase 20: Portal form language across every screen
@@ -167,5 +167,25 @@
 
 ### Still open
 
-- [ ] `DriverStatusDialog` picked up uppercase section headings. It is a dialog, so it was meant to be excluded; the three headings there title blocks rather than the dialog itself, but it deserves a look with a driver on a phone.
+- [x] Returned `DriverStatusDialog`'s three headings to sentence case, matching `ModalDialog`. Uppercase Vietnamese is the worst case for a driver on a phone: the diacritics crowd the cap height and the letterforms lose their ascender cues.
 - [ ] Leaflet renders its overlay pane without `aria-hidden`. Harmless today, but worth a wrapper if the maps ever carry announced content.
+
+## Phase 21: List toolbars, and the contrast the earlier passes missed
+
+- [x] Add `FilterBar` to the shared control module: a `<search>` landmark, the filter grid, and a live result count so a screen reader hears the list change.
+- [x] Give orders a search and status/payment filter, and fleet a search and status/driver filter.
+- [x] Extract `filterOrders` / `filterVehicles` into `list-filters.ts` and cover them with 9 tests, including the nullable phone and driver columns.
+- [x] Rebuild the drivers filter row on the shared controls, replacing its hand-rolled magnifier and empty-state SVGs with Heroicons.
+- [x] Tell an empty list apart from a filtered-empty list on all three screens.
+- [x] Raise the selects from 40 px to 44 px: they sat ragged against the search input and under the console's own touch target.
+- [x] Fix the placeholder ink on all six fields. It failed on **both** grounds and was inverted - the darker ink sat on the darker ground: light 2.56:1, dark 3.50:1, now 4.76:1 and 6.51:1.
+- [x] Replace the colour emoji still on the driver's outdoor surfaces (COD badges, payment buttons, settlement confirmation) with Heroicons that inherit `currentColor`.
+- [x] Audit the three toolbars at 1440 px and 375 px, dark and light: zero findings.
+- [x] Verify typecheck, 176 frontend tests, production build, 136 backend tests.
+
+### Still open
+
+- [ ] Leaflet renders its overlay pane without `aria-hidden`. Harmless today, but worth a wrapper if the maps ever carry announced content.
+- [ ] The reference uses circular brand avatars in its list rows. The order and fleet lists could carry depot or vehicle marks the same way once there is artwork for them.
+- [ ] Colour emoji still appear on non-driver surfaces (demo tour, system health, leaderboard podium, map pins). The podium medals are arguably the content itself; the map pins would need SVG strings inside Leaflet `divIcon`.
+- [ ] Only two photographs serve eleven banners. More art in `public/landing/` would stop the repetition.

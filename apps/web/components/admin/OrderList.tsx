@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import { InboxIcon, MagnifyingGlassIcon } from '@heroicons/react/24/outline';
 
 import { useI18n } from '@/context/I18nContext';
 import { failureReasonTranslationKey } from '../delivery-failure';
@@ -69,6 +70,7 @@ function DeliveryEvidence({
 export function OrderList({
   orders,
   isLoading,
+  isFiltered = false,
   deletingId,
   onDelete,
   onDispatch,
@@ -76,6 +78,8 @@ export function OrderList({
 }: {
   orders: Order[];
   isLoading: boolean;
+  /** An empty list means something different once a filter is applied. */
+  isFiltered?: boolean;
   deletingId: string | null;
   onDelete: (order: Order) => void;
   onDispatch: (order: Order) => void;
@@ -99,14 +103,24 @@ export function OrderList({
   }
 
   if (orders.length === 0) {
+    const EmptyIcon = isFiltered ? MagnifyingGlassIcon : InboxIcon;
     return (
-      <div className="grid min-h-64 place-items-center px-4 py-12 text-center" role="status">
-        <div>
-          <span className="mx-auto grid size-11 place-items-center rounded-full bg-amber-50 text-xl text-amber-700 dark:bg-amber-950 dark:text-amber-300" aria-hidden="true">＋</span>
-          <h3 className="mt-3 font-bold text-slate-950 dark:text-white text-base uppercase tracking-[0.14em]">{t('orders.emptyTitle')}</h3>
-          <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">{t('orders.emptyDescription')}</p>
-        </div>
-      </div>
+      <p className="grid min-h-64 place-items-center px-4 py-12 text-center" role="status">
+        <span className="block">
+          <span
+            aria-hidden="true"
+            className="mx-auto grid size-11 place-items-center rounded-full bg-amber-50 text-amber-700 dark:bg-amber-950 dark:text-amber-300"
+          >
+            <EmptyIcon className="size-5" strokeWidth={1.6} />
+          </span>
+          <strong className="mt-3 block text-base font-bold uppercase tracking-[0.14em] text-slate-950 dark:text-white">
+            {t(isFiltered ? 'orders.noMatchTitle' : 'orders.emptyTitle')}
+          </strong>
+          <span className="mt-1 block text-sm text-slate-500 dark:text-slate-400">
+            {t(isFiltered ? 'orders.noMatchDescription' : 'orders.emptyDescription')}
+          </span>
+        </span>
+      </p>
     );
   }
 

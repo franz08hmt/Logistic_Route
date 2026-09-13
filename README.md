@@ -347,6 +347,22 @@ cho viền hộp, Heroicons và font Poppins.
 `HairlineGrid`, `DataFrame`, `PrimaryAction`). Thêm trang mới thì lắp các khối
 này thay vì dựng lại.
 
+`components/ui/Controls.tsx` chứa bộ điều khiển biểu mẫu: `SearchField`,
+`SelectField`, `PillButton`, `MetricChip` và `FilterBar`. `FilterBar` bọc hàng
+lọc trong thẻ `<search>` kèm dòng đếm kết quả `aria-live`, nhờ vậy trình đọc màn
+hình nghe được danh sách thay đổi khi người dùng gõ. Trang đơn hàng, đội xe và
+tài xế đều dùng chung bộ này.
+
+Logic lọc nằm riêng ở `components/admin/list-filters.ts` (`filterOrders`,
+`filterVehicles`) để kiểm thử độc lập với giao diện. Bộ lọc chạy phía client vì
+danh sách của một kho đã nằm sẵn trong bộ nhớ và tự làm mới mỗi 10 giây.
+
+Mọi nút bấm và ô nhập cao tối thiểu 44 px, chữ mờ placeholder dùng cặp
+`placeholder:text-slate-500 dark:placeholder:text-slate-400` (4,76:1 trên nền
+sáng và 6,51:1 trên nền tối) để tài xế đọc được ngoài nắng. Biểu tượng luôn là
+Heroicons chứ không phải emoji màu: emoji giữ bảng màu riêng nên không thể chỉnh
+tương phản và hiển thị khác nhau trên mỗi máy.
+
 Dải ảnh mở đầu mỗi trang lấy từ bảng `BANNERS` trong
 `components/console/PageBanner.tsx`. Mỗi ảnh khai báo hệ số phơi sáng riêng vì
 ảnh tối và ảnh sáng không thể dùng chung một lớp phủ. Muốn mỗi trang một ảnh

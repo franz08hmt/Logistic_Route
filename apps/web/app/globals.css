@@ -14,13 +14,10 @@
   --color-slate-900: #1b1e25;
   --color-slate-800: #23262e;
   --color-slate-700: #2d3138;
-  /* One brand ramp, the landing portal's amber, shared by both halves. */
-  --color-brand-50: #fffbeb;
-  --color-brand-100: #fef3c7;
-  --color-brand-500: #f59e0b;
-  --color-brand-600: #d97706;
-  --color-brand-700: #b45309;
-  --color-brand-900: #78350f;
+  /* The accent is Tailwind's own amber ramp, retuned at 400 further down. A
+     parallel `--color-brand-*` alias used to sit here holding the identical
+     hexes; it had no callers, so it was only a second name for the same colour
+     and a way for the two to drift apart. */
 
   /* Dark Cinema. Shared by the public landing portal and the console chrome
      (sidebar, top bar, stat tiles) so both halves of the product read as one

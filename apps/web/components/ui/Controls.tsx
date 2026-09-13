@@ -18,7 +18,7 @@ import {
  */
 
 const FIELD_BASE =
-  'w-full rounded-sm border border-slate-200 bg-white text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-amber-500 focus:ring-2 focus:ring-amber-500/25 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-100 dark:placeholder:text-slate-500';
+  'w-full rounded-sm border border-slate-200 bg-white text-slate-900 outline-none transition placeholder:text-slate-500 dark:placeholder:text-slate-400 focus:border-amber-500 focus:ring-2 focus:ring-amber-500/25 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-100';
 
 export function SearchField({
   label,
@@ -39,7 +39,11 @@ export function SearchField({
   return (
     <p className="relative w-full">
       <label
-        className={hideLabel ? 'sr-only' : 'mb-1.5 block text-xs font-semibold text-slate-500 dark:text-slate-400'}
+        className={
+          hideLabel
+            ? 'sr-only'
+            : 'mb-1.5 block text-[11px] font-semibold text-slate-500 dark:text-slate-400'
+        }
         htmlFor={id}
       >
         {label}
@@ -87,7 +91,7 @@ export function SelectField({
       <span className="relative block">
         <select
           id={id}
-          className={`${FIELD_BASE} min-h-10 appearance-none py-2 pl-3.5 pr-9 text-sm font-semibold`}
+          className={`${FIELD_BASE} min-h-11 appearance-none py-2 pl-3.5 pr-9 text-sm font-semibold`}
           value={value}
           onChange={(event) => onChange(event.target.value)}
         >
@@ -182,5 +186,44 @@ export function Panel({
     >
       {children}
     </Tag>
+  );
+}
+
+/**
+ * Filter row for a list screen.
+ *
+ * `<search>` is the landmark for this exact purpose, so the controls announce
+ * themselves as a search region rather than as loose form fields. The result
+ * count lives in the same region and is a live region: typing in the search
+ * field changes the list below without moving focus, so a screen reader would
+ * otherwise get no signal that anything happened.
+ */
+export function FilterBar({
+  children,
+  label,
+  resultCount,
+}: {
+  children: ReactNode;
+  /** Names the region; several screens can carry one without ambiguity. */
+  label: string;
+  resultCount?: string;
+}) {
+  return (
+    <search
+      aria-label={label}
+      className="rounded-sm border border-slate-200 bg-white p-4 dark:border-slate-800 dark:bg-slate-900 sm:p-5"
+    >
+      <div className="grid gap-3 lg:grid-cols-[minmax(16rem,1fr)_13rem_13rem]">
+        {children}
+      </div>
+      {resultCount && (
+        <p
+          aria-live="polite"
+          className="mt-3 text-[11px] font-bold uppercase tracking-[0.16em] text-slate-500 dark:text-slate-400"
+        >
+          {resultCount}
+        </p>
+      )}
+    </search>
   );
 }
